@@ -6,8 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
-import { PointOfSale } from "./pages/PointOfSale";
-import { StockManagement } from "./pages/StockManagement";
+import PointOfSale from "./pages/PointOfSale";
+import StockManagement from "./pages/StockManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

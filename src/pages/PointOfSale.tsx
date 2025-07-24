@@ -319,3 +319,5 @@ export function PointOfSale() {
     </Layout>
   );
 }
+
+export default PointOfSale;
