@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
+import { PointOfSale } from "./pages/PointOfSale";
+import { StockManagement } from "./pages/StockManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,8 +21,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/products" element={<Layout><Products /></Layout>} />
-          <Route path="/pos" element={<Layout><div className="p-8"><h1 className="text-3xl font-bold">Point of Sale</h1><p className="text-muted-foreground">Coming soon...</p></div></Layout>} />
-          <Route path="/stock" element={<Layout><div className="p-8"><h1 className="text-3xl font-bold">Stock Management</h1><p className="text-muted-foreground">Coming soon...</p></div></Layout>} />
+          <Route path="/pos" element={<PointOfSale />} />
+          <Route path="/stock" element={<StockManagement />} />
           <Route path="/sales" element={<Layout><div className="p-8"><h1 className="text-3xl font-bold">Sales History</h1><p className="text-muted-foreground">Coming soon...</p></div></Layout>} />
           <Route path="/reports" element={<Layout><div className="p-8"><h1 className="text-3xl font-bold">Reports</h1><p className="text-muted-foreground">Coming soon...</p></div></Layout>} />
           <Route path="/scanner" element={<Layout><div className="p-8"><h1 className="text-3xl font-bold">Barcode Scanner</h1><p className="text-muted-foreground">Coming soon...</p></div></Layout>} />
