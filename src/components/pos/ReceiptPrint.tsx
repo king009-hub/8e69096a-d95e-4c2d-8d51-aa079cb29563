@@ -1,0 +1,150 @@
+import { CartItem } from "@/types/inventory";
+
+interface ReceiptPrintProps {
+  saleNumber: string;
+  customerName?: string;
+  customerPhone?: string;
+  items: CartItem[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  paymentMethod: string;
+  saleDate: string;
+}
+
+export const ReceiptPrint = ({
+  saleNumber,
+  customerName,
+  customerPhone,
+  items,
+  subtotal,
+  discount,
+  total,
+  paymentMethod,
+  saleDate
+}: ReceiptPrintProps) => {
+  
+  const printReceipt = () => {
+    const receiptContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt - ${saleNumber}</title>
+          <style>
+            @media print {
+              @page { margin: 0; size: 80mm auto; }
+              body { margin: 0; padding: 0; }
+            }
+            body { 
+              font-family: 'Courier New', monospace; 
+              font-size: 11px; 
+              margin: 0; 
+              padding: 8px; 
+              width: 72mm; 
+              line-height: 1.2;
+            }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .line { border-bottom: 1px dashed #000; margin: 3px 0; }
+            .double-line { border-bottom: 2px solid #000; margin: 3px 0; }
+            .item-row { 
+              display: flex; 
+              justify-content: space-between; 
+              margin: 1px 0; 
+              word-wrap: break-word;
+            }
+            .item-name { 
+              flex: 1; 
+              overflow: hidden; 
+              text-overflow: ellipsis; 
+              white-space: nowrap; 
+              margin-right: 5px; 
+            }
+            .item-price { text-align: right; }
+            .total-row { 
+              display: flex; 
+              justify-content: space-between; 
+              margin: 2px 0; 
+              font-weight: bold; 
+            }
+            .header { margin-bottom: 5px; }
+            .footer { margin-top: 8px; font-size: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header center bold">
+            LOVABLE STORE<br>
+            123 Business Street<br>
+            City, State 12345<br>
+            Tel: (555) 123-4567
+          </div>
+          <div class="line"></div>
+          
+          <div>Receipt #: ${saleNumber}</div>
+          <div>Date: ${new Date(saleDate).toLocaleDateString()}</div>
+          <div>Time: ${new Date(saleDate).toLocaleTimeString()}</div>
+          <div>Cashier: Admin</div>
+          ${customerName ? `<div>Customer: ${customerName}</div>` : ''}
+          ${customerPhone ? `<div>Phone: ${customerPhone}</div>` : ''}
+          
+          <div class="line"></div>
+          
+          ${items.map(item => `
+            <div class="item-row">
+              <span class="item-name">${item.product.name}</span>
+            </div>
+            <div class="item-row">
+              <span>${item.quantity} x $${item.unit_price.toFixed(2)}</span>
+              <span class="item-price">$${(item.quantity * item.unit_price).toFixed(2)}</span>
+            </div>
+          `).join('')}
+          
+          <div class="line"></div>
+          
+          <div class="item-row">
+            <span>Subtotal:</span>
+            <span>$${subtotal.toFixed(2)}</span>
+          </div>
+          ${discount > 0 ? `
+          <div class="item-row">
+            <span>Discount:</span>
+            <span>-$${discount.toFixed(2)}</span>
+          </div>
+          ` : ''}
+          <div class="double-line"></div>
+          <div class="total-row">
+            <span>TOTAL:</span>
+            <span>$${total.toFixed(2)}</span>
+          </div>
+          <div class="item-row">
+            <span>Payment (${paymentMethod.toUpperCase()}):</span>
+            <span>$${total.toFixed(2)}</span>
+          </div>
+          
+          <div class="line"></div>
+          <div class="center footer">
+            Thank you for your purchase!<br>
+            Please come again<br><br>
+            Visit us at www.lovablestore.com<br>
+            Return policy: 30 days with receipt
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 1000);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank', 'width=300,height=600');
+    if (printWindow) {
+      printWindow.document.write(receiptContent);
+      printWindow.document.close();
+    }
+  };
+
+  return { printReceipt };
+};

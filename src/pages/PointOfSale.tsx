@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useProducts } from "@/hooks/useProducts";
 import { useSales } from "@/hooks/useSales";
+import { useCustomers } from "@/hooks/useCustomers";
 import { CartItem } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,12 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Plus, Minus, ShoppingCart, Trash2, Printer, Receipt, Edit2 } from "lucide-react";
+import { Search, Plus, Minus, ShoppingCart, Trash2, Printer, Receipt, Edit2, User, Phone } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
 
 export function PointOfSale() {
   const { products } = useProducts();
   const { createSale } = useSales();
+  const { findOrCreateCustomer } = useCustomers();
   const { toast } = useToast();
   
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -272,6 +275,14 @@ export function PointOfSale() {
     }
 
     try {
+      let customerId;
+      
+      // Create or find customer if name is provided
+      if (customerName.trim()) {
+        const customer = await findOrCreateCustomer(customerName.trim(), customerPhone.trim() || undefined);
+        customerId = customer.id;
+      }
+
       const saleData = {
         customer_name: customerName || undefined,
         customer_phone: customerPhone || undefined,
@@ -290,22 +301,38 @@ export function PointOfSale() {
         total_price: item.quantity * item.unit_price
       }));
 
-      const sale = await createSale(saleData, items);
-      setLastSale(sale);
+      const sale = await createSale(saleData, items, customerId);
+      setLastSale({ ...sale, customer_name: customerName, customer_phone: customerPhone });
 
       toast({
         title: "Success",
-        description: "Sale completed successfully",
+        description: `Sale ${sale.sale_number} completed successfully`,
       });
 
-      // Clear the cart and customer info after a brief delay to allow printing
+      // Auto-print receipt after successful sale
+      setTimeout(() => {
+        const receiptPrint = ReceiptPrint({
+          saleNumber: sale.sale_number,
+          customerName: customerName || undefined,
+          customerPhone: customerPhone || undefined,
+          items: cart,
+          subtotal,
+          discount: discountAmount,
+          total,
+          paymentMethod,
+          saleDate: sale.sale_date
+        });
+        receiptPrint.printReceipt();
+      }, 500);
+
+      // Clear the cart and customer info after a brief delay
       setTimeout(() => {
         setCart([]);
         setCustomerName("");
         setCustomerPhone("");
         setDiscount(0);
         setPaymentMethod("cash");
-      }, 500);
+      }, 1000);
     } catch (error) {
       toast({
         title: "Error",
@@ -465,25 +492,36 @@ export function PointOfSale() {
             {cart.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Customer Info</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Customer Information
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="customer-name">Customer Name</Label>
+                    <Label htmlFor="customer-name" className="text-sm font-medium">
+                      Customer Name
+                    </Label>
                     <Input
                       id="customer-name"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Optional"
+                      placeholder="Enter customer name (for receipt)"
+                      className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="customer-phone">Phone Number</Label>
+                    <Label htmlFor="customer-phone" className="text-sm font-medium flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      Phone Number
+                    </Label>
                     <Input
                       id="customer-phone"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="Optional"
+                      placeholder="Enter phone number"
+                      type="tel"
+                      className="mt-1"
                     />
                   </div>
                    <div>

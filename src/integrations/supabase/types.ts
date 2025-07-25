@@ -14,6 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
+      customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      listings: {
+        Row: {
+          asking_price: number
+          color: string | null
+          condition: string
+          created_at: string
+          description: string | null
+          fuel_type: string | null
+          id: string
+          image_urls: string[] | null
+          location: string
+          make: string
+          mileage: string
+          model: string
+          payment_status: string | null
+          seller_email: string
+          seller_name: string
+          seller_phone: string | null
+          status: string | null
+          stripe_session_id: string | null
+          transmission: string | null
+          updated_at: string
+          user_id: string | null
+          vehicle_type: string
+          year: number
+        }
+        Insert: {
+          asking_price: number
+          color?: string | null
+          condition: string
+          created_at?: string
+          description?: string | null
+          fuel_type?: string | null
+          id?: string
+          image_urls?: string[] | null
+          location: string
+          make: string
+          mileage: string
+          model: string
+          payment_status?: string | null
+          seller_email: string
+          seller_name: string
+          seller_phone?: string | null
+          status?: string | null
+          stripe_session_id?: string | null
+          transmission?: string | null
+          updated_at?: string
+          user_id?: string | null
+          vehicle_type: string
+          year: number
+        }
+        Update: {
+          asking_price?: number
+          color?: string | null
+          condition?: string
+          created_at?: string
+          description?: string | null
+          fuel_type?: string | null
+          id?: string
+          image_urls?: string[] | null
+          location?: string
+          make?: string
+          mileage?: string
+          model?: string
+          payment_status?: string | null
+          seller_email?: string
+          seller_name?: string
+          seller_phone?: string | null
+          status?: string | null
+          stripe_session_id?: string | null
+          transmission?: string | null
+          updated_at?: string
+          user_id?: string | null
+          vehicle_type?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string | null
+          id: string
+          listing_id: string | null
+          status: string | null
+          stripe_session_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string | null
+          id?: string
+          listing_id?: string | null
+          status?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string | null
+          id?: string
+          listing_id?: string | null
+          status?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
@@ -107,6 +259,7 @@ export type Database = {
       sales: {
         Row: {
           created_at: string
+          customer_id: string | null
           customer_name: string | null
           customer_phone: string | null
           discount: number | null
@@ -120,6 +273,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
           discount?: number | null
@@ -133,6 +287,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
           discount?: number | null
@@ -144,7 +299,15 @@ export type Database = {
           sale_number?: string
           total_amount?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_movements: {
         Row: {

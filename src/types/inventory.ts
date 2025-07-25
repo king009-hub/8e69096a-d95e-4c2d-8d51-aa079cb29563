@@ -18,6 +18,7 @@ export interface Sale {
   sale_number: string;
   customer_name?: string;
   customer_phone?: string;
+  customer_id?: string;
   total_amount: number;
   discount: number;
   final_amount: number;
