@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Minus, ShoppingCart, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Plus, Minus, ShoppingCart, Trash2, Printer, Receipt, Edit2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export function PointOfSale() {
@@ -21,6 +23,10 @@ export function PointOfSale() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [editingPrice, setEditingPrice] = useState<string | null>(null);
+  const [tempPrice, setTempPrice] = useState(0);
+  const [lastSale, setLastSale] = useState<any>(null);
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,6 +91,172 @@ export function PointOfSale() {
     setCart(prev => prev.filter(item => item.product.id !== productId));
   };
 
+  const updatePrice = (productId: string, newPrice: number) => {
+    setCart(prev => prev.map(item =>
+      item.product.id === productId
+        ? { ...item, unit_price: newPrice }
+        : item
+    ));
+    setEditingPrice(null);
+  };
+
+  const startEditingPrice = (productId: string, currentPrice: number) => {
+    setEditingPrice(productId);
+    setTempPrice(currentPrice);
+  };
+
+  const printInvoice = () => {
+    if (!lastSale) return;
+    
+    const printWindow = window.open('', '_blank');
+    const invoice = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Invoice - ${lastSale.sale_number}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .invoice-details { margin-bottom: 20px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .items-table th { background-color: #f2f2f2; }
+            .totals { text-align: right; margin-top: 20px; }
+            .total-line { margin: 5px 0; }
+            .final-total { font-size: 18px; font-weight: bold; border-top: 2px solid #333; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>INVOICE</h1>
+            <h2>Your Store Name</h2>
+            <p>Your Store Address</p>
+          </div>
+          
+          <div class="invoice-details">
+            <p><strong>Invoice Number:</strong> ${lastSale.sale_number}</p>
+            <p><strong>Date:</strong> ${new Date(lastSale.sale_date).toLocaleDateString()}</p>
+            <p><strong>Customer:</strong> ${lastSale.customer_name || 'Walk-in Customer'}</p>
+            ${lastSale.customer_phone ? `<p><strong>Phone:</strong> ${lastSale.customer_phone}</p>` : ''}
+            <p><strong>Payment Method:</strong> ${lastSale.payment_method.toUpperCase()}</p>
+          </div>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${cart.map(item => `
+                <tr>
+                  <td>${item.product.name}</td>
+                  <td>${item.quantity}</td>
+                  <td>$${item.unit_price.toFixed(2)}</td>
+                  <td>$${(item.quantity * item.unit_price).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="total-line">Subtotal: $${subtotal.toFixed(2)}</div>
+            <div class="total-line">Discount: -$${discountAmount.toFixed(2)}</div>
+            <div class="total-line final-total">Total: $${total.toFixed(2)}</div>
+          </div>
+
+          <div style="margin-top: 40px; text-align: center;">
+            <p>Thank you for your business!</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    printWindow?.document.write(invoice);
+    printWindow?.document.close();
+    printWindow?.print();
+  };
+
+  const printReceipt = () => {
+    if (!lastSale) return;
+    
+    const printWindow = window.open('', '_blank');
+    const receipt = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt - ${lastSale.sale_number}</title>
+          <style>
+            body { font-family: monospace; font-size: 12px; margin: 0; padding: 10px; width: 300px; }
+            .center { text-align: center; }
+            .line { border-bottom: 1px dashed #000; margin: 5px 0; }
+            .item-row { display: flex; justify-content: space-between; margin: 2px 0; }
+            .bold { font-weight: bold; }
+            .right { text-align: right; }
+          </style>
+        </head>
+        <body>
+          <div class="center bold">
+            YOUR STORE NAME<br>
+            Store Address<br>
+            Tel: (123) 456-7890
+          </div>
+          <div class="line"></div>
+          
+          <div>Receipt #: ${lastSale.sale_number}</div>
+          <div>Date: ${new Date(lastSale.sale_date).toLocaleDateString()}</div>
+          <div>Time: ${new Date(lastSale.sale_date).toLocaleTimeString()}</div>
+          <div>Cashier: Admin</div>
+          ${lastSale.customer_name ? `<div>Customer: ${lastSale.customer_name}</div>` : ''}
+          
+          <div class="line"></div>
+          
+          ${cart.map(item => `
+            <div class="item-row">
+              <span>${item.product.name}</span>
+            </div>
+            <div class="item-row">
+              <span>${item.quantity} x $${item.unit_price.toFixed(2)}</span>
+              <span>$${(item.quantity * item.unit_price).toFixed(2)}</span>
+            </div>
+          `).join('')}
+          
+          <div class="line"></div>
+          
+          <div class="item-row">
+            <span>Subtotal:</span>
+            <span>$${subtotal.toFixed(2)}</span>
+          </div>
+          <div class="item-row">
+            <span>Discount:</span>
+            <span>-$${discountAmount.toFixed(2)}</span>
+          </div>
+          <div class="item-row bold">
+            <span>TOTAL:</span>
+            <span>$${total.toFixed(2)}</span>
+          </div>
+          <div class="item-row">
+            <span>Payment (${lastSale.payment_method.toUpperCase()}):</span>
+            <span>$${total.toFixed(2)}</span>
+          </div>
+          
+          <div class="line"></div>
+          <div class="center">
+            Thank you for your purchase!<br>
+            Please come again
+          </div>
+        </body>
+      </html>
+    `;
+    
+    printWindow?.document.write(receipt);
+    printWindow?.document.close();
+    printWindow?.print();
+  };
+
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
   const discountAmount = (subtotal * discount) / 100;
   const total = subtotal - discountAmount;
@@ -106,7 +278,7 @@ export function PointOfSale() {
         total_amount: subtotal,
         discount: discountAmount,
         final_amount: total,
-        payment_method: 'cash',
+        payment_method: paymentMethod,
         sale_date: new Date().toISOString(),
         notes: undefined
       };
@@ -118,18 +290,22 @@ export function PointOfSale() {
         total_price: item.quantity * item.unit_price
       }));
 
-      await createSale(saleData, items);
-
-      // Clear the cart and customer info
-      setCart([]);
-      setCustomerName("");
-      setCustomerPhone("");
-      setDiscount(0);
+      const sale = await createSale(saleData, items);
+      setLastSale(sale);
 
       toast({
         title: "Success",
         description: "Sale completed successfully",
       });
+
+      // Clear the cart and customer info after a brief delay to allow printing
+      setTimeout(() => {
+        setCart([]);
+        setCustomerName("");
+        setCustomerPhone("");
+        setDiscount(0);
+        setPaymentMethod("cash");
+      }, 500);
     } catch (error) {
       toast({
         title: "Error",
@@ -207,14 +383,54 @@ export function PointOfSale() {
                   <p className="text-muted-foreground text-center py-8">Cart is empty</p>
                 ) : (
                   <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {cart.map((item) => (
-                      <div key={item.product.id} className="flex items-center justify-between p-3 border border-border rounded">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-foreground">{item.product.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            ${item.unit_price.toFixed(2)} each
-                          </p>
-                        </div>
+                     {cart.map((item) => (
+                       <div key={item.product.id} className="flex items-center justify-between p-3 border border-border rounded">
+                         <div className="flex-1">
+                           <h4 className="font-medium text-foreground">{item.product.name}</h4>
+                           <div className="flex items-center gap-2">
+                             {editingPrice === item.product.id ? (
+                               <div className="flex items-center gap-1">
+                                 <Input
+                                   type="number"
+                                   value={tempPrice}
+                                   onChange={(e) => setTempPrice(Number(e.target.value))}
+                                   className="w-20 h-6 text-xs"
+                                   step="0.01"
+                                   min="0"
+                                 />
+                                 <Button
+                                   size="sm"
+                                   onClick={() => updatePrice(item.product.id, tempPrice)}
+                                   className="h-6 px-2"
+                                 >
+                                   ✓
+                                 </Button>
+                                 <Button
+                                   size="sm"
+                                   variant="outline"
+                                   onClick={() => setEditingPrice(null)}
+                                   className="h-6 px-2"
+                                 >
+                                   ✕
+                                 </Button>
+                               </div>
+                             ) : (
+                               <div className="flex items-center gap-1">
+                                 <span className="text-sm text-muted-foreground">
+                                   ${item.unit_price.toFixed(2)} each
+                                 </span>
+                                 <Button
+                                   size="sm"
+                                   variant="ghost"
+                                   onClick={() => startEditingPrice(item.product.id, item.unit_price)}
+                                   className="h-6 w-6 p-0"
+                                 >
+                                   <Edit2 className="h-3 w-3" />
+                                 </Button>
+                               </div>
+                             )}
+                           </div>
+                         </div>
                         <div className="flex items-center space-x-2">
                           <Button
                             size="sm"
@@ -270,18 +486,32 @@ export function PointOfSale() {
                       placeholder="Optional"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="discount">Discount (%)</Label>
-                    <Input
-                      id="discount"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={discount}
-                      onChange={(e) => setDiscount(Number(e.target.value))}
-                      placeholder="0"
-                    />
-                  </div>
+                   <div>
+                     <Label htmlFor="discount">Discount (%)</Label>
+                     <Input
+                       id="discount"
+                       type="number"
+                       min="0"
+                       max="100"
+                       value={discount}
+                       onChange={(e) => setDiscount(Number(e.target.value))}
+                       placeholder="0"
+                     />
+                   </div>
+                   <div>
+                     <Label htmlFor="payment-method">Payment Method</Label>
+                     <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                       <SelectTrigger>
+                         <SelectValue placeholder="Select payment method" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="cash">Cash</SelectItem>
+                         <SelectItem value="card">Card</SelectItem>
+                         <SelectItem value="momo">Mobile Money</SelectItem>
+                         <SelectItem value="credit">Credit Sale</SelectItem>
+                       </SelectContent>
+                     </Select>
+                   </div>
                 </CardContent>
               </Card>
             )}
@@ -303,13 +533,36 @@ export function PointOfSale() {
                       <span>${total.toFixed(2)}</span>
                     </div>
                   </div>
-                  <Button 
-                    className="w-full mt-4" 
-                    onClick={handleCompleteSale}
-                    size="lg"
-                  >
-                    Complete Sale
-                  </Button>
+                   <div className="space-y-2 mt-4">
+                     <Button 
+                       className="w-full" 
+                       onClick={handleCompleteSale}
+                       size="lg"
+                     >
+                       Complete Sale
+                     </Button>
+                     
+                     {lastSale && (
+                       <div className="flex gap-2">
+                         <Button 
+                           variant="outline" 
+                           onClick={printInvoice}
+                           className="flex-1"
+                         >
+                           <Printer className="h-4 w-4 mr-2" />
+                           Print Invoice
+                         </Button>
+                         <Button 
+                           variant="outline" 
+                           onClick={printReceipt}
+                           className="flex-1"
+                         >
+                           <Receipt className="h-4 w-4 mr-2" />
+                           Print Receipt
+                         </Button>
+                       </div>
+                     )}
+                   </div>
                 </CardContent>
               </Card>
             )}
