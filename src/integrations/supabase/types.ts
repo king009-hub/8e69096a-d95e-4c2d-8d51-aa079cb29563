@@ -166,6 +166,66 @@ export type Database = {
           },
         ]
       }
+      product_batches: {
+        Row: {
+          batch_number: string
+          created_at: string
+          expiry_date: string | null
+          id: string
+          notes: string | null
+          product_id: string
+          purchase_price: number
+          quantity: number
+          received_date: string
+          selling_price: number
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          notes?: string | null
+          product_id: string
+          purchase_price?: number
+          quantity?: number
+          received_date?: string
+          selling_price?: number
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string
+          purchase_price?: number
+          quantity?: number
+          received_date?: string
+          selling_price?: number
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_calculated_stock"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
@@ -248,6 +308,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_calculated_stock"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sale_items_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -311,6 +378,7 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          batch_id: string | null
           created_at: string
           id: string
           movement_type: string
@@ -321,6 +389,7 @@ export type Database = {
           reference_id: string | null
         }
         Insert: {
+          batch_id?: string | null
           created_at?: string
           id?: string
           movement_type: string
@@ -331,6 +400,7 @@ export type Database = {
           reference_id?: string | null
         }
         Update: {
+          batch_id?: string | null
           created_at?: string
           id?: string
           movement_type?: string
@@ -342,19 +412,90 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "stock_movements_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "product_batches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_movements_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_calculated_stock"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      products_with_calculated_stock: {
+        Row: {
+          barcode: string | null
+          calculated_stock: number | null
+          category: string | null
+          created_at: string | null
+          current_selling_price: number | null
+          description: string | null
+          expiry_date: string | null
+          id: string | null
+          min_stock_threshold: number | null
+          name: string | null
+          next_expiry_date: string | null
+          purchase_price: number | null
+          selling_price: number | null
+          stock_quantity: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          barcode?: string | null
+          calculated_stock?: never
+          category?: string | null
+          created_at?: string | null
+          current_selling_price?: never
+          description?: string | null
+          expiry_date?: string | null
+          id?: string | null
+          min_stock_threshold?: number | null
+          name?: string | null
+          next_expiry_date?: never
+          purchase_price?: number | null
+          selling_price?: number | null
+          stock_quantity?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          barcode?: string | null
+          calculated_stock?: never
+          category?: string | null
+          created_at?: string | null
+          current_selling_price?: never
+          description?: string | null
+          expiry_date?: string | null
+          id?: string | null
+          min_stock_threshold?: number | null
+          name?: string | null
+          next_expiry_date?: never
+          purchase_price?: number | null
+          selling_price?: number | null
+          stock_quantity?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      calculate_product_stock: {
+        Args: { product_uuid: string }
+        Returns: number
+      }
       generate_sale_number: {
         Args: Record<PropertyKey, never>
         Returns: string

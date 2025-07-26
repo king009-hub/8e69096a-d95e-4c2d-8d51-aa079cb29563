@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useProducts } from "@/hooks/useProducts";
 import { Product } from "@/types/inventory";
-import { Plus, Search, Edit, Trash2, Package, AlertTriangle } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, AlertTriangle, Layers } from "lucide-react";
+import { ProductBatchesDialog } from "@/components/products/ProductBatchesDialog";
 import { format } from "date-fns";
 
 type ProductFormData = Omit<Product, 'id' | 'created_at' | 'updated_at'>;
@@ -329,6 +330,14 @@ export default function Products() {
                   </CardDescription>
                 </div>
                 <div className="flex space-x-1">
+                  <ProductBatchesDialog
+                    product={product}
+                    trigger={
+                      <Button variant="ghost" size="sm">
+                        <Layers className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
                   <Button
                     variant="ghost"
                     size="sm"

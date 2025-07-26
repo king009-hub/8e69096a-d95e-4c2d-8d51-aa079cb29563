@@ -57,6 +57,22 @@ export interface CartItem {
   unit_price: number;
 }
 
+export interface ProductBatch {
+  id: string;
+  product_id: string;
+  batch_number: string;
+  purchase_price: number;
+  selling_price: number;
+  quantity: number;
+  received_date: string;
+  expiry_date?: string;
+  supplier?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+}
+
 export interface DashboardStats {
   totalProducts: number;
   totalSales: number;
