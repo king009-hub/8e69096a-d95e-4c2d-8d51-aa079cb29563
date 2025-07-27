@@ -7,7 +7,8 @@ import {
   Truck, 
   BarChart3,
   Bell,
-  ScanLine
+  ScanLine,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const navigation = [
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Scanner", href: "/scanner", icon: ScanLine },
   { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {

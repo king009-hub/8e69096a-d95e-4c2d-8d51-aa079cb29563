@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      company_profile: {
+        Row: {
+          address: string | null
+          business_hours: Json | null
+          company_name: string
+          created_at: string
+          email: string | null
+          id: string
+          logo_url: string | null
+          phone: string | null
+          tax_number: string | null
+          tax_rates: Json | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          business_hours?: Json | null
+          company_name: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          tax_number?: string | null
+          tax_rates?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          business_hours?: Json | null
+          company_name?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          tax_number?: string | null
+          tax_rates?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -376,6 +418,36 @@ export type Database = {
           },
         ]
       }
+      settings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       stock_movements: {
         Row: {
           batch_id: string | null
@@ -433,6 +505,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          permissions: Json | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permissions?: Json | null
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permissions?: Json | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

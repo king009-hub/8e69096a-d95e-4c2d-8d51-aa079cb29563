@@ -12,6 +12,7 @@ import SalesHistory from "./pages/SalesHistory";
 import Reports from "./pages/Reports";
 import Scanner from "./pages/Scanner";
 import Notifications from "./pages/Notifications";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/reports" element={<Reports />} />
           <Route path="/scanner" element={<Scanner />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/settings" element={<Layout><Settings /></Layout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
