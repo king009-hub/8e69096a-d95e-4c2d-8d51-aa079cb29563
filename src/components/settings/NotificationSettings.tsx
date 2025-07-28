@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -35,18 +36,20 @@ export function NotificationSettings() {
   });
 
   // Update form values when data loads
-  if (settings && !isLoading) {
-    const settingsMap = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as Record<string, any>);
+  useEffect(() => {
+    if (settings && !isLoading) {
+      const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, any>);
 
-    form.reset({
-      enable_email: Boolean(settingsMap.enable_email),
-      enable_low_stock_alerts: Boolean(settingsMap.enable_low_stock_alerts),
-      enable_expiry_alerts: Boolean(settingsMap.enable_expiry_alerts),
-    });
-  }
+      form.reset({
+        enable_email: Boolean(settingsMap.enable_email),
+        enable_low_stock_alerts: Boolean(settingsMap.enable_low_stock_alerts),
+        enable_expiry_alerts: Boolean(settingsMap.enable_expiry_alerts),
+      });
+    }
+  }, [settings, isLoading, form]);
 
   const onSubmit = async (values: z.infer<typeof notificationFormSchema>) => {
     for (const [key, value] of Object.entries(values)) {
