@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -39,19 +40,21 @@ export function POSSettings() {
   });
 
   // Update form values when data loads
-  if (settings && !isLoading) {
-    const settingsMap = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as Record<string, any>);
+  useEffect(() => {
+    if (settings && !isLoading) {
+      const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, any>);
 
-    form.reset({
-      default_payment_method: settingsMap.default_payment_method || "cash",
-      enable_discounts: Boolean(settingsMap.enable_discounts),
-      max_discount_percent: Number(settingsMap.max_discount_percent) || 50,
-      enable_customer_display: Boolean(settingsMap.enable_customer_display),
-    });
-  }
+      form.reset({
+        default_payment_method: settingsMap.default_payment_method || "cash",
+        enable_discounts: Boolean(settingsMap.enable_discounts),
+        max_discount_percent: Number(settingsMap.max_discount_percent) || 50,
+        enable_customer_display: Boolean(settingsMap.enable_customer_display),
+      });
+    }
+  }, [settings, isLoading, form]);
 
   const onSubmit = async (values: z.infer<typeof posFormSchema>) => {
     for (const [key, value] of Object.entries(values)) {

@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -37,18 +38,20 @@ export function ThemeSettings() {
   });
 
   // Update form values when data loads
-  if (settings && !isLoading) {
-    const settingsMap = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as Record<string, any>);
+  useEffect(() => {
+    if (settings && !isLoading) {
+      const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, any>);
 
-    form.reset({
-      primary_color: settingsMap.primary_color || "hsl(221.2, 83.2%, 53.3%)",
-      dark_mode: Boolean(settingsMap.dark_mode),
-      font_size: settingsMap.font_size || "medium",
-    });
-  }
+      form.reset({
+        primary_color: settingsMap.primary_color || "hsl(221.2, 83.2%, 53.3%)",
+        dark_mode: Boolean(settingsMap.dark_mode),
+        font_size: settingsMap.font_size || "medium",
+      });
+    }
+  }, [settings, isLoading, form]);
 
   const onSubmit = async (values: z.infer<typeof themeFormSchema>) => {
     for (const [key, value] of Object.entries(values)) {

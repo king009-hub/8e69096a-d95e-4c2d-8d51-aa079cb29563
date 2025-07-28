@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -40,19 +41,21 @@ export function ReceiptSettings() {
   });
 
   // Update form values when data loads
-  if (settings && !isLoading) {
-    const settingsMap = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as Record<string, any>);
+  useEffect(() => {
+    if (settings && !isLoading) {
+      const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, any>);
 
-    form.reset({
-      header_text: settingsMap.header_text || "Thank you for your purchase!",
-      footer_text: settingsMap.footer_text || "Visit us again!",
-      show_logo: Boolean(settingsMap.show_logo),
-      paper_size: settingsMap.paper_size || "80mm",
-    });
-  }
+      form.reset({
+        header_text: settingsMap.header_text || "Thank you for your purchase!",
+        footer_text: settingsMap.footer_text || "Visit us again!",
+        show_logo: Boolean(settingsMap.show_logo),
+        paper_size: settingsMap.paper_size || "80mm",
+      });
+    }
+  }, [settings, isLoading, form]);
 
   const onSubmit = async (values: z.infer<typeof receiptFormSchema>) => {
     for (const [key, value] of Object.entries(values)) {
