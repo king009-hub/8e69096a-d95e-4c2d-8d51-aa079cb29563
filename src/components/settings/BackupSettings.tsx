@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -39,18 +40,20 @@ export function BackupSettings() {
   });
 
   // Update form values when data loads
-  if (settings && !isLoading) {
-    const settingsMap = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as Record<string, any>);
+  useEffect(() => {
+    if (settings && !isLoading) {
+      const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, any>);
 
-    form.reset({
-      auto_backup: Boolean(settingsMap.auto_backup),
-      backup_frequency: settingsMap.backup_frequency || "daily",
-      retention_days: Number(settingsMap.retention_days) || 30,
-    });
-  }
+      form.reset({
+        auto_backup: Boolean(settingsMap.auto_backup),
+        backup_frequency: settingsMap.backup_frequency || "daily",
+        retention_days: Number(settingsMap.retention_days) || 30,
+      });
+    }
+  }, [settings, isLoading, form]);
 
   const onSubmit = async (values: z.infer<typeof backupFormSchema>) => {
     for (const [key, value] of Object.entries(values)) {
