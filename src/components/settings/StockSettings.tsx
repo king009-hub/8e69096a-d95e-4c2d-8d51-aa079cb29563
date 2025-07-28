@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -38,19 +39,21 @@ export function StockSettings() {
   });
 
   // Update form values when data loads
-  if (settings && !isLoading) {
-    const settingsMap = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as Record<string, any>);
+  useEffect(() => {
+    if (settings && !isLoading) {
+      const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, any>);
 
-    form.reset({
-      low_stock_threshold: Number(settingsMap.low_stock_threshold) || 10,
-      enable_expiry_alerts: Boolean(settingsMap.enable_expiry_alerts),
-      expiry_alert_days: Number(settingsMap.expiry_alert_days) || 30,
-      auto_calculate_stock: Boolean(settingsMap.auto_calculate_stock),
-    });
-  }
+      form.reset({
+        low_stock_threshold: Number(settingsMap.low_stock_threshold) || 10,
+        enable_expiry_alerts: Boolean(settingsMap.enable_expiry_alerts),
+        expiry_alert_days: Number(settingsMap.expiry_alert_days) || 30,
+        auto_calculate_stock: Boolean(settingsMap.auto_calculate_stock),
+      });
+    }
+  }, [settings, isLoading, form]);
 
   const onSubmit = async (values: z.infer<typeof stockFormSchema>) => {
     for (const [key, value] of Object.entries(values)) {
