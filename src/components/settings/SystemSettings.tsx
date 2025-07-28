@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,29 +62,33 @@ export function SystemSettings() {
   });
 
   // Update form values when data loads
-  if (settings && !settingsLoading) {
-    const settingsMap = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as Record<string, any>);
+  useEffect(() => {
+    if (settings && !settingsLoading) {
+      const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, any>);
 
-    systemForm.reset({
-      currency: settingsMap.currency || "USD",
-      timezone: settingsMap.timezone || "UTC",
-      date_format: settingsMap.date_format || "DD/MM/YYYY",
-      language: settingsMap.language || "en",
-    });
-  }
+      systemForm.reset({
+        currency: settingsMap.currency || "USD",
+        timezone: settingsMap.timezone || "UTC",
+        date_format: settingsMap.date_format || "DD/MM/YYYY",
+        language: settingsMap.language || "en",
+      });
+    }
+  }, [settings, settingsLoading, systemForm]);
 
-  if (companyProfile && !companyLoading) {
-    companyForm.reset({
-      company_name: companyProfile.company_name || "",
-      address: companyProfile.address || "",
-      phone: companyProfile.phone || "",
-      email: companyProfile.email || "",
-      tax_number: companyProfile.tax_number || "",
-    });
-  }
+  useEffect(() => {
+    if (companyProfile && !companyLoading) {
+      companyForm.reset({
+        company_name: companyProfile.company_name || "",
+        address: companyProfile.address || "",
+        phone: companyProfile.phone || "",
+        email: companyProfile.email || "",
+        tax_number: companyProfile.tax_number || "",
+      });
+    }
+  }, [companyProfile, companyLoading, companyForm]);
 
   const onSystemSubmit = async (values: z.infer<typeof systemFormSchema>) => {
     for (const [key, value] of Object.entries(values)) {
