@@ -3,6 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { useProducts } from "@/hooks/useProducts";
 import { useSales } from "@/hooks/useSales";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 import { CartItem } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,17 +17,23 @@ import { useToast } from "@/components/ui/use-toast";
 import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
 
 export function PointOfSale() {
+  const { formatCurrency, posSettings, getCurrencySymbol } = useSettingsContext();
   const { products } = useProducts();
   const { createSale } = useSales();
   const { findOrCreateCustomer } = useCustomers();
   const { toast } = useToast();
+  
+  // Helper function for printing (to avoid double currency symbols)
+  const printCurrency = (amount: number) => {
+    return `${getCurrencySymbol()}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [discount, setDiscount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentMethod, setPaymentMethod] = useState(posSettings.default_payment_method);
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState(0);
   const [lastSale, setLastSale] = useState<any>(null);
@@ -158,17 +165,17 @@ export function PointOfSale() {
                 <tr>
                   <td>${item.product.name}</td>
                   <td>${item.quantity}</td>
-                  <td>$${item.unit_price.toFixed(2)}</td>
-                  <td>$${(item.quantity * item.unit_price).toFixed(2)}</td>
+                  <td>${printCurrency(item.unit_price)}</td>
+                  <td>${printCurrency(item.quantity * item.unit_price)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
           <div class="totals">
-            <div class="total-line">Subtotal: $${subtotal.toFixed(2)}</div>
-            <div class="total-line">Discount: -$${discountAmount.toFixed(2)}</div>
-            <div class="total-line final-total">Total: $${total.toFixed(2)}</div>
+            <div class="total-line">Subtotal: ${printCurrency(subtotal)}</div>
+            <div class="total-line">Discount: -${printCurrency(discountAmount)}</div>
+            <div class="total-line final-total">Total: ${printCurrency(total)}</div>
           </div>
 
           <div style="margin-top: 40px; text-align: center;">
@@ -222,8 +229,8 @@ export function PointOfSale() {
               <span>${item.product.name}</span>
             </div>
             <div class="item-row">
-              <span>${item.quantity} x $${item.unit_price.toFixed(2)}</span>
-              <span>$${(item.quantity * item.unit_price).toFixed(2)}</span>
+              <span>${item.quantity} x ${printCurrency(item.unit_price)}</span>
+              <span>${printCurrency(item.quantity * item.unit_price)}</span>
             </div>
           `).join('')}
           
@@ -231,19 +238,19 @@ export function PointOfSale() {
           
           <div class="item-row">
             <span>Subtotal:</span>
-            <span>$${subtotal.toFixed(2)}</span>
+            <span>${formatCurrency(subtotal).replace('$', '')}</span>
           </div>
           <div class="item-row">
             <span>Discount:</span>
-            <span>-$${discountAmount.toFixed(2)}</span>
+            <span>-${formatCurrency(discountAmount).replace('$', '')}</span>
           </div>
           <div class="item-row bold">
             <span>TOTAL:</span>
-            <span>$${total.toFixed(2)}</span>
+            <span>${formatCurrency(total).replace('$', '')}</span>
           </div>
           <div class="item-row">
             <span>Payment (${lastSale.payment_method.toUpperCase()}):</span>
-            <span>$${total.toFixed(2)}</span>
+            <span>${formatCurrency(total).replace('$', '')}</span>
           </div>
           
           <div class="line"></div>
@@ -331,7 +338,7 @@ export function PointOfSale() {
         setCustomerName("");
         setCustomerPhone("");
         setDiscount(0);
-        setPaymentMethod("cash");
+        setPaymentMethod(posSettings.default_payment_method);
       }, 1000);
     } catch (error) {
       toast({
@@ -386,7 +393,7 @@ export function PointOfSale() {
                       <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-bold text-primary">
-                          ${product.selling_price.toFixed(2)}
+                          {formatCurrency(product.selling_price)}
                         </span>
                         <Button size="sm" disabled={product.stock_quantity <= 0}>
                           <Plus className="h-4 w-4" />
@@ -443,9 +450,9 @@ export function PointOfSale() {
                                </div>
                              ) : (
                                <div className="flex items-center gap-1">
-                                 <span className="text-sm text-muted-foreground">
-                                   ${item.unit_price.toFixed(2)} each
-                                 </span>
+                                  <span className="text-sm text-muted-foreground">
+                                    {formatCurrency(item.unit_price)} each
+                                  </span>
                                  <Button
                                    size="sm"
                                    variant="ghost"
@@ -558,18 +565,18 @@ export function PointOfSale() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span>${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Discount:</span>
-                      <span>-${discountAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
-                      <span>Total:</span>
-                      <span>${total.toFixed(2)}</span>
-                    </div>
+                     <div className="flex justify-between">
+                       <span>Subtotal:</span>
+                       <span>{formatCurrency(subtotal)}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span>Discount:</span>
+                       <span>-{formatCurrency(discountAmount)}</span>
+                     </div>
+                     <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
+                       <span>Total:</span>
+                       <span>{formatCurrency(total)}</span>
+                     </div>
                   </div>
                    <div className="space-y-2 mt-4">
                      <Button 

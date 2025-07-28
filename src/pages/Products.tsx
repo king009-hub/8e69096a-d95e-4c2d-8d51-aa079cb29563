@@ -8,14 +8,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useProducts } from "@/hooks/useProducts";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 import { Product } from "@/types/inventory";
 import { Plus, Search, Edit, Trash2, Package, AlertTriangle, Layers } from "lucide-react";
 import { ProductBatchesDialog } from "@/components/products/ProductBatchesDialog";
-import { format } from "date-fns";
 
 type ProductFormData = Omit<Product, 'id' | 'created_at' | 'updated_at'>;
 
 export default function Products() {
+  const { formatCurrency, formatDate, stockSettings } = useSettingsContext();
   const { products, loading, addProduct, updateProduct, deleteProduct } = useProducts();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -29,7 +30,7 @@ export default function Products() {
       purchase_price: 0,
       selling_price: 0,
       stock_quantity: 0,
-      min_stock_threshold: 10,
+      min_stock_threshold: stockSettings.low_stock_threshold,
       category: "",
       expiry_date: "",
     },
@@ -366,11 +367,11 @@ export default function Products() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Purchase Price</p>
-                    <p className="font-semibold">${product.purchase_price.toFixed(2)}</p>
+                    <p className="font-semibold">{formatCurrency(product.purchase_price)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Selling Price</p>
-                    <p className="font-semibold text-success">${product.selling_price.toFixed(2)}</p>
+                    <p className="font-semibold text-success">{formatCurrency(product.selling_price)}</p>
                   </div>
                 </div>
 
@@ -395,7 +396,7 @@ export default function Products() {
 
                 {product.expiry_date && (
                   <div className="text-xs text-muted-foreground">
-                    Expires: {format(new Date(product.expiry_date), 'MMM dd, yyyy')}
+                    Expires: {formatDate(new Date(product.expiry_date))}
                   </div>
                 )}
               </div>

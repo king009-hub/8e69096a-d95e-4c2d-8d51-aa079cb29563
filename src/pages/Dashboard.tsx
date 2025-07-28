@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardStats } from "@/types/inventory";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 import { 
   Package, 
   ShoppingCart, 
@@ -14,6 +15,7 @@ import {
 import { format } from "date-fns";
 
 export default function Dashboard() {
+  const { formatCurrency, formatDate, stockSettings, companyProfile } = useSettingsContext();
   const [stats, setStats] = useState<DashboardStats>({
     totalProducts: 0,
     totalSales: 0,
@@ -26,7 +28,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [stockSettings.low_stock_threshold]);
 
   const fetchDashboardData = async () => {
     try {
@@ -35,11 +37,11 @@ export default function Dashboard() {
         .from('products')
         .select('*', { count: 'exact', head: true });
 
-      // Get low stock products
+      // Get low stock products using dynamic threshold
       const { count: lowStockCount } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })
-        .lt('stock_quantity', 10);
+        .lt('stock_quantity', stockSettings.low_stock_threshold);
 
       // Get total sales
       const { count: salesCount } = await supabase
@@ -106,10 +108,15 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          {companyProfile && (
+            <p className="text-muted-foreground">{companyProfile.company_name}</p>
+          )}
+        </div>
         <Badge variant="outline" className="text-sm">
           <Calendar className="w-4 h-4 mr-1" />
-          {format(new Date(), 'MMMM dd, yyyy')}
+          {formatDate(new Date())}
         </Badge>
       </div>
 
@@ -146,7 +153,7 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               All time revenue
             </p>
@@ -185,7 +192,7 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">${stats.todayRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-success">{formatCurrency(stats.todayRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               Revenue today
             </p>
