@@ -448,6 +448,30 @@ export type Database = {
           },
         ]
       }
+      security_audit_log: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           category: string
@@ -536,6 +560,42 @@ export type Database = {
           },
         ]
       }
+      user_role_audit: {
+        Row: {
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          new_role: string | null
+          old_role: string | null
+          reason: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          new_role?: string | null
+          old_role?: string | null
+          reason?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          new_role?: string | null
+          old_role?: string | null
+          reason?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -583,40 +643,6 @@ export type Database = {
           stock_quantity: number | null
           updated_at: string | null
         }
-        Insert: {
-          barcode?: string | null
-          calculated_stock?: never
-          category?: string | null
-          created_at?: string | null
-          current_selling_price?: never
-          description?: string | null
-          expiry_date?: string | null
-          id?: string | null
-          min_stock_threshold?: number | null
-          name?: string | null
-          next_expiry_date?: never
-          purchase_price?: number | null
-          selling_price?: number | null
-          stock_quantity?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          barcode?: string | null
-          calculated_stock?: never
-          category?: string | null
-          created_at?: string | null
-          current_selling_price?: never
-          description?: string | null
-          expiry_date?: string | null
-          id?: string | null
-          min_stock_threshold?: number | null
-          name?: string | null
-          next_expiry_date?: never
-          purchase_price?: number | null
-          selling_price?: number | null
-          stock_quantity?: number | null
-          updated_at?: string | null
-        }
         Relationships: []
       }
     }
@@ -633,12 +659,36 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_by_email: {
+        Args: { user_email: string }
+        Returns: {
+          user_id: string
+          email: string
+          created_at: string
+        }[]
+      }
       get_user_count: {
         Args: Record<PropertyKey, never>
         Returns: number
       }
       is_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      log_security_event: {
+        Args: { event_type: string; user_id_param?: string; details?: Json }
+        Returns: undefined
+      }
+      safe_update_user_role: {
+        Args:
+          | { target_user_id: string; new_role: string }
+          | {
+              target_user_id: string
+              new_role: string
+              reason?: string
+              ip_address?: string
+              user_agent?: string
+            }
         Returns: boolean
       }
     }

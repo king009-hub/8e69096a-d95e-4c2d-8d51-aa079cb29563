@@ -73,8 +73,8 @@ export const ReceiptPrint = ({
         </head>
         <body>
           <div class="header center bold">
-            LOVABLE STORE<br>
-            123 Business Street<br>
+            PERFECT RETAIL SYSTEM<br>
+            Your Business Address<br>
             City, State 12345<br>
             Tel: (555) 123-4567
           </div>
@@ -125,8 +125,9 @@ export const ReceiptPrint = ({
           <div class="center footer">
             Thank you for your purchase!<br>
             Please come again<br><br>
-            Visit us at www.lovablestore.com<br>
-            Return policy: 30 days with receipt
+            Visit us at www.perfectretail.com<br>
+            Return policy: 30 days with receipt<br>
+            Customer service: support@perfectretail.com
           </div>
           
           <script>
