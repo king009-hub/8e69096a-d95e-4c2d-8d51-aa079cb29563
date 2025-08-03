@@ -3,6 +3,8 @@ import { Layout } from "@/components/layout/Layout";
 import { useProducts } from "@/hooks/useProducts";
 import { useSales } from "@/hooks/useSales";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useProductBatches } from "@/hooks/useProductBatches";
+import { useBatchStock } from "@/hooks/useBatchStock";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { CartItem } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +23,8 @@ export function PointOfSale() {
   const { products } = useProducts();
   const { createSale } = useSales();
   const { findOrCreateCustomer } = useCustomers();
+  const { getBatchesForSale } = useProductBatches();
+  const { getProductStock } = useBatchStock();
   const { toast } = useToast();
   
   // Helper function for printing (to avoid double currency symbols)
@@ -45,26 +49,31 @@ export function PointOfSale() {
 
   const addToCart = (productId: string) => {
     const product = products.find(p => p.id === productId);
-    if (!product || product.stock_quantity <= 0) {
+    if (!product) {
       toast({
         title: "Error",
-        description: "Product is out of stock",
+        description: "Product not found",
         variant: "destructive",
       });
       return;
     }
 
     const existingItem = cart.find(item => item.product.id === productId);
+    const newQuantity = existingItem ? existingItem.quantity + 1 : 1;
+    
+    // Check batch availability using FEFO logic
+    const { canFulfill } = getBatchesForSale(productId, newQuantity);
+    if (!canFulfill) {
+      toast({
+        title: "Error",
+        description: "Insufficient stock in batches",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (existingItem) {
-      if (existingItem.quantity >= product.stock_quantity) {
-        toast({
-          title: "Error",
-          description: "Cannot add more than available stock",
-          variant: "destructive",
-        });
-        return;
-      }
-      updateQuantity(productId, existingItem.quantity + 1);
+      updateQuantity(productId, newQuantity);
     } else {
       setCart(prev => [...prev, {
         product,
@@ -80,11 +89,12 @@ export function PointOfSale() {
       return;
     }
 
-    const product = products.find(p => p.id === productId);
-    if (product && quantity > product.stock_quantity) {
+    // Check batch availability using FEFO logic
+    const { canFulfill } = getBatchesForSale(productId, quantity);
+    if (!canFulfill) {
       toast({
         title: "Error",
-        description: "Cannot exceed available stock",
+        description: "Cannot exceed available stock in batches",
         variant: "destructive",
       });
       return;
@@ -301,14 +311,8 @@ export function PointOfSale() {
         notes: undefined
       };
 
-      const items = cart.map(item => ({
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.quantity * item.unit_price
-      }));
-
-      const sale = await createSale(saleData, items, customerId);
+      // Pass the cart items directly - they already match CartItem interface
+      const sale = await createSale(saleData, cart, customerId);
       setLastSale({ ...sale, customer_name: customerName, customer_phone: customerPhone });
 
       toast({
@@ -386,8 +390,8 @@ export function PointOfSale() {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-medium text-foreground">{product.name}</h3>
-                        <Badge variant={product.stock_quantity > 0 ? "secondary" : "destructive"}>
-                          {product.stock_quantity} in stock
+                        <Badge variant={getProductStock(product.id) > 0 ? "secondary" : "destructive"}>
+                          {getProductStock(product.id)} in stock
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
@@ -395,7 +399,7 @@ export function PointOfSale() {
                         <span className="text-lg font-bold text-primary">
                           {formatCurrency(product.selling_price)}
                         </span>
-                        <Button size="sm" disabled={product.stock_quantity <= 0}>
+                        <Button size="sm" disabled={getProductStock(product.id) <= 0}>
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>

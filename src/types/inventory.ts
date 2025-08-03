@@ -32,6 +32,7 @@ export interface SaleItem {
   id: string;
   sale_id: string;
   product_id: string;
+  batch_id?: string;
   quantity: number;
   unit_price: number;
   total_price: number;
