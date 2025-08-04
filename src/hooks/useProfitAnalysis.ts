@@ -46,6 +46,10 @@ export const useProfitAnalysis = (customDateRange?: { start: Date; end: Date }) 
             product_batches (
               purchase_price,
               selling_price
+            ),
+            products (
+              purchase_price,
+              selling_price
             )
           )
         `)
@@ -69,13 +73,18 @@ export const useProfitAnalysis = (customDateRange?: { start: Date; end: Date }) 
 
         sale.sale_items?.forEach(item => {
           // Calculate profit per item: (selling_price - purchase_price) * quantity
-          const batchData = item.product_batches;
-          if (batchData) {
-            const purchasePrice = Number(batchData.purchase_price);
-            const unitSellingPrice = Number(item.unit_price);
-            const itemProfit = (unitSellingPrice - purchasePrice) * Number(item.quantity);
-            productProfit += itemProfit;
+          let purchasePrice = 0;
+          let unitSellingPrice = Number(item.unit_price);
+          
+          // Try to get batch-specific pricing first, then fallback to product pricing
+          if (item.product_batches) {
+            purchasePrice = Number(item.product_batches.purchase_price);
+          } else if (item.products) {
+            purchasePrice = Number(item.products.purchase_price);
           }
+          
+          const itemProfit = (unitSellingPrice - purchasePrice) * Number(item.quantity);
+          productProfit += Math.max(0, itemProfit); // Ensure we don't count negative profits
         });
       });
 

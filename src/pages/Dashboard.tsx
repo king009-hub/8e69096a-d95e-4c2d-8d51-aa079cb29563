@@ -52,11 +52,14 @@ export default function Dashboard() {
         .from('products')
         .select('*', { count: 'exact', head: true });
 
-      // Get low stock products using dynamic threshold
-      const { count: lowStockCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .lt('stock_quantity', stockSettings.low_stock_threshold);
+      // Get low stock products using batch-calculated stock and dynamic threshold
+      const { data: productsWithStock } = await supabase
+        .from('products_with_calculated_stock')
+        .select('id, calculated_stock, min_stock_threshold');
+
+      const lowStockCount = productsWithStock?.filter(product => 
+        (product.calculated_stock || 0) <= (product.min_stock_threshold || stockSettings.low_stock_threshold)
+      ).length || 0;
 
       // Get total sales
       const { count: salesCount } = await supabase
@@ -88,7 +91,7 @@ export default function Dashboard() {
         totalProducts: productCount || 0,
         totalSales: salesCount || 0,
         totalRevenue,
-        lowStockProducts: lowStockCount || 0,
+        lowStockProducts: lowStockCount,
         todaySales: todaySalesCount || 0,
         todayRevenue,
       });
