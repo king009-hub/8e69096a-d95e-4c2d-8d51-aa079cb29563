@@ -35,7 +35,15 @@ export default function Auth() {
     });
 
     if (error) {
-      setError(error.message);
+      // Provide more specific error messages
+      if (error.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (error.message.includes('Email not confirmed')) {
+        setError('Please check your email and click the confirmation link before signing in.');
+      } else {
+        setError(error.message);
+      }
+      console.error('Sign in error:', error);
     }
     setLoading(false);
   };
@@ -45,7 +53,14 @@ export default function Auth() {
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signUp({
+    // Basic password validation
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -58,9 +73,17 @@ export default function Auth() {
     });
 
     if (error) {
-      setError(error.message);
-    } else {
-      setError('Check your email for the confirmation link.');
+      if (error.message.includes('User already registered')) {
+        setError('An account with this email already exists. Please sign in instead.');
+      } else {
+        setError(error.message);
+      }
+      console.error('Sign up error:', error);
+    } else if (data.user && !data.session) {
+      setError('Success! Please check your email and click the confirmation link to complete your registration.');
+    } else if (data.session) {
+      // User is automatically signed in (email confirmation disabled)
+      setError('Account created successfully! You are now signed in.');
     }
     setLoading(false);
   };
