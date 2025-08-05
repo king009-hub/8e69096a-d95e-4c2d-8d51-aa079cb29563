@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Search, Plus, Minus, ShoppingCart, Trash2, Printer, Receipt, Edit2, User, Phone, Monitor } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
 import { CustomerDisplay } from "@/components/pos/CustomerDisplay";
 
