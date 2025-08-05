@@ -14,9 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Plus, Minus, ShoppingCart, Trash2, Printer, Receipt, Edit2, User, Phone } from "lucide-react";
+import { Search, Plus, Minus, ShoppingCart, Trash2, Printer, Receipt, Edit2, User, Phone, Monitor } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
+import { CustomerDisplay } from "@/components/pos/CustomerDisplay";
 
 export function PointOfSale() {
   const { formatCurrency, posSettings, getCurrencySymbol } = useSettingsContext();
@@ -41,6 +42,7 @@ export function PointOfSale() {
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState(0);
   const [lastSale, setLastSale] = useState<any>(null);
+  const [showCustomerDisplay, setShowCustomerDisplay] = useState(false);
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -358,10 +360,20 @@ export function PointOfSale() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Point of Sale</h1>
-          <Badge variant="outline" className="text-lg px-4 py-2">
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            {cart.length} items
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowCustomerDisplay(!showCustomerDisplay)}
+              className="flex items-center gap-2"
+            >
+              <Monitor className="h-4 w-4" />
+              {showCustomerDisplay ? "Hide" : "Show"} Customer Display
+            </Button>
+            <Badge variant="outline" className="text-lg px-4 py-2">
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              {cart.length} items
+            </Badge>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -617,6 +629,29 @@ export function PointOfSale() {
             )}
           </div>
         </div>
+
+        {/* Customer Display Modal/Overlay */}
+        {showCustomerDisplay && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-background rounded-lg shadow-2xl w-full max-w-4xl h-5/6 relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-4 right-4 z-10"
+                onClick={() => setShowCustomerDisplay(false)}
+              >
+                ✕
+              </Button>
+              <CustomerDisplay
+                cart={cart}
+                subtotal={subtotal}
+                discountAmount={discountAmount}
+                total={total}
+                customerName={customerName}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
