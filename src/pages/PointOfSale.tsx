@@ -336,7 +336,7 @@ export function PointOfSale() {
           saleDate: sale.sale_date
         });
         receiptPrint.printReceipt();
-      }, 500);
+      }, 5);
 
       // Clear the cart and customer info after a brief delay
       setTimeout(() => {
