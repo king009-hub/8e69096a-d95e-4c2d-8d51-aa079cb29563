@@ -276,6 +276,7 @@ export type Database = {
           description: string | null
           expiry_date: string | null
           id: string
+          image_url: string | null
           min_stock_threshold: number | null
           name: string
           purchase_price: number
@@ -290,6 +291,7 @@ export type Database = {
           description?: string | null
           expiry_date?: string | null
           id?: string
+          image_url?: string | null
           min_stock_threshold?: number | null
           name: string
           purchase_price?: number
@@ -304,6 +306,7 @@ export type Database = {
           description?: string | null
           expiry_date?: string | null
           id?: string
+          image_url?: string | null
           min_stock_threshold?: number | null
           name?: string
           purchase_price?: number
