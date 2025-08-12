@@ -12,9 +12,11 @@ export function Layout({ children }: LayoutProps) {
   const { signOut } = useAuth();
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <div className="flex h-screen bg-background group">
+      <div className="fixed left-0 top-0 h-full z-50 -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-in-out">
+        <Sidebar />
+      </div>
+      <main className="flex-1 overflow-auto w-full">
         <div className="flex justify-end p-4">
           <Button 
             variant="outline" 

@@ -400,20 +400,42 @@ export function PointOfSale() {
                       className="border border-border rounded-lg p-4 hover:bg-accent cursor-pointer transition-colors"
                       onClick={() => addToCart(product.id)}
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-medium text-foreground">{product.name}</h3>
-                        <Badge variant={getProductStock(product.id) > 0 ? "secondary" : "destructive"}>
-                          {getProductStock(product.id)} in stock
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-primary">
-                          {formatCurrency(product.selling_price)}
-                        </span>
-                        <Button size="sm" disabled={getProductStock(product.id) <= 0}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                      <div className="flex gap-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                            {product.image_url ? (
+                              <img 
+                                src={product.image_url} 
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.nextElementSibling!.className = 'flex items-center justify-center w-full h-full text-muted-foreground text-xs';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-muted-foreground text-xs">No Image</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-medium text-foreground truncate">{product.name}</h3>
+                            <Badge variant={getProductStock(product.id) > 0 ? "secondary" : "destructive"} className="ml-2 flex-shrink-0">
+                              {getProductStock(product.id)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{product.description}</p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-bold text-primary">
+                              {formatCurrency(product.selling_price)}
+                            </span>
+                            <Button size="sm" disabled={getProductStock(product.id) <= 0}>
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}

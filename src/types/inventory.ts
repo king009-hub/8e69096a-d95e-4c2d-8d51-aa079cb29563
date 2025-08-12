@@ -9,6 +9,7 @@ export interface Product {
   min_stock_threshold: number;
   category?: string;
   expiry_date?: string;
+  image_url?: string;
   created_at: string;
   updated_at: string;
 }
