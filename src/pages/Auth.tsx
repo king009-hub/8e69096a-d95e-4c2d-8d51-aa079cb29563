@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,16 +8,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertCircle } from 'lucide-react';
+import { useWebAuthn } from '@/hooks/useWebAuthn';
+import { AlertCircle, Fingerprint, Shield } from 'lucide-react';
 
 export default function Auth() {
   const { user } = useAuth();
+  const { 
+    registerBiometric, 
+    authenticateWithBiometric, 
+    isBiometricRegistered, 
+    isWebAuthnSupported,
+    loading: biometricLoading 
+  } = useWebAuthn();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [webAuthnSupported, setWebAuthnSupported] = useState(false);
+
+  // Check WebAuthn support on mount
+  useEffect(() => {
+    const checkWebAuthnSupport = async () => {
+      const supported = await isWebAuthnSupported();
+      setWebAuthnSupported(supported);
+    };
+    checkWebAuthnSupport();
+  }, [isWebAuthnSupported]);
 
   // Redirect if already authenticated
   if (user) {
@@ -46,6 +64,32 @@ export default function Auth() {
       console.error('Sign in error:', error);
     }
     setLoading(false);
+  };
+
+  const handleBiometricSignIn = async () => {
+    if (!email) {
+      setError('Please enter your email first');
+      return;
+    }
+
+    const success = await authenticateWithBiometric(email);
+    if (success) {
+      // In a real implementation, you'd get a token and sign in with Supabase
+      // For this demo, we'll simulate a successful sign in
+      setError('Fingerprint authentication successful! (Demo mode - please use regular login)');
+    }
+  };
+
+  const handleRegisterBiometric = async () => {
+    if (!email) {
+      setError('Please enter your email first');
+      return;
+    }
+
+    const success = await registerBiometric(email);
+    if (success) {
+      setError('Fingerprint registered! You can now use it to sign in.');
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -126,6 +170,42 @@ export default function Auth() {
                     required
                   />
                 </div>
+                
+                {webAuthnSupported && (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={handleBiometricSignIn}
+                        disabled={loading || biometricLoading || !isBiometricRegistered(email)}
+                      >
+                        <Fingerprint className="w-4 h-4 mr-2" />
+                        {biometricLoading ? 'Authenticating...' : 'Use Fingerprint'}
+                      </Button>
+                      
+                      {!isBiometricRegistered(email) && email && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRegisterBiometric}
+                          disabled={loading || biometricLoading}
+                        >
+                          <Shield className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {email && !isBiometricRegistered(email) && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Click the shield icon to register your fingerprint
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
