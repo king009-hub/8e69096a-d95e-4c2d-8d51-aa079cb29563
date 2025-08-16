@@ -85,21 +85,21 @@ export default function Products() {
     setIsDialogOpen(true);
   };
 
-  if (loading) {
+      if (loading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Products</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-4 md:space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Products</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
-                <div className="h-6 bg-muted rounded w-3/4"></div>
-                <div className="h-4 bg-muted rounded w-1/2"></div>
+                <div className="h-5 md:h-6 bg-muted rounded w-3/4"></div>
+                <div className="h-3 md:h-4 bg-muted rounded w-1/2"></div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="h-4 bg-muted rounded"></div>
-                  <div className="h-4 bg-muted rounded w-2/3"></div>
+                  <div className="h-3 md:h-4 bg-muted rounded"></div>
+                  <div className="h-3 md:h-4 bg-muted rounded w-2/3"></div>
                 </div>
               </CardContent>
             </Card>
@@ -110,22 +110,23 @@ export default function Products() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Products</h1>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold">Products</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleAddNew}>
+            <Button onClick={handleAddNew} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
-              Add Product
+              <span className="hidden xs:inline">Add Product</span>
+              <span className="xs:hidden">Add</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-lg md:text-xl">
                 {editingProduct ? "Edit Product" : "Add New Product"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm">
                 {editingProduct 
                   ? "Update the product information below." 
                   : "Fill in the details to add a new product to your inventory."
@@ -134,7 +135,7 @@ export default function Products() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="name"
@@ -177,7 +178,7 @@ export default function Products() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="purchase_price"
@@ -218,7 +219,7 @@ export default function Products() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="stock_quantity"
@@ -284,15 +285,16 @@ export default function Products() {
                   )}
                 />
 
-                <div className="flex justify-end space-x-2">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-2">
                   <Button 
                     type="button" 
                     variant="outline" 
                     onClick={() => setIsDialogOpen(false)}
+                    className="order-2 sm:order-1"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" className="order-1 sm:order-2">
                     {editingProduct ? "Update Product" : "Add Product"}
                   </Button>
                 </div>
@@ -302,7 +304,7 @@ export default function Products() {
         </Dialog>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -312,30 +314,30 @@ export default function Products() {
             className="pl-10"
           />
         </div>
-        <Badge variant="outline">
+        <Badge variant="outline" className="self-center sm:self-auto">
           {filteredProducts.length} products
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {filteredProducts.map((product) => (
           <Card key={product.id} className="relative">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
-                  <CardDescription>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-base md:text-lg truncate">{product.name}</CardTitle>
+                  <CardDescription className="mt-1">
                     {product.barcode && (
-                      <span className="font-mono text-xs">{product.barcode}</span>
+                      <span className="font-mono text-xs break-all">{product.barcode}</span>
                     )}
                   </CardDescription>
                 </div>
-                <div className="flex space-x-1">
+                <div className="flex flex-col sm:flex-row gap-1">
                   <ProductBatchesDialog
                     product={product}
                     trigger={
-                      <Button variant="ghost" size="sm">
-                        <Layers className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Layers className="h-3 w-3 md:h-4 md:w-4" />
                       </Button>
                     }
                   />
@@ -343,62 +345,66 @@ export default function Products() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleEdit(product)}
+                    className="h-8 w-8 p-0"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3 w-3 md:h-4 md:w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(product.id)}
+                    className="h-8 w-8 p-0"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <div className="space-y-3">
                 {product.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
                     {product.description}
                   </p>
                 )}
                 
-                <div className="flex items-center justify-between">
+                <div className="grid grid-cols-2 gap-2 text-center sm:text-left">
                   <div>
-                    <p className="text-sm text-muted-foreground">Purchase Price</p>
-                    <p className="font-semibold">{formatCurrency(product.purchase_price)}</p>
+                    <p className="text-xs text-muted-foreground">Purchase</p>
+                    <p className="text-sm font-semibold">{formatCurrency(product.purchase_price)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Selling Price</p>
-                    <p className="font-semibold text-success">{formatCurrency(product.selling_price)}</p>
+                    <p className="text-xs text-muted-foreground">Selling</p>
+                    <p className="text-sm font-semibold text-success">{formatCurrency(product.selling_price)}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Stock: {product.stock_quantity}</span>
+                  <div className="flex items-center space-x-1 md:space-x-2">
+                    <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                    <span className="text-xs md:text-sm">Stock: {product.stock_quantity}</span>
                   </div>
                   {product.stock_quantity <= product.min_stock_threshold && (
                     <Badge variant="destructive" className="text-xs">
                       <AlertTriangle className="h-3 w-3 mr-1" />
-                      Low Stock
+                      <span className="hidden sm:inline">Low Stock</span>
+                      <span className="sm:hidden">Low</span>
                     </Badge>
                   )}
                 </div>
 
-                {product.category && (
-                  <Badge variant="secondary" className="text-xs">
-                    {product.category}
-                  </Badge>
-                )}
-
-                {product.expiry_date && (
-                  <div className="text-xs text-muted-foreground">
-                    Expires: {formatDate(new Date(product.expiry_date))}
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {product.category && (
+                    <Badge variant="secondary" className="text-xs">
+                      {product.category}
+                    </Badge>
+                  )}
+                  {product.expiry_date && (
+                    <div className="text-xs text-muted-foreground">
+                      Exp: {formatDate(new Date(product.expiry_date))}
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
