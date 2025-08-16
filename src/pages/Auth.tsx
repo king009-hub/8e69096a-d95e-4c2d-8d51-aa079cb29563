@@ -74,21 +74,54 @@ export default function Auth() {
 
     const success = await authenticateWithBiometric(email);
     if (success) {
-      // In a real implementation, you'd get a token and sign in with Supabase
-      // For this demo, we'll simulate a successful sign in
-      setError('Fingerprint authentication successful! (Demo mode - please use regular login)');
+      // Attempt to sign in with the stored password for this demo
+      const credentials = JSON.parse(localStorage.getItem('webauthn_credentials') || '{}');
+      const userCredential = credentials[email];
+      
+      if (userCredential && userCredential.storedPassword) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password: userCredential.storedPassword,
+        });
+        
+        if (error) {
+          setError('Fingerprint verified but login failed. Please use regular sign in.');
+        }
+      } else {
+        setError('Fingerprint verified! Please complete setup by signing in with password once.');
+      }
     }
   };
 
   const handleRegisterBiometric = async () => {
-    if (!email) {
-      setError('Please enter your email first');
+    if (!email || !password) {
+      setError('Please enter both email and password first');
       return;
     }
 
+    // First verify the credentials work
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      setError('Please verify your email and password are correct before registering fingerprint');
+      return;
+    }
+
+    // Sign out temporarily to continue with registration
+    await supabase.auth.signOut();
+
     const success = await registerBiometric(email);
     if (success) {
-      setError('Fingerprint registered! You can now use it to sign in.');
+      // Store the password securely for future fingerprint logins
+      const credentials = JSON.parse(localStorage.getItem('webauthn_credentials') || '{}');
+      if (credentials[email]) {
+        credentials[email].storedPassword = password;
+        localStorage.setItem('webauthn_credentials', JSON.stringify(credentials));
+      }
+      setError('Fingerprint registered successfully! You can now use it to sign in.');
     }
   };
 
@@ -171,40 +204,47 @@ export default function Auth() {
                   />
                 </div>
                 
-                {webAuthnSupported && (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={handleBiometricSignIn}
-                        disabled={loading || biometricLoading || !isBiometricRegistered(email)}
-                      >
-                        <Fingerprint className="w-4 h-4 mr-2" />
-                        {biometricLoading ? 'Authenticating...' : 'Use Fingerprint'}
-                      </Button>
-                      
-                      {!isBiometricRegistered(email) && email && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleRegisterBiometric}
-                          disabled={loading || biometricLoading}
-                        >
-                          <Shield className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                    
-                    {email && !isBiometricRegistered(email) && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        Click the shield icon to register your fingerprint
-                      </p>
-                    )}
-                  </div>
-                )}
+                 {webAuthnSupported && (
+                   <div className="space-y-2">
+                     <div className="flex gap-2">
+                       <Button
+                         type="button"
+                         variant="outline"
+                         className="flex-1"
+                         onClick={handleBiometricSignIn}
+                         disabled={loading || biometricLoading || !isBiometricRegistered(email)}
+                       >
+                         <Fingerprint className="w-4 h-4 mr-2" />
+                         {biometricLoading ? 'Authenticating...' : 'Sign In with Fingerprint'}
+                       </Button>
+                       
+                       {!isBiometricRegistered(email) && email && password && (
+                         <Button
+                           type="button"
+                           variant="outline"
+                           size="sm"
+                           onClick={handleRegisterBiometric}
+                           disabled={loading || biometricLoading}
+                           title="Register fingerprint"
+                         >
+                           <Shield className="w-4 h-4" />
+                         </Button>
+                       )}
+                     </div>
+                     
+                     {email && !isBiometricRegistered(email) && (
+                       <p className="text-xs text-muted-foreground text-center">
+                         {password ? 'Click the shield to register fingerprint' : 'Enter password first to enable fingerprint registration'}
+                       </p>
+                     )}
+                     
+                     {email && isBiometricRegistered(email) && (
+                       <p className="text-xs text-success text-center">
+                         ✓ Fingerprint registered for this account
+                       </p>
+                     )}
+                   </div>
+                 )}
                 
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Signing in...' : 'Sign In'}
@@ -258,10 +298,45 @@ export default function Auth() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Sign Up'}
-                </Button>
-              </form>
+                 {webAuthnSupported && email && password && firstName && lastName && (
+                   <div className="space-y-2">
+                     <Button
+                       type="button"
+                       variant="outline"
+                       className="w-full"
+                       onClick={async () => {
+                         // First create the account
+                         const { error } = await supabase.auth.signUp({
+                           email,
+                           password,
+                           options: {
+                             emailRedirectTo: `${window.location.origin}/`,
+                             data: {
+                               first_name: firstName,
+                               last_name: lastName,
+                             },
+                           },
+                         });
+                         
+                         if (!error) {
+                           // Then register fingerprint
+                           await handleRegisterBiometric();
+                           setError('Account created and fingerprint registered! Check your email to confirm.');
+                         }
+                       }}
+                       disabled={loading || biometricLoading}
+                     >
+                       <Fingerprint className="w-4 h-4 mr-2" />
+                       {biometricLoading ? 'Setting up...' : 'Sign Up with Fingerprint'}
+                     </Button>
+                     <div className="text-center text-xs text-muted-foreground">or</div>
+                   </div>
+                 )}
+                 
+                 <Button type="submit" className="w-full" disabled={loading}>
+                   {loading ? 'Creating account...' : 'Sign Up'}
+                 </Button>
+               </form>
             </TabsContent>
           </Tabs>
           
