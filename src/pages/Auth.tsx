@@ -141,7 +141,6 @@ export default function Auth() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
         data: {
           first_name: firstName,
           last_name: lastName,
@@ -157,10 +156,10 @@ export default function Auth() {
       }
       console.error('Sign up error:', error);
     } else if (data.user && !data.session) {
-      setError('Success! Please check your email and click the confirmation link to complete your registration.');
+      setError('Account created! Please check your email to confirm your account.');
     } else if (data.session) {
       // User is automatically signed in (email confirmation disabled)
-      setError('Account created successfully! You are now signed in.');
+      // No need to show success message as they'll be redirected automatically
     }
     setLoading(false);
   };
@@ -310,7 +309,6 @@ export default function Auth() {
                            email,
                            password,
                            options: {
-                             emailRedirectTo: `${window.location.origin}/`,
                              data: {
                                first_name: firstName,
                                last_name: lastName,
@@ -321,7 +319,7 @@ export default function Auth() {
                          if (!error) {
                            // Then register fingerprint
                            await handleRegisterBiometric();
-                           setError('Account created and fingerprint registered! Check your email to confirm.');
+                           setError('Account created and fingerprint registered!');
                          }
                        }}
                        disabled={loading || biometricLoading}
