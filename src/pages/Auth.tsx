@@ -354,6 +354,12 @@ export default function Auth() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          
+          <div className="mt-4 text-center">
+            <Button variant="link" size="sm" onClick={() => window.location.href = '/admin-setup'}>
+              Admin Setup
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

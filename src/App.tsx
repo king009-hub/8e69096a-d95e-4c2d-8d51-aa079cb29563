@@ -17,6 +17,7 @@ import Scanner from "./pages/Scanner";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import AdminSetup from "./pages/AdminSetup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,7 +31,8 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/auth" element={<Auth />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/admin-setup" element={<AdminSetup />} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/products" element={<ProtectedRoute><Layout><Products /></Layout></ProtectedRoute>} />
               <Route path="/pos" element={<ProtectedRoute><PointOfSale /></ProtectedRoute>} />
