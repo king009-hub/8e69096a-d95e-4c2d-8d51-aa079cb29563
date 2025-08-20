@@ -648,6 +648,7 @@ export type Database = {
           description: string | null
           expiry_date: string | null
           id: string | null
+          image_url: string | null
           min_stock_threshold: number | null
           name: string | null
           next_expiry_date: string | null

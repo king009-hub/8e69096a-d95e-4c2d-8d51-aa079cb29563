@@ -145,21 +145,31 @@ export default function Auth() {
           first_name: firstName,
           last_name: lastName,
         },
+        emailRedirectTo: `${window.location.origin}/`,
       },
     });
 
     if (error) {
-      if (error.message.includes('User already registered')) {
+      if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
         setError('An account with this email already exists. Please sign in instead.');
+      } else if (error.message.includes('Invalid email')) {
+        setError('Please enter a valid email address.');
+      } else if (error.message.includes('weak password')) {
+        setError('Password is too weak. Please use a stronger password.');
       } else {
-        setError(error.message);
+        setError(`Signup failed: ${error.message}`);
       }
       console.error('Sign up error:', error);
     } else if (data.user && !data.session) {
       setError('Account created! Please check your email to confirm your account.');
     } else if (data.session) {
       // User is automatically signed in (email confirmation disabled)
-      // No need to show success message as they'll be redirected automatically
+      // Clear form
+      setEmail('');
+      setPassword('');
+      setFirstName('');
+      setLastName('');
+      setError('Account created successfully! You will be redirected automatically.');
     }
     setLoading(false);
   };
