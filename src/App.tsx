@@ -31,9 +31,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin-setup" element={<AdminSetup />} />
-              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/admin-setup" element={<AdminSetup />} />
+              <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
               <Route path="/products" element={<ProtectedRoute><Layout><Products /></Layout></ProtectedRoute>} />
               <Route path="/pos" element={<ProtectedRoute><PointOfSale /></ProtectedRoute>} />
               <Route path="/stock" element={<ProtectedRoute><StockManagement /></ProtectedRoute>} />
