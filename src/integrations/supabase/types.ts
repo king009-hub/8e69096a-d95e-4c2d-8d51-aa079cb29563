@@ -693,6 +693,10 @@ export type Database = {
         Args: { details?: Json; event_type: string; user_id_param?: string }
         Returns: undefined
       }
+      reset_admin_password: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       safe_update_user_role: {
         Args:
           | {

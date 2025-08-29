@@ -11,8 +11,8 @@ import { AlertCircle, Shield, CheckCircle } from 'lucide-react';
 
 export default function AdminSetup() {
   const { user } = useAuth();
-  const [email, setEmail] = useState('krwibutso5@gmail.com');
-  const [password, setPassword] = useState('krwibutso123');
+  const [email, setEmail] = useState('admin@system.com');
+  const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -22,93 +22,74 @@ export default function AdminSetup() {
     return <Navigate to="/" replace />;
   }
 
-  const handleAdminLogin = async () => {
+  const createFreshAdmin = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      // First try regular sign in
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      // Create a completely new admin account
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: 'System',
+            last_name: 'Admin'
+          },
+          emailRedirectTo: `${window.location.origin}/`
+        },
+      });
+
+      if (signUpError && !signUpError.message.includes('already been registered')) {
+        throw signUpError;
+      }
+
+      // Try to sign in immediately
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
-        if (signInError.message.includes('Invalid login credentials')) {
-          // If credentials are invalid, try to reset the password
-          setError('Credentials invalid. Attempting to fix user account...');
-          
-          // Try to sign up again to reset the user
-          const { error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                first_name: 'Admin',
-                last_name: 'User',
-              },
-              emailRedirectTo: `${window.location.origin}/`,
-            },
-          });
-
-          if (signUpError && !signUpError.message.includes('already been registered')) {
-            throw signUpError;
-          }
-
-          // Wait a moment and try to sign in again
-          setTimeout(async () => {
-            const { error: retryError } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-
-            if (retryError) {
-              setError('Failed to sign in after account setup. Please try the regular login page.');
-            } else {
-              setSuccess('Admin account setup successful! Redirecting...');
-            }
-            setLoading(false);
-          }, 2000);
-          return;
-        } else {
-          throw signInError;
-        }
-      } else {
-        setSuccess('Admin login successful! Redirecting...');
+        throw signInError;
       }
+
+      setSuccess('New admin account created and logged in successfully! Redirecting...');
+      
+      // Redirect to dashboard
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+
     } catch (err: any) {
-      setError(`Login failed: ${err.message}`);
+      setError(`Failed to create admin: ${err.message}`);
     }
     setLoading(false);
   };
 
-  const handleManualSetup = async () => {
+  const tryOriginalLogin = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      // Create new admin account
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: 'Admin',
-            last_name: 'User',
-          },
-          emailRedirectTo: `${window.location.origin}/`,
-        },
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'krwibutso5@gmail.com',
+        password: 'krwibutso123',
       });
 
-      if (error && !error.message.includes('already been registered')) {
+      if (error) {
         throw error;
       }
 
-      setSuccess('Admin account created/updated! You can now use the regular login page.');
+      setSuccess('Original login successful! Redirecting...');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+
     } catch (err: any) {
-      setError(`Setup failed: ${err.message}`);
+      setError(`Original login failed: ${err.message}`);
     }
     setLoading(false);
   };
@@ -151,21 +132,28 @@ export default function AdminSetup() {
 
           <div className="space-y-3">
             <Button 
-              onClick={handleAdminLogin} 
+              onClick={tryOriginalLogin} 
               className="w-full" 
               disabled={loading}
+              variant="default"
             >
-              {loading ? 'Processing...' : 'Login as Admin'}
+              {loading ? 'Trying...' : 'Try Original Login (krwibutso5@gmail.com)'}
             </Button>
             
             <Button 
-              onClick={handleManualSetup} 
-              variant="outline" 
+              onClick={createFreshAdmin} 
+              variant="secondary" 
               className="w-full" 
               disabled={loading}
             >
-              {loading ? 'Setting up...' : 'Setup Admin Account'}
+              {loading ? 'Creating...' : 'Create New Admin (admin@system.com)'}
             </Button>
+          </div>
+
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p><strong>New Admin Credentials:</strong></p>
+            <p>Email: admin@system.com</p>
+            <p>Password: admin123</p>
           </div>
 
           {error && (
