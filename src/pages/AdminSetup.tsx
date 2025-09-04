@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertCircle, Shield, CheckCircle } from 'lucide-react';
+import { AlertCircle, Shield, CheckCircle, User, Users } from 'lucide-react';
 
 export default function AdminSetup() {
   const { user } = useAuth();
@@ -68,31 +68,36 @@ export default function AdminSetup() {
     setLoading(false);
   };
 
-  const tryOriginalLogin = async () => {
+  const tryCredential = async (email: string, password: string, label: string) => {
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'krwibutso5@gmail.com',
-        password: 'krwibutso123',
+        email,
+        password,
       });
 
       if (error) {
         throw error;
       }
 
-      setSuccess('Original login successful! Redirecting...');
+      setSuccess(`${label} login successful! Redirecting...`);
       setTimeout(() => {
         window.location.href = '/';
       }, 2000);
 
     } catch (err: any) {
-      setError(`Original login failed: ${err.message}`);
+      setError(`${label} login failed: ${err.message}`);
     }
     setLoading(false);
   };
+
+  const tryOriginalLogin = () => tryCredential('krwibutso5@gmail.com', 'krwibutso123', 'Original');
+  const tryAdminLogin = () => tryCredential('admin@system.com', 'admin123', 'Admin');
+  const tryTestLogin = () => tryCredential('test@example.com', 'test123', 'Test');
+  const tryDemoLogin = () => tryCredential('demo@test.com', 'demo123', 'Demo');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -131,29 +136,72 @@ export default function AdminSetup() {
           </div>
 
           <div className="space-y-3">
+            <div className="text-sm text-muted-foreground mb-3">
+              <strong>Available Test Accounts:</strong>
+            </div>
+            
             <Button 
               onClick={tryOriginalLogin} 
               className="w-full" 
               disabled={loading}
               variant="default"
             >
-              {loading ? 'Trying...' : 'Try Original Login (krwibutso5@gmail.com)'}
+              <User className="w-4 h-4 mr-2" />
+              {loading ? 'Trying...' : 'Original Login (krwibutso5@gmail.com)'}
             </Button>
             
             <Button 
-              onClick={createFreshAdmin} 
+              onClick={tryAdminLogin} 
               variant="secondary" 
               className="w-full" 
               disabled={loading}
             >
-              {loading ? 'Creating...' : 'Create New Admin (admin@system.com)'}
+              <Shield className="w-4 h-4 mr-2" />
+              {loading ? 'Trying...' : 'Admin Login (admin@system.com)'}
+            </Button>
+
+            <Button 
+              onClick={tryTestLogin} 
+              variant="outline" 
+              className="w-full" 
+              disabled={loading}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              {loading ? 'Trying...' : 'Test Login (test@example.com)'}
+            </Button>
+
+            <Button 
+              onClick={tryDemoLogin} 
+              variant="outline" 
+              className="w-full" 
+              disabled={loading}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              {loading ? 'Trying...' : 'Demo Login (demo@test.com)'}
+            </Button>
+            
+            <div className="text-center my-3">
+              <span className="text-sm text-muted-foreground">or</span>
+            </div>
+
+            <Button 
+              onClick={createFreshAdmin} 
+              variant="destructive" 
+              className="w-full" 
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create New Admin Account'}
             </Button>
           </div>
 
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p><strong>New Admin Credentials:</strong></p>
-            <p>Email: admin@system.com</p>
-            <p>Password: admin123</p>
+          <div className="text-xs text-muted-foreground space-y-2 bg-muted/50 p-3 rounded-lg">
+            <p><strong>Test Credentials (ready to use):</strong></p>
+            <div className="grid grid-cols-1 gap-1">
+              <p>• krwibutso5@gmail.com / krwibutso123</p>
+              <p>• admin@system.com / admin123</p>
+              <p>• test@example.com / test123</p>
+              <p>• demo@test.com / demo123</p>
+            </div>
           </div>
 
           {error && (
