@@ -636,6 +636,72 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicles: {
+        Row: {
+          category: string | null
+          condition: string
+          created_at: string
+          description: string | null
+          fuel_type: string
+          id: string
+          image_url: string | null
+          is_featured: boolean | null
+          location: string
+          make: string
+          mileage: string
+          model: string
+          price: number
+          seller_email: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          vehicle_type: string
+          year: number
+        }
+        Insert: {
+          category?: string | null
+          condition: string
+          created_at?: string
+          description?: string | null
+          fuel_type: string
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          location: string
+          make: string
+          mileage: string
+          model: string
+          price: number
+          seller_email?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          vehicle_type?: string
+          year: number
+        }
+        Update: {
+          category?: string | null
+          condition?: string
+          created_at?: string
+          description?: string | null
+          fuel_type?: string
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          location?: string
+          make?: string
+          mileage?: string
+          model?: string
+          price?: number
+          seller_email?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          vehicle_type?: string
+          year?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       products_with_calculated_stock: {
