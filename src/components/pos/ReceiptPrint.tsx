@@ -1,4 +1,5 @@
 import { CartItem } from "@/types/inventory";
+import QRCode from 'qrcode';
 
 interface ReceiptPrintProps {
   saleNumber: string;
@@ -24,7 +25,24 @@ export const ReceiptPrint = ({
   saleDate
 }: ReceiptPrintProps) => {
   
-  const printReceipt = () => {
+  const printReceipt = async () => {
+    // Generate QR code with receipt data
+    const qrData = JSON.stringify({
+      saleNumber,
+      total,
+      date: saleDate,
+      customer: customerName || 'Walk-in Customer'
+    });
+    
+    const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+      width: 120,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+
     const receiptContent = `
       <!DOCTYPE html>
       <html>
@@ -125,6 +143,10 @@ export const ReceiptPrint = ({
           <div class="center footer">
             Thank you for your purchase!<br>
             Please come again<br><br>
+            <div style="margin: 10px 0;">
+              <img src="${qrCodeDataURL}" alt="Receipt QR Code" style="width: 60px; height: 60px; margin: 0 auto; display: block;" />
+              <div style="font-size: 8px; margin-top: 3px;">Scan for receipt details</div>
+            </div>
             Visit us at www.perfectretail.com<br>
             Return policy: 30 days with receipt<br>
             Customer service: support@perfectretail.com
