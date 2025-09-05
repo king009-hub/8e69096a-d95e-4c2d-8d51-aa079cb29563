@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { useSettings, useUpdateSetting } from "@/hooks/useSettings";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const receiptFormSchema = z.object({
   header_text: z.string(),
@@ -58,12 +59,18 @@ export function ReceiptSettings() {
   }, [settings, isLoading, form]);
 
   const onSubmit = async (values: z.infer<typeof receiptFormSchema>) => {
-    for (const [key, value] of Object.entries(values)) {
-      await updateSetting.mutateAsync({
-        category: "receipt",
-        key,
-        value,
-      });
+    try {
+      for (const [key, value] of Object.entries(values)) {
+        await updateSetting.mutateAsync({
+          category: "receipt",
+          key,
+          value,
+        });
+      }
+      toast.success("Receipt settings updated successfully");
+    } catch (error) {
+      console.error("Error updating receipt settings:", error);
+      toast.error("Failed to update receipt settings");
     }
   };
 

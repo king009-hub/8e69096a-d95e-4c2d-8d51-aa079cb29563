@@ -18,6 +18,7 @@ import {
 import { useCompanyProfile, useUpdateCompanyProfile, useSettings, useUpdateSetting } from "@/hooks/useSettings";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const systemFormSchema = z.object({
   currency: z.string().min(1, "Currency is required"),
@@ -91,17 +92,29 @@ export function SystemSettings() {
   }, [companyProfile, companyLoading, companyForm]);
 
   const onSystemSubmit = async (values: z.infer<typeof systemFormSchema>) => {
-    for (const [key, value] of Object.entries(values)) {
-      await updateSetting.mutateAsync({
-        category: "system",
-        key,
-        value,
-      });
+    try {
+      for (const [key, value] of Object.entries(values)) {
+        await updateSetting.mutateAsync({
+          category: "system",
+          key,
+          value,
+        });
+      }
+      toast.success("System settings updated successfully");
+    } catch (error) {
+      console.error("Error updating system settings:", error);
+      toast.error("Failed to update system settings");
     }
   };
 
   const onCompanySubmit = async (values: z.infer<typeof companyFormSchema>) => {
-    await updateCompanyProfile.mutateAsync(values);
+    try {
+      await updateCompanyProfile.mutateAsync(values);
+      toast.success("Company profile updated successfully");
+    } catch (error) {
+      console.error("Error updating company profile:", error);
+      toast.error("Failed to update company profile");
+    }
   };
 
   if (settingsLoading || companyLoading) {
