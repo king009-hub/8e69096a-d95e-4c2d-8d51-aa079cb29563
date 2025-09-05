@@ -612,10 +612,18 @@ export function PointOfSale() {
                        <span>Subtotal:</span>
                        <span>{formatCurrency(subtotal)}</span>
                      </div>
-                     <div className="flex justify-between">
-                       <span>Discount:</span>
-                       <span>-{formatCurrency(discountAmount)}</span>
-                     </div>
+                     {discount > 0 && (
+                       <div className="flex justify-between text-destructive">
+                         <span>Discount ({discount}%):</span>
+                         <span>-{formatCurrency(discountAmount)}</span>
+                       </div>
+                     )}
+                     {posSettings.enable_tax && taxAmount > 0 && (
+                       <div className="flex justify-between">
+                         <span>{posSettings.tax_name} ({posSettings.tax_rate}%):</span>
+                         <span>{formatCurrency(taxAmount)}</span>
+                       </div>
+                     )}
                      <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
                        <span>Total:</span>
                        <span>{formatCurrency(total)}</span>

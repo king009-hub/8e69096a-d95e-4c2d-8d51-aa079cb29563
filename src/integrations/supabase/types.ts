@@ -421,6 +421,7 @@ export type Database = {
           payment_method: string | null
           sale_date: string
           sale_number: string
+          tax_amount: number | null
           total_amount: number
         }
         Insert: {
@@ -435,6 +436,7 @@ export type Database = {
           payment_method?: string | null
           sale_date?: string
           sale_number: string
+          tax_amount?: number | null
           total_amount?: number
         }
         Update: {
@@ -449,6 +451,7 @@ export type Database = {
           payment_method?: string | null
           sale_date?: string
           sale_number?: string
+          tax_amount?: number | null
           total_amount?: number
         }
         Relationships: [
