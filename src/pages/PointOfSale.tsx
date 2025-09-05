@@ -281,7 +281,9 @@ export function PointOfSale() {
 
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
   const discountAmount = (subtotal * discount) / 100;
-  const total = subtotal - discountAmount;
+  const taxableAmount = subtotal - discountAmount;
+  const taxAmount = posSettings.enable_tax ? (taxableAmount * (posSettings.tax_rate || 0)) / 100 : 0;
+  const total = taxableAmount + taxAmount;
 
   const handleCompleteSale = async () => {
     if (cart.length === 0) {
@@ -307,6 +309,7 @@ export function PointOfSale() {
         customer_phone: customerPhone || undefined,
         total_amount: subtotal,
         discount: discountAmount,
+        tax_amount: taxAmount,
         final_amount: total,
         payment_method: paymentMethod,
         sale_date: new Date().toISOString(),
@@ -331,6 +334,8 @@ export function PointOfSale() {
           items: cart,
           subtotal,
           discount: discountAmount,
+          taxAmount,
+          taxName: posSettings.tax_name || "Tax",
           total,
           paymentMethod,
           saleDate: sale.sale_date

@@ -32,6 +32,9 @@ interface POSSettings {
   enable_discounts: boolean;
   max_discount_percent: number;
   enable_customer_display: boolean;
+  enable_tax: boolean;
+  tax_rate: number;
+  tax_name: string;
 }
 
 interface ReceiptSettings {
@@ -100,6 +103,9 @@ const DEFAULT_POS_SETTINGS: POSSettings = {
   enable_discounts: true,
   max_discount_percent: 50,
   enable_customer_display: true,
+  enable_tax: false,
+  tax_rate: 0,
+  tax_name: 'Tax',
 };
 
 const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
@@ -215,6 +221,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         enable_discounts: Boolean(settingsMap.enable_discounts),
         max_discount_percent: Number(settingsMap.max_discount_percent) || DEFAULT_POS_SETTINGS.max_discount_percent,
         enable_customer_display: Boolean(settingsMap.enable_customer_display),
+        enable_tax: Boolean(settingsMap.enable_tax),
+        tax_rate: Number(settingsMap.tax_rate) || DEFAULT_POS_SETTINGS.tax_rate,
+        tax_name: settingsMap.tax_name || DEFAULT_POS_SETTINGS.tax_name,
       });
     }
   }, [posSettingsData]);

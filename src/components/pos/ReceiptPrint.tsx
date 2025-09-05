@@ -8,6 +8,8 @@ interface ReceiptPrintProps {
   items: CartItem[];
   subtotal: number;
   discount: number;
+  taxAmount?: number;
+  taxName?: string;
   total: number;
   paymentMethod: string;
   saleDate: string;
@@ -20,6 +22,8 @@ export const ReceiptPrint = ({
   items,
   subtotal,
   discount,
+  taxAmount = 0,
+  taxName = "Tax",
   total,
   paymentMethod,
   saleDate
@@ -127,6 +131,12 @@ export const ReceiptPrint = ({
           <div class="item-row">
             <span>Discount:</span>
             <span>-$${discount.toFixed(2)}</span>
+          </div>
+          ` : ''}
+          ${taxAmount > 0 ? `
+          <div class="item-row">
+            <span>${taxName}:</span>
+            <span>$${taxAmount.toFixed(2)}</span>
           </div>
           ` : ''}
           <div class="double-line"></div>

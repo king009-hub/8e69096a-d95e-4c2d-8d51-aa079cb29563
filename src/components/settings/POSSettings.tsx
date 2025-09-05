@@ -17,12 +17,16 @@ import {
 } from "@/components/ui/form";
 import { useSettings, useUpdateSetting } from "@/hooks/useSettings";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const posFormSchema = z.object({
   default_payment_method: z.string(),
   enable_discounts: z.boolean(),
   max_discount_percent: z.number().min(0).max(100),
   enable_customer_display: z.boolean(),
+  enable_tax: z.boolean(),
+  tax_rate: z.number().min(0).max(100),
+  tax_name: z.string(),
 });
 
 export function POSSettings() {
@@ -36,6 +40,9 @@ export function POSSettings() {
       enable_discounts: true,
       max_discount_percent: 50,
       enable_customer_display: true,
+      enable_tax: false,
+      tax_rate: 0,
+      tax_name: "Tax",
     },
   });
 
@@ -52,17 +59,26 @@ export function POSSettings() {
         enable_discounts: Boolean(settingsMap.enable_discounts),
         max_discount_percent: Number(settingsMap.max_discount_percent) || 50,
         enable_customer_display: Boolean(settingsMap.enable_customer_display),
+        enable_tax: Boolean(settingsMap.enable_tax),
+        tax_rate: Number(settingsMap.tax_rate) || 0,
+        tax_name: settingsMap.tax_name || "Tax",
       });
     }
   }, [settings, isLoading, form]);
 
   const onSubmit = async (values: z.infer<typeof posFormSchema>) => {
-    for (const [key, value] of Object.entries(values)) {
-      await updateSetting.mutateAsync({
-        category: "pos",
-        key,
-        value,
-      });
+    try {
+      for (const [key, value] of Object.entries(values)) {
+        await updateSetting.mutateAsync({
+          category: "pos",
+          key,
+          value,
+        });
+      }
+      toast.success("POS settings updated successfully");
+    } catch (error) {
+      console.error("Error updating POS settings:", error);
+      toast.error("Failed to update POS settings");
     }
   };
 
@@ -167,6 +183,72 @@ export function POSSettings() {
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="enable_tax"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Enable Tax</FormLabel>
+                <FormDescription>
+                  Apply tax to all sales transactions
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="tax_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tax Name</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Tax, VAT, GST"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Display name for tax on receipts and invoices
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="tax_rate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tax Rate (%)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <FormDescription>
+                Tax percentage to apply to sales (e.g., 10.5 for 10.5%)
+              </FormDescription>
+              <FormMessage />
             </FormItem>
           )}
         />
