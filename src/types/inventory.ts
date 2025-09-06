@@ -22,6 +22,7 @@ export interface Sale {
   customer_id?: string;
   total_amount: number;
   discount: number;
+  tax_amount?: number;
   final_amount: number;
   payment_method: string;
   sale_date: string;
