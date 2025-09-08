@@ -7,15 +7,13 @@ import { useProductBatches } from "@/hooks/useProductBatches";
 import { useBatchStock } from "@/hooks/useBatchStock";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { CartItem } from "@/types/inventory";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { Search, Plus, Minus, ShoppingCart, Trash2, Printer, Receipt, Edit2, User, Phone, Monitor, CreditCard, Banknote, Calculator, Package } from "lucide-react";
+import { Search, Plus, Minus, Trash2, Monitor, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
 import { CustomerDisplay } from "@/components/pos/CustomerDisplay";
@@ -44,6 +42,8 @@ export default function PointOfSale() {
   const [tempPrice, setTempPrice] = useState(0);
   const [lastSale, setLastSale] = useState<any>(null);
   const [showCustomerDisplay, setShowCustomerDisplay] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [paidAmount, setPaidAmount] = useState("");
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,12 +77,49 @@ export default function PointOfSale() {
 
     if (existingItem) {
       updateQuantity(productId, newQuantity);
+      setSelectedProduct({...existingItem, quantity: newQuantity});
     } else {
-      setCart(prev => [...prev, {
+      const newItem = {
         product,
         quantity: 1,
         unit_price: product.selling_price
-      }]);
+      };
+      setCart(prev => [...prev, newItem]);
+      setSelectedProduct(newItem);
+    }
+  };
+
+  const selectCartItem = (item: CartItem) => {
+    setSelectedProduct(item);
+  };
+
+  const updateSelectedProduct = (updates: Partial<CartItem>) => {
+    if (!selectedProduct) return;
+    
+    const updatedItem = { ...selectedProduct, ...updates };
+    setSelectedProduct(updatedItem);
+    
+    if (updates.quantity !== undefined) {
+      if (updates.quantity <= 0) {
+        removeFromCart(selectedProduct.product.id);
+        setSelectedProduct(null);
+      } else {
+        updateQuantity(selectedProduct.product.id, updates.quantity);
+      }
+    } else if (updates.unit_price !== undefined) {
+      updatePrice(selectedProduct.product.id, updates.unit_price);
+    }
+  };
+
+  const handleNumpadClick = (value: string) => {
+    if (value === "C") {
+      setPaidAmount("");
+    } else if (value === ".") {
+      if (!paidAmount.includes(".")) {
+        setPaidAmount(prev => prev + ".");
+      }
+    } else {
+      setPaidAmount(prev => prev + value);
     }
   };
 
@@ -121,163 +158,6 @@ export default function PointOfSale() {
         : item
     ));
     setEditingPrice(null);
-  };
-
-  const startEditingPrice = (productId: string, currentPrice: number) => {
-    setEditingPrice(productId);
-    setTempPrice(currentPrice);
-  };
-
-  const printInvoice = () => {
-    if (!lastSale) return;
-    
-    const printWindow = window.open('', '_blank');
-    const invoice = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Invoice - ${lastSale.sale_number}</title>
-          <style>
-            body { font-family: Inter, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .invoice-details { margin-bottom: 20px; }
-            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            .items-table th { background-color: #f2f2f2; }
-            .totals { text-align: right; margin-top: 20px; }
-            .total-line { margin: 5px 0; }
-            .final-total { font-size: 18px; font-weight: bold; border-top: 2px solid #333; padding-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>INVOICE</h1>
-            <h2>Your Store Name</h2>
-            <p>Your Store Address</p>
-          </div>
-          
-          <div class="invoice-details">
-            <p><strong>Invoice Number:</strong> ${lastSale.sale_number}</p>
-            <p><strong>Date:</strong> ${new Date(lastSale.sale_date).toLocaleDateString()}</p>
-            <p><strong>Customer:</strong> ${lastSale.customer_name || 'Walk-in Customer'}</p>
-            ${lastSale.customer_phone ? `<p><strong>Phone:</strong> ${lastSale.customer_phone}</p>` : ''}
-            <p><strong>Payment Method:</strong> ${lastSale.payment_method.toUpperCase()}</p>
-          </div>
-
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${cart.map(item => `
-                <tr>
-                  <td>${item.product.name}</td>
-                  <td>${item.quantity}</td>
-                  <td>${printCurrency(item.unit_price)}</td>
-                  <td>${printCurrency(item.quantity * item.unit_price)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-
-          <div class="totals">
-            <div class="total-line">Subtotal: ${printCurrency(subtotal)}</div>
-            <div class="total-line">Discount: -${printCurrency(discountAmount)}</div>
-            <div class="total-line final-total">Total: ${printCurrency(total)}</div>
-          </div>
-
-          <div style="margin-top: 40px; text-align: center;">
-            <p>Thank you for your business!</p>
-          </div>
-        </body>
-      </html>
-    `;
-    
-    printWindow?.document.write(invoice);
-    printWindow?.document.close();
-    printWindow?.print();
-  };
-
-  const printReceipt = () => {
-    if (!lastSale) return;
-    
-    const printWindow = window.open('', '_blank');
-    const receipt = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Receipt - ${lastSale.sale_number}</title>
-          <style>
-            body { font-family: Inter, monospace; font-size: 12px; margin: 0; padding: 10px; width: 300px; }
-            .center { text-align: center; }
-            .line { border-bottom: 1px dashed #000; margin: 5px 0; }
-            .item-row { display: flex; justify-content: space-between; margin: 2px 0; }
-            .bold { font-weight: bold; }
-            .right { text-align: right; }
-          </style>
-        </head>
-        <body>
-          <div class="center bold">
-            YOUR STORE NAME<br>
-            Store Address<br>
-            Tel: (123) 456-7890
-          </div>
-          <div class="line"></div>
-          
-          <div>Receipt #: ${lastSale.sale_number}</div>
-          <div>Date: ${new Date(lastSale.sale_date).toLocaleDateString()}</div>
-          <div>Time: ${new Date(lastSale.sale_date).toLocaleTimeString()}</div>
-          <div>Cashier: Admin</div>
-          ${lastSale.customer_name ? `<div>Customer: ${lastSale.customer_name}</div>` : ''}
-          
-          <div class="line"></div>
-          
-          ${cart.map(item => `
-            <div class="item-row">
-              <span>${item.product.name}</span>
-            </div>
-            <div class="item-row">
-              <span>${item.quantity} x ${printCurrency(item.unit_price)}</span>
-              <span>${printCurrency(item.quantity * item.unit_price)}</span>
-            </div>
-          `).join('')}
-          
-          <div class="line"></div>
-          
-          <div class="item-row">
-            <span>Subtotal:</span>
-            <span>${formatCurrency(subtotal).replace('$', '')}</span>
-          </div>
-          <div class="item-row">
-            <span>Discount:</span>
-            <span>-${formatCurrency(discountAmount).replace('$', '')}</span>
-          </div>
-          <div class="item-row bold">
-            <span>TOTAL:</span>
-            <span>${formatCurrency(total).replace('$', '')}</span>
-          </div>
-          <div class="item-row">
-            <span>Payment (${lastSale.payment_method.toUpperCase()}):</span>
-            <span>${formatCurrency(total).replace('$', '')}</span>
-          </div>
-          
-          <div class="line"></div>
-          <div class="center">
-            Thank you for your purchase!<br>
-            Please come again
-          </div>
-        </body>
-      </html>
-    `;
-    
-    printWindow?.document.write(receipt);
-    printWindow?.document.close();
-    printWindow?.print();
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
@@ -351,6 +231,8 @@ export default function PointOfSale() {
         setCustomerPhone("");
         setDiscount(0);
         setPaymentMethod(posSettings.default_payment_method);
+        setSelectedProduct(null);
+        setPaidAmount("");
       }, 1000);
     } catch (error) {
       toast({
@@ -363,412 +245,249 @@ export default function PointOfSale() {
 
   return (
     <Layout>
-      <div className="h-screen bg-gradient-to-br from-background via-background to-accent/20">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border/50 bg-card/80 backdrop-blur-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-              <Calculator className="h-8 w-8 text-primary" />
+      <div className="h-screen bg-background overflow-hidden">
+        {/* Compact Header with Total and Complete Sale */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
+          <div className="flex items-center gap-6">
+            <div className="text-2xl font-bold text-primary">
+              Total: {formatCurrency(total)}
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground tracking-tight">Point of Sale</h1>
-              <p className="text-sm text-muted-foreground font-medium">Modern retail management system</p>
+            <div className="text-sm text-muted-foreground">
+              {cart.length} items • Subtotal: {formatCurrency(subtotal)}
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleCompleteSale}
+              disabled={cart.length === 0}
+              className="h-10 px-6 bg-success hover:bg-success/90 text-success-foreground font-semibold"
+            >
+              Complete Sale
+            </Button>
             <Button
               variant="outline"
               onClick={() => setShowCustomerDisplay(!showCustomerDisplay)}
-              className="flex items-center gap-2 h-12 px-6 rounded-xl border-2 hover:border-primary/30 transition-all duration-200"
+              size="sm"
             >
-              <Monitor className="h-5 w-5" />
-              {showCustomerDisplay ? "Hide" : "Show"} Display
+              <Monitor className="h-4 w-4 mr-2" />
+              Display
             </Button>
-            <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/10 border border-primary/20">
-              <ShoppingCart className="h-5 w-5 text-primary" />
-              <span className="text-lg font-bold text-primary">{cart.length} items</span>
-            </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="h-[calc(100vh-120px)]">
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            {/* Left Sidebar - Cart */}
-            <ResizablePanel defaultSize={35} minSize={30} maxSize={45}>
-              <div className="h-full bg-card border-r border-border/50 flex flex-col">
-                {/* Cart Header */}
-                <div className="p-6 border-b border-border/50">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-xl bg-success/10 border border-success/20">
-                      <ShoppingCart className="h-6 w-6 text-success" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-foreground">Shopping Cart</h2>
-                  </div>
-                  
-                  {/* Customer Section */}
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="customer-name" className="text-sm font-semibold text-foreground flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Customer Name
-                        </Label>
-                        <Input
-                          id="customer-name"
-                          placeholder="Enter customer name"
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                          className="h-12 rounded-xl border-2 focus:border-primary/50 transition-colors"
-                        />
+        {/* Main Content - 70% width container */}
+        <div className="h-[calc(100vh-64px)] flex justify-center">
+          <div className="w-[70%] h-full">
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              {/* Left Sidebar - Selected Item & Keypad */}
+              <ResizablePanel defaultSize={30} minSize={25} maxSize={35}>
+                <div className="h-full bg-card border-r border-border flex flex-col">
+                  {/* Selected Product Editor */}
+                  <div className="p-4 border-b border-border">
+                    <h3 className="font-semibold text-base mb-3">Selected Item</h3>
+                    {selectedProduct ? (
+                      <div className="space-y-3">
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          <h4 className="font-medium text-sm">{selectedProduct.product.name}</h4>
+                          <p className="text-xs text-muted-foreground">{selectedProduct.product.barcode}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Qty</Label>
+                            <div className="flex items-center gap-1">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="h-7 w-7 p-0"
+                                onClick={() => updateSelectedProduct({ quantity: selectedProduct.quantity - 1 })}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <Input 
+                                value={selectedProduct.quantity}
+                                onChange={(e) => updateSelectedProduct({ quantity: parseInt(e.target.value) || 0 })}
+                                className="h-7 text-center text-xs"
+                              />
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="h-7 w-7 p-0"
+                                onClick={() => updateSelectedProduct({ quantity: selectedProduct.quantity + 1 })}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Price</Label>
+                            <Input 
+                              value={selectedProduct.unit_price}
+                              onChange={(e) => updateSelectedProduct({ unit_price: parseFloat(e.target.value) || 0 })}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                        </div>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="w-full h-7 text-xs"
+                          onClick={() => {
+                            removeFromCart(selectedProduct.product.id);
+                            setSelectedProduct(null);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Remove
+                        </Button>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="customer-phone" className="text-sm font-semibold text-foreground flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          Phone Number
-                        </Label>
-                        <Input
-                          id="customer-phone"
-                          placeholder="Enter phone number"
-                          value={customerPhone}
-                          onChange={(e) => setCustomerPhone(e.target.value)}
-                          className="h-12 rounded-xl border-2 focus:border-primary/50 transition-colors"
-                        />
-                      </div>
-                    </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Select a product to edit</p>
+                    )}
                   </div>
-                </div>
 
-                {/* Cart Items */}
-                <div className="flex-1 overflow-auto p-6">
-                  {cart.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="p-6 rounded-2xl bg-muted/30 border border-muted/50 inline-block">
-                        <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-lg font-medium text-muted-foreground">Cart is empty</p>
-                        <p className="text-sm text-muted-foreground mt-1">Add products to start selling</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
+                  {/* Cart Items - Compact */}
+                  <div className="flex-1 overflow-auto p-4">
+                    <div className="space-y-2">
                       {cart.map((item) => (
-                        <div key={item.product.id} className="p-4 rounded-2xl border border-border/50 bg-background/50 hover:bg-accent/20 transition-all duration-200">
-                          <div className="flex gap-4">
-                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted/50 flex items-center justify-center border border-border/30">
-                              {item.product.image_url ? (
-                                <img 
-                                  src={item.product.image_url} 
-                                  alt={item.product.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Package className="h-6 w-6 text-muted-foreground" />
-                              )}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-foreground text-lg truncate">{item.product.name}</h3>
-                              <div className="flex items-center gap-3 mt-2">
-                                <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                                    className="h-8 w-8 p-0 rounded-md hover:bg-destructive/10 hover:text-destructive"
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </Button>
-                                  <span className="font-bold text-foreground min-w-[2rem] text-center text-lg">
-                                    {item.quantity}
-                                  </span>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                                    className="h-8 w-8 p-0 rounded-md hover:bg-success/10 hover:text-success"
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => removeFromCart(item.product.id)}
-                                  className="h-8 w-8 p-0 rounded-md hover:bg-destructive/10 hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              
-                              <div className="flex items-center justify-between mt-3">
-                                {editingPrice === item.product.id ? (
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      type="number"
-                                      value={tempPrice}
-                                      onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)}
-                                      className="w-24 h-8 text-sm rounded-lg"
-                                      step="0.01"
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={() => updatePrice(item.product.id, tempPrice)}
-                                      className="h-8 px-3 rounded-lg"
-                                    >
-                                      Save
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => startEditingPrice(item.product.id, item.unit_price)}
-                                    className="flex items-center gap-2 h-8 px-3 rounded-lg hover:bg-primary/10"
-                                  >
-                                    <span className="font-bold text-lg text-primary">
-                                      {formatCurrency(item.unit_price)}
-                                    </span>
-                                    <Edit2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                                
-                                <span className="font-bold text-xl text-foreground">
-                                  {formatCurrency(item.quantity * item.unit_price)}
-                                </span>
-                              </div>
-                            </div>
+                        <div
+                          key={item.product.id}
+                          onClick={() => selectCartItem(item)}
+                          className={`p-2 rounded cursor-pointer border text-xs ${
+                            selectedProduct?.product.id === item.product.id 
+                              ? 'bg-primary/10 border-primary' 
+                              : 'bg-background border-border hover:bg-muted/50'
+                          }`}
+                        >
+                          <div className="font-medium truncate">{item.product.name}</div>
+                          <div className="text-muted-foreground">
+                            {item.quantity} x {formatCurrency(item.unit_price)} = {formatCurrency(item.quantity * item.unit_price)}
                           </div>
                         </div>
                       ))}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Numeric Keypad */}
+                  <div className="p-4 border-t border-border">
+                    <div className="mb-3">
+                      <Label className="text-xs">Amount Paid</Label>
+                      <Input 
+                        value={paidAmount}
+                        onChange={(e) => setPaidAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ".", "C"].map((num) => (
+                        <Button
+                          key={num}
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => handleNumpadClick(num)}
+                        >
+                          {num}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Customer Info - Compact */}
+                  <div className="p-4 border-t border-border">
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Customer name"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                      <Input
+                        placeholder="Phone number"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
                 </div>
+              </ResizablePanel>
 
-                {/* Cart Summary & Checkout */}
-                {cart.length > 0 && (
-                  <div className="p-6 border-t border-border/50 bg-accent/10">
-                    {/* Discount & Payment */}
-                    <div className="space-y-4 mb-6">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Discount %</Label>
-                          <Input
-                            type="number"
-                            value={discount}
-                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                            className="h-12 rounded-xl border-2 focus:border-primary/50"
-                            placeholder="0"
-                            min="0"
-                            max="100"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                            <CreditCard className="h-4 w-4" />
-                            Payment
-                          </Label>
-                          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                            <SelectTrigger className="h-12 rounded-xl border-2 focus:border-primary/50">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cash">
-                                <div className="flex items-center gap-2">
-                                  <Banknote className="h-4 w-4" />
-                                  Cash
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="card">
-                                <div className="flex items-center gap-2">
-                                  <CreditCard className="h-4 w-4" />
-                                  Card
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+              <ResizableHandle withHandle />
+
+              {/* Right Panel - Products Grid */}
+              <ResizablePanel defaultSize={70} minSize={65}>
+                <div className="h-full bg-background">
+                  {/* Search */}
+                  <div className="p-4 border-b border-border">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search products..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 h-9"
+                      />
                     </div>
+                  </div>
 
-                    {/* Totals */}
-                    <div className="space-y-3 mb-6">
-                      <div className="flex justify-between items-center py-2 border-b border-border/30">
-                        <span className="font-medium text-muted-foreground">Subtotal</span>
-                        <span className="font-bold text-lg text-foreground">{formatCurrency(subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-border/30">
-                        <span className="font-medium text-muted-foreground">Discount</span>
-                        <span className="font-bold text-lg text-destructive">-{formatCurrency(discountAmount)}</span>
-                      </div>
-                      {posSettings.enable_tax && (
-                        <div className="flex justify-between items-center py-2 border-b border-border/30">
-                          <span className="font-medium text-muted-foreground">{posSettings.tax_name || "Tax"}</span>
-                          <span className="font-bold text-lg text-foreground">{formatCurrency(taxAmount)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center py-3 border-t-2 border-primary/20">
-                        <span className="font-bold text-xl text-foreground">Total</span>
-                        <span className="font-bold text-2xl text-primary">{formatCurrency(total)}</span>
-                      </div>
-                    </div>
-
-                    {/* Checkout Buttons */}
-                    <div className="space-y-3">
-                      <Button
-                        onClick={handleCompleteSale}
-                        className="w-full h-14 text-lg font-bold rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-lg"
-                      >
-                        Complete Sale
-                      </Button>
-                      
-                      {lastSale && (
-                        <div className="grid grid-cols-2 gap-3">
-                          <Button
-                            variant="outline"
-                            onClick={printReceipt}
-                            className="h-12 rounded-xl border-2 hover:border-primary/30 transition-all duration-200"
+                  {/* Products Grid - Compact */}
+                  <div className="p-4 h-[calc(100%-80px)] overflow-auto">
+                    <div className="grid grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                      {filteredProducts.map((product) => {
+                        const stock = getProductStock(product.id);
+                        const inCart = cart.find(item => item.product.id === product.id);
+                        
+                        return (
+                          <Card
+                            key={product.id}
+                            className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${
+                              inCart ? 'ring-2 ring-primary bg-primary/5' : ''
+                            }`}
+                            onClick={() => addToCart(product.id)}
                           >
-                            <Receipt className="h-4 w-4 mr-2" />
-                            Receipt
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={printInvoice}
-                            className="h-12 rounded-xl border-2 hover:border-primary/30 transition-all duration-200"
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Invoice
-                          </Button>
-                        </div>
-                      )}
+                            <CardContent className="p-3">
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-muted/50 rounded-lg mb-2 mx-auto flex items-center justify-center">
+                                  <Package className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                                <h3 className="font-medium text-xs truncate mb-1" title={product.name}>
+                                  {product.name}
+                                </h3>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Stock: {stock}
+                                </div>
+                                <div className="font-bold text-sm text-primary">
+                                  {formatCurrency(product.selling_price)}
+                                </div>
+                                {inCart && (
+                                  <Badge variant="secondary" className="mt-1 text-xs">
+                                    {inCart.quantity} in cart
+                                  </Badge>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
-                  </div>
-                )}
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
-
-            {/* Right Panel - Products */}
-            <ResizablePanel defaultSize={65} minSize={55}>
-              <div className="h-full bg-background/50 flex flex-col">
-                {/* Products Header */}
-                <div className="p-6 border-b border-border/50">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-xl bg-info/10 border border-info/20">
-                      <Package className="h-6 w-6 text-info" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-foreground">Product Catalog</h2>
-                  </div>
-                  
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      placeholder="Search products by name or barcode..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-12 h-14 text-lg rounded-2xl border-2 focus:border-primary/50 transition-colors bg-card"
-                    />
                   </div>
                 </div>
-
-                {/* Products Grid */}
-                <div className="flex-1 overflow-auto p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="group relative rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm hover:bg-card hover:border-primary/30 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
-                        onClick={() => addToCart(product.id)}
-                      >
-                        {/* Product Image */}
-                        <div className="aspect-square p-4">
-                          <div className="w-full h-full rounded-xl overflow-hidden bg-muted/30 flex items-center justify-center border border-border/30">
-                            {product.image_url ? (
-                              <img 
-                                src={product.image_url} 
-                                alt={product.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            ) : (
-                              <Package className="h-12 w-12 text-muted-foreground" />
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Product Info */}
-                        <div className="p-4 pt-0">
-                          <div className="flex items-start justify-between mb-3">
-                            <h3 className="font-bold text-foreground text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                              {product.name}
-                            </h3>
-                            <Badge 
-                              variant={getProductStock(product.id) > 0 ? "secondary" : "destructive"} 
-                              className="ml-2 flex-shrink-0 font-bold"
-                            >
-                              {getProductStock(product.id)}
-                            </Badge>
-                          </div>
-                          
-                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                            {product.description}
-                          </p>
-                          
-                          <div className="flex items-center justify-between">
-                            <span className="text-2xl font-bold text-primary">
-                              {formatCurrency(product.selling_price)}
-                            </span>
-                            <Button 
-                              size="sm" 
-                              disabled={getProductStock(product.id) <= 0}
-                              className="rounded-xl h-10 w-10 p-0 shadow-lg hover:shadow-xl transition-all duration-200"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addToCart(product.id);
-                              }}
-                            >
-                              <Plus className="h-5 w-5" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Hover Effect */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                      </div>
-                    ))}
-                  </div>
-
-                  {filteredProducts.length === 0 && (
-                    <div className="text-center py-12">
-                      <div className="p-6 rounded-2xl bg-muted/30 border border-muted/50 inline-block">
-                        <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-lg font-medium text-muted-foreground">No products found</p>
-                        <p className="text-sm text-muted-foreground mt-1">Try adjusting your search terms</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
         </div>
 
         {/* Customer Display Modal */}
-        <Dialog open={showCustomerDisplay} onOpenChange={setShowCustomerDisplay}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-            <DialogHeader>
-              <DialogTitle>Customer Display</DialogTitle>
-            </DialogHeader>
-                            <CustomerDisplay
-                              cart={cart}
-                              subtotal={subtotal}
-                              discountAmount={discountAmount}
-                              total={total}
-                              customerName={customerName}
-                            />
-          </DialogContent>
-        </Dialog>
+        {showCustomerDisplay && (
+          <CustomerDisplay
+            cart={cart}
+            subtotal={subtotal}
+            discountAmount={discountAmount}
+            total={total}
+            customerName={customerName}
+          />
+        )}
       </div>
     </Layout>
   );
