@@ -33,23 +33,18 @@ export function Layout({ children }: LayoutProps) {
       </div>
 
       <main className="flex-1 overflow-auto w-full">
-        <div className="flex justify-between items-center p-3 md:p-4">
-          <div className="md:hidden">
-            <h1 className="text-lg font-semibold text-primary">StockFlow</h1>
-          </div>
-          <div className="ml-auto">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={signOut}
-              className="gap-1 md:gap-2 text-xs md:text-sm"
-            >
-              <LogOut className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden xs:inline">Sign Out</span>
-            </Button>
-          </div>
+        <div className="flex justify-end items-center p-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={signOut}
+            className="gap-1 text-xs"
+          >
+            <LogOut className="h-3 w-3" />
+            <span className="hidden xs:inline">Sign Out</span>
+          </Button>
         </div>
-        <div className="p-3 md:p-6 lg:p-8 pt-0">
+        <div className="px-3 md:px-6 lg:px-8">
           {children}
         </div>
       </main>
