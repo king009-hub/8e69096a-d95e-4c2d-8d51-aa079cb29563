@@ -245,7 +245,7 @@ export default function PointOfSale() {
 
   return (
     <Layout>
-      <div className="h-screen bg-background overflow-hidden">
+      <div className="h-[calc(100vh-60px)] bg-background overflow-hidden">
         {/* Compact Header with Total and Complete Sale */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
           <div className="flex items-center gap-6">
@@ -276,7 +276,7 @@ export default function PointOfSale() {
         </div>
 
         {/* Main Content - 70% width container */}
-        <div className="h-[calc(100vh-64px)] flex justify-center">
+        <div className="h-[calc(100%-64px)] flex justify-center">
           <div className="w-[70%] h-full">
             <ResizablePanelGroup direction="horizontal" className="h-full">
               {/* Left Sidebar - Selected Item & Keypad */}
