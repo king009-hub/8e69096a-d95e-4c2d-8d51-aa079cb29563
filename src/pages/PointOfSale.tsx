@@ -13,7 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { Search, Plus, Minus, Trash2, Monitor, Package } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Search, Plus, Minus, Trash2, Monitor, Package, Printer, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
 import { CustomerDisplay } from "@/components/pos/CustomerDisplay";
@@ -44,6 +46,9 @@ export default function PointOfSale() {
   const [showCustomerDisplay, setShowCustomerDisplay] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [paidAmount, setPaidAmount] = useState("");
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [tinNumber, setTinNumber] = useState("");
+  const [receiptPhone, setReceiptPhone] = useState("");
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -176,6 +181,8 @@ export default function PointOfSale() {
       return;
     }
 
+    setShowPaymentDialog(false);
+
     try {
       let customerId;
       
@@ -233,6 +240,8 @@ export default function PointOfSale() {
         setPaymentMethod(posSettings.default_payment_method);
         setSelectedProduct(null);
         setPaidAmount("");
+        setTinNumber("");
+        setReceiptPhone("");
       }, 1000);
     } catch (error) {
       toast({
@@ -252,18 +261,93 @@ export default function PointOfSale() {
             <div className="text-xl font-bold text-primary">
               Total: {formatCurrency(total)}
             </div>
-            <div className="text-sm text-muted-foreground">
-              {cart.length} items • Subtotal: {formatCurrency(subtotal)}
-            </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={handleCompleteSale}
-              disabled={cart.length === 0}
-              className="h-10 px-6 bg-success hover:bg-success/90 text-success-foreground font-semibold"
-            >
-              Complete Sale
-            </Button>
+            <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  disabled={cart.length === 0}
+                  className="h-10 px-6 bg-success hover:bg-success/90 text-success-foreground font-semibold"
+                >
+                  Complete Sale
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Complete Payment
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="text-center p-4 bg-muted/30 rounded-lg">
+                    <div className="text-2xl font-bold text-primary">
+                      {formatCurrency(total)}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium">Payment Method</Label>
+                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="cash" id="cash" />
+                        <Label htmlFor="cash">Cash</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="momo" id="momo" />
+                        <Label htmlFor="momo">Mobile Money</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="airtel" id="airtel" />
+                        <Label htmlFor="airtel">Airtel Money</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="card" id="card" />
+                        <Label htmlFor="card">Card</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-sm">TIN Number</Label>
+                      <Input 
+                        value={tinNumber}
+                        onChange={(e) => setTinNumber(e.target.value)}
+                        placeholder="Optional"
+                        className="h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Receipt Phone</Label>
+                      <Input 
+                        value={receiptPhone}
+                        onChange={(e) => setReceiptPhone(e.target.value)}
+                        placeholder="Optional"
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleCompleteSale}
+                      className="flex-1 bg-success hover:bg-success/90"
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      Pay & Print
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowPaymentDialog(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button
               variant="outline"
               onClick={() => setShowCustomerDisplay(!showCustomerDisplay)}
@@ -280,7 +364,7 @@ export default function PointOfSale() {
           <div className="w-[70%] h-full">
             <ResizablePanelGroup direction="horizontal" className="h-full">
               {/* Left Sidebar - Selected Item & Keypad */}
-              <ResizablePanel defaultSize={30} minSize={25} maxSize={35}>
+              <ResizablePanel defaultSize={45} minSize={40} maxSize={50}>
                 <div className="h-full bg-card border-r border-border flex flex-col">
                   {/* Selected Product Editor */}
                   <div className="p-4 border-b border-border">
@@ -416,7 +500,7 @@ export default function PointOfSale() {
               <ResizableHandle withHandle />
 
               {/* Right Panel - Products Grid */}
-              <ResizablePanel defaultSize={70} minSize={65}>
+              <ResizablePanel defaultSize={55} minSize={50}>
                 <div className="h-full bg-background">
                   {/* Search */}
                   <div className="p-4 border-b border-border">
