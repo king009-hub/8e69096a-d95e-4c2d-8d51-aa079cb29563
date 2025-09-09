@@ -33,18 +33,18 @@ export function Layout({ children }: LayoutProps) {
       </div>
 
       <main className="flex-1 overflow-auto w-full">
-        <div className="flex justify-end items-center p-2">
+        <div className="flex justify-end items-center p-1">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={signOut}
-            className="gap-1 text-xs"
+            className="gap-1 text-xs h-7"
           >
             <LogOut className="h-3 w-3" />
             <span className="hidden xs:inline">Sign Out</span>
           </Button>
         </div>
-        <div className="px-3 md:px-6 lg:px-8">
+        <div className="px-2 md:px-4">
           {children}
         </div>
       </main>

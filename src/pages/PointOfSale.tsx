@@ -245,11 +245,11 @@ export default function PointOfSale() {
 
   return (
     <Layout>
-      <div className="h-[calc(100vh-60px)] bg-background overflow-hidden">
+      <div className="h-[calc(100vh-40px)] bg-background overflow-hidden">
         {/* Compact Header with Total and Complete Sale */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
-          <div className="flex items-center gap-6">
-            <div className="text-2xl font-bold text-primary">
+        <div className="flex items-center justify-between px-3 py-1 border-b border-border bg-card">
+          <div className="flex items-center gap-4">
+            <div className="text-xl font-bold text-primary">
               Total: {formatCurrency(total)}
             </div>
             <div className="text-sm text-muted-foreground">
@@ -276,7 +276,7 @@ export default function PointOfSale() {
         </div>
 
         {/* Main Content - 70% width container */}
-        <div className="h-[calc(100%-64px)] flex justify-center">
+        <div className="h-[calc(100%-40px)] flex justify-center">
           <div className="w-[70%] h-full">
             <ResizablePanelGroup direction="horizontal" className="h-full">
               {/* Left Sidebar - Selected Item & Keypad */}
@@ -431,9 +431,9 @@ export default function PointOfSale() {
                     </div>
                   </div>
 
-                  {/* Products Grid - Compact */}
-                  <div className="p-4 h-[calc(100%-80px)] overflow-auto">
-                    <div className="grid grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {/* Products Grid - Compact - 7 cards per column */}
+                  <div className="p-2 h-[calc(100%-60px)] overflow-auto">
+                    <div className="grid grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                       {filteredProducts.map((product) => {
                         const stock = getProductStock(product.id);
                         const inCart = cart.find(item => item.product.id === product.id);
@@ -446,22 +446,22 @@ export default function PointOfSale() {
                             }`}
                             onClick={() => addToCart(product.id)}
                           >
-                            <CardContent className="p-3">
+                            <CardContent className="p-2">
                               <div className="text-center">
-                                <div className="w-12 h-12 bg-muted/50 rounded-lg mb-2 mx-auto flex items-center justify-center">
-                                  <Package className="h-6 w-6 text-muted-foreground" />
+                                <div className="w-8 h-8 bg-muted/50 rounded-md mb-1 mx-auto flex items-center justify-center">
+                                  <Package className="h-4 w-4 text-muted-foreground" />
                                 </div>
-                                <h3 className="font-medium text-xs truncate mb-1" title={product.name}>
+                                <h3 className="font-medium text-[10px] truncate mb-1 leading-tight" title={product.name}>
                                   {product.name}
                                 </h3>
-                                <div className="text-xs text-muted-foreground mb-1">
+                                <div className="text-[9px] text-muted-foreground mb-1">
                                   Stock: {stock}
                                 </div>
-                                <div className="font-bold text-sm text-primary">
+                                <div className="font-bold text-[11px] text-primary">
                                   {formatCurrency(product.selling_price)}
                                 </div>
                                 {inCart && (
-                                  <Badge variant="secondary" className="mt-1 text-xs">
+                                  <Badge variant="secondary" className="mt-1 text-[8px] px-1 py-0">
                                     {inCart.quantity} in cart
                                   </Badge>
                                 )}
