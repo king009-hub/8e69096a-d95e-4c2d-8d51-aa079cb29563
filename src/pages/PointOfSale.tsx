@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Search, Plus, Minus, Trash2, Monitor, Package, Printer, CreditCard } from "lucide-react";
+import { Search, Plus, Minus, Trash2, Monitor, Package, Printer, CreditCard, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
 import { CustomerDisplay } from "@/components/pos/CustomerDisplay";
@@ -305,7 +305,37 @@ export default function PointOfSale() {
                         <RadioGroupItem value="card" id="card" />
                         <Label htmlFor="card">Card</Label>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="loan" id="loan" />
+                        <Label htmlFor="loan">Loan Payment</Label>
+                      </div>
                     </RadioGroup>
+                  </div>
+
+                  {/* Amount Input with Keypad */}
+                  <div>
+                    <Label className="text-sm font-medium">Amount Paid</Label>
+                    <Input 
+                      value={paidAmount}
+                      onChange={(e) => setPaidAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="h-10 text-lg font-mono text-center"
+                      readOnly
+                    />
+                    
+                    {/* Numeric Keypad */}
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "C"].map((key) => (
+                        <Button
+                          key={key}
+                          variant="outline"
+                          className="h-12 text-lg font-semibold"
+                          onClick={() => handleNumpadClick(key)}
+                        >
+                          {key}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -359,148 +389,79 @@ export default function PointOfSale() {
           </div>
         </div>
 
-        {/* Main Content - 70% width container */}
-        <div className="h-[calc(100%-40px)] flex justify-center">
-          <div className="w-[70%] h-full">
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              {/* Left Sidebar - Selected Item & Keypad */}
-              <ResizablePanel defaultSize={45} minSize={40} maxSize={50}>
-                <div className="h-full bg-card border-r border-border flex flex-col">
-                  {/* Selected Product Editor */}
-                  <div className="p-4 border-b border-border">
-                    <h3 className="font-semibold text-base mb-3">Selected Item</h3>
-                    {selectedProduct ? (
-                      <div className="space-y-3">
-                        <div className="p-3 bg-muted/30 rounded-lg">
-                          <h4 className="font-medium text-sm">{selectedProduct.product.name}</h4>
-                          <p className="text-xs text-muted-foreground">{selectedProduct.product.barcode}</p>
+        {/* Main Content - Full Width */}
+        <div className="h-[calc(100%-40px)]">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            {/* Expanded Left Panel - Cart Items */}
+            <ResizablePanel defaultSize={60} minSize={50} maxSize={70}>
+              <div className="h-full bg-card border-r border-border flex flex-col">
+                <div className="p-3 border-b border-border">
+                  <h3 className="font-semibold text-sm">Cart Items</h3>
+                </div>
+                
+                {/* Cart Items List - One Column Layout */}
+                <div className="flex-1 overflow-auto p-3">
+                  <div className="space-y-2">
+                    {cart.map((item) => (
+                      <div
+                        key={item.product.id}
+                        className="flex items-center justify-between p-3 rounded-lg border border-border bg-background hover:bg-muted/50"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-sm truncate">{item.product.name}</h4>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <Label className="text-xs">Qty</Label>
-                            <div className="flex items-center gap-1">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="h-7 w-7 p-0"
-                                onClick={() => updateSelectedProduct({ quantity: selectedProduct.quantity - 1 })}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <Input 
-                                value={selectedProduct.quantity}
-                                onChange={(e) => updateSelectedProduct({ quantity: parseInt(e.target.value) || 0 })}
-                                className="h-7 text-center text-xs"
-                              />
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="h-7 w-7 p-0"
-                                onClick={() => updateSelectedProduct({ quantity: selectedProduct.quantity + 1 })}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Price</Label>
-                            <Input 
-                              value={selectedProduct.unit_price}
-                              onChange={(e) => updateSelectedProduct({ unit_price: parseFloat(e.target.value) || 0 })}
-                              className="h-7 text-xs"
-                            />
-                          </div>
+                        
+                        <div className="flex items-center gap-2 ml-3">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-6 w-6 p-0"
+                            onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span 
+                            className="text-sm font-medium cursor-pointer min-w-[30px] text-center"
+                            onClick={() => addToCart(item.product.id)}
+                          >
+                            {item.quantity}
+                          </span>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-6 w-6 p-0"
+                            onClick={() => addToCart(item.product.id)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
                         </div>
+                        
+                        <div className="text-sm font-medium ml-3 min-w-[80px] text-right">
+                          {formatCurrency(item.unit_price)}
+                        </div>
+                        
                         <Button 
-                          variant="destructive" 
                           size="sm" 
-                          className="w-full h-7 text-xs"
-                          onClick={() => {
-                            removeFromCart(selectedProduct.product.id);
-                            setSelectedProduct(null);
-                          }}
+                          variant="ghost"
+                          className="h-6 w-6 p-0 ml-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => removeFromCart(item.product.id)}
                         >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Remove
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Select a product to edit</p>
+                    ))}
+                    {cart.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-8">Cart is empty</p>
                     )}
                   </div>
-
-                  {/* Cart Items - Compact */}
-                  <div className="flex-1 overflow-auto p-4">
-                    <div className="space-y-2">
-                      {cart.map((item) => (
-                        <div
-                          key={item.product.id}
-                          onClick={() => selectCartItem(item)}
-                          className={`p-2 rounded cursor-pointer border text-xs ${
-                            selectedProduct?.product.id === item.product.id 
-                              ? 'bg-primary/10 border-primary' 
-                              : 'bg-background border-border hover:bg-muted/50'
-                          }`}
-                        >
-                          <div className="font-medium truncate">{item.product.name}</div>
-                          <div className="text-muted-foreground">
-                            {item.quantity} x {formatCurrency(item.unit_price)} = {formatCurrency(item.quantity * item.unit_price)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Numeric Keypad */}
-                  <div className="p-4 border-t border-border">
-                    <div className="mb-3">
-                      <Label className="text-xs">Amount Paid</Label>
-                      <Input 
-                        value={paidAmount}
-                        onChange={(e) => setPaidAmount(e.target.value)}
-                        placeholder="0.00"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="grid grid-cols-3 gap-1">
-                      {["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ".", "C"].map((num) => (
-                        <Button
-                          key={num}
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs"
-                          onClick={() => handleNumpadClick(num)}
-                        >
-                          {num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Customer Info - Compact */}
-                  <div className="p-4 border-t border-border">
-                    <div className="space-y-2">
-                      <Input
-                        placeholder="Customer name"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        className="h-8 text-xs"
-                      />
-                      <Input
-                        placeholder="Phone number"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                  </div>
                 </div>
-              </ResizablePanel>
+              </div>
+            </ResizablePanel>
 
-              <ResizableHandle withHandle />
+            <ResizableHandle withHandle />
 
-              {/* Right Panel - Products Grid */}
-              <ResizablePanel defaultSize={55} minSize={50}>
+            {/* Right Panel - Products Grid */}
+            <ResizablePanel defaultSize={40} minSize={30} maxSize={50}>
                 <div className="h-full bg-background">
                   {/* Search */}
                   <div className="p-4 border-b border-border">
@@ -559,7 +520,6 @@ export default function PointOfSale() {
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
-          </div>
         </div>
 
         {/* Customer Display Modal */}
