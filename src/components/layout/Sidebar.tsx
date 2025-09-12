@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   ScanLine,
+  CreditCard,
   Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Scanner", href: "/scanner", icon: ScanLine },
   { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Loan Management", href: "/loans", icon: CreditCard },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

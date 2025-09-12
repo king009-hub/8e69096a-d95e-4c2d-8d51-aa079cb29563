@@ -19,6 +19,7 @@ import { Search, Plus, Minus, Trash2, Monitor, Package, Printer, CreditCard, X }
 import { useToast } from "@/hooks/use-toast";
 import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
 import { CustomerDisplay } from "@/components/pos/CustomerDisplay";
+import { CreateLoanDialog } from "@/components/loans/CreateLoanDialog";
 
 export default function PointOfSale() {
   const { formatCurrency, posSettings, getCurrencySymbol } = useSettingsContext();
@@ -263,15 +264,16 @@ export default function PointOfSale() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-              <DialogTrigger asChild>
-                <Button
-                  disabled={cart.length === 0}
-                  className="h-10 px-6 bg-success hover:bg-success/90 text-success-foreground font-semibold"
-                >
-                  Complete Sale
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    disabled={cart.length === 0}
+                    className="h-10 px-6 bg-success hover:bg-success/90 text-success-foreground font-semibold"
+                  >
+                    Complete Sale
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
@@ -378,6 +380,16 @@ export default function PointOfSale() {
                 </div>
               </DialogContent>
             </Dialog>
+            
+            <CreateLoanDialog>
+              <Button 
+                className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                disabled={cart.length === 0}
+              >
+                Create Loan
+              </Button>
+            </CreateLoanDialog>
+            
             <Button
               variant="outline"
               onClick={() => setShowCustomerDisplay(!showCustomerDisplay)}
@@ -386,6 +398,7 @@ export default function PointOfSale() {
               <Monitor className="h-4 w-4 mr-2" />
               Display
             </Button>
+            </div>
           </div>
         </div>
 

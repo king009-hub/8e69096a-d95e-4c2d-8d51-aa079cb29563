@@ -56,6 +56,51 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_loans: {
+        Row: {
+          created_at: string
+          customer_id: string
+          due_date: string | null
+          id: string
+          interest_rate: number | null
+          loan_number: string
+          notes: string | null
+          paid_amount: number
+          remaining_amount: number
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          due_date?: string | null
+          id?: string
+          interest_rate?: number | null
+          loan_number: string
+          notes?: string | null
+          paid_amount?: number
+          remaining_amount?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          due_date?: string | null
+          id?: string
+          interest_rate?: number | null
+          loan_number?: string
+          notes?: string | null
+          paid_amount?: number
+          remaining_amount?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -161,6 +206,72 @@ export type Database = {
           user_id?: string | null
           vehicle_type?: string
           year?: number
+        }
+        Relationships: []
+      }
+      loan_items: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          id: string
+          loan_id: string
+          product_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          loan_id: string
+          product_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          loan_id?: string
+          product_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: []
+      }
+      loan_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          loan_id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string
+          reference_number: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          loan_id: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          reference_number?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          loan_id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          reference_number?: string | null
         }
         Relationships: []
       }
@@ -733,6 +844,10 @@ export type Database = {
       calculate_product_stock: {
         Args: { product_uuid: string }
         Returns: number
+      }
+      generate_loan_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       generate_sale_number: {
         Args: Record<PropertyKey, never>
