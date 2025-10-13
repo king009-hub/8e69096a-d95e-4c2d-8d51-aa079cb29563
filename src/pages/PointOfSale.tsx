@@ -605,9 +605,19 @@ export default function PointOfSale() {
                           >
                             <CardContent className="p-1.5">
                               <div className="text-center">
-                                <div className="w-6 h-6 bg-muted/50 rounded-md mb-0.5 mx-auto flex items-center justify-center">
-                                  <Package className="h-3 w-3 text-muted-foreground" />
-                                </div>
+                                {product.image_url ? (
+                                  <div className="w-10 h-10 bg-muted/50 rounded-md mb-0.5 mx-auto overflow-hidden">
+                                    <img 
+                                      src={product.image_url} 
+                                      alt={product.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-6 h-6 bg-muted/50 rounded-md mb-0.5 mx-auto flex items-center justify-center">
+                                    <Package className="h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                )}
                                 <h3 className="font-medium text-[9px] truncate mb-0.5 leading-tight" title={product.name}>
                                   {product.name}
                                 </h3>

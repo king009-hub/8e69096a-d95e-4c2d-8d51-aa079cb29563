@@ -10,17 +10,23 @@ import { useForm } from "react-hook-form";
 import { useProducts } from "@/hooks/useProducts";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { Product } from "@/types/inventory";
-import { Plus, Search, Edit, Trash2, Package, AlertTriangle, Layers } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, AlertTriangle, Layers, Upload, X } from "lucide-react";
 import { ProductBatchesDialog } from "@/components/products/ProductBatchesDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 type ProductFormData = Omit<Product, 'id' | 'created_at' | 'updated_at'>;
 
 export default function Products() {
   const { formatCurrency, formatDate, stockSettings } = useSettingsContext();
   const { products, loading, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const form = useForm<ProductFormData>({
     defaultValues: {
@@ -42,12 +48,56 @@ export default function Products() {
     product.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const onSubmit = async (data: ProductFormData) => {
     try {
+      let imageUrl = editingProduct?.image_url;
+      
+      // Upload image if a new one was selected
+      if (imageFile) {
+        const uploadedUrl = await uploadImage(imageFile);
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        }
+      }
+
       // Convert empty string expiry_date to undefined/null for database
       const productData = {
         ...data,
         expiry_date: data.expiry_date && data.expiry_date.trim() !== '' ? data.expiry_date : undefined,
+        image_url: imageUrl || undefined,
       };
       
       if (editingProduct) {
@@ -57,6 +107,8 @@ export default function Products() {
       }
       setIsDialogOpen(false);
       setEditingProduct(null);
+      setImageFile(null);
+      setImagePreview(null);
       form.reset();
     } catch (error) {
       console.error('Error saving product:', error);
@@ -65,6 +117,8 @@ export default function Products() {
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
+    setImagePreview(product.image_url || null);
+    setImageFile(null);
     form.reset({
       name: product.name,
       barcode: product.barcode || "",
@@ -87,8 +141,27 @@ export default function Products() {
 
   const handleAddNew = () => {
     setEditingProduct(null);
+    setImageFile(null);
+    setImagePreview(null);
     form.reset();
     setIsDialogOpen(true);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
   };
 
       if (loading) {
@@ -262,22 +335,54 @@ export default function Products() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Electronics, Food, etc." />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
                 <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Electronics, Food, etc." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel>Product Image (Optional)</FormLabel>
+                {imagePreview ? (
+                  <div className="relative w-32 h-32 border rounded-md overflow-hidden">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6"
+                      onClick={removeImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed rounded-md p-4">
+                    <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Click to upload image</span>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              <FormField
                   control={form.control}
                   name="expiry_date"
                   render={({ field }) => (
@@ -300,8 +405,8 @@ export default function Products() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="order-1 sm:order-2">
-                    {editingProduct ? "Update Product" : "Add Product"}
+                  <Button type="submit" className="order-1 sm:order-2" disabled={uploading}>
+                    {uploading ? "Uploading..." : editingProduct ? "Update Product" : "Add Product"}
                   </Button>
                 </div>
               </form>
