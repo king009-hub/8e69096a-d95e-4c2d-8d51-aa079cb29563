@@ -588,9 +588,9 @@ export default function PointOfSale() {
                     </div>
                   </div>
 
-                  {/* Products Grid - Compact - 7 cards per column */}
-                  <div className="p-2 h-[calc(100%-60px)] overflow-auto">
-                    <div className="grid grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                  {/* Products Grid - Compact - 9 cards per column */}
+                  <div className="p-1.5 h-[calc(100%-60px)] overflow-auto">
+                    <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5">
                       {filteredProducts.map((product) => {
                         const stock = getProductStock(product.id);
                         const inCart = cart.find(item => item.product.id === product.id);
@@ -599,27 +599,27 @@ export default function PointOfSale() {
                           <Card
                             key={product.id}
                             className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${
-                              inCart ? 'ring-2 ring-primary bg-primary/5' : ''
+                              inCart ? 'ring-1 ring-primary bg-primary/5' : ''
                             }`}
                             onClick={() => addToCart(product.id)}
                           >
-                            <CardContent className="p-2">
+                            <CardContent className="p-1.5">
                               <div className="text-center">
-                                <div className="w-8 h-8 bg-muted/50 rounded-md mb-1 mx-auto flex items-center justify-center">
-                                  <Package className="h-4 w-4 text-muted-foreground" />
+                                <div className="w-6 h-6 bg-muted/50 rounded-md mb-0.5 mx-auto flex items-center justify-center">
+                                  <Package className="h-3 w-3 text-muted-foreground" />
                                 </div>
-                                <h3 className="font-medium text-[10px] truncate mb-1 leading-tight" title={product.name}>
+                                <h3 className="font-medium text-[9px] truncate mb-0.5 leading-tight" title={product.name}>
                                   {product.name}
                                 </h3>
-                                <div className="text-[9px] text-muted-foreground mb-1">
+                                <div className="text-[8px] text-muted-foreground mb-0.5">
                                   Stock: {stock}
                                 </div>
-                                <div className="font-bold text-[11px] text-primary">
+                                <div className="font-bold text-[9px] text-primary">
                                   {formatCurrency(product.selling_price)}
                                 </div>
                                 {inCart && (
-                                  <Badge variant="secondary" className="mt-1 text-[8px] px-1 py-0">
-                                    {inCart.quantity} in cart
+                                  <Badge variant="secondary" className="mt-0.5 text-[7px] px-0.5 py-0 h-3">
+                                    {inCart.quantity}
                                   </Badge>
                                 )}
                               </div>
