@@ -44,10 +44,16 @@ export default function Products() {
 
   const onSubmit = async (data: ProductFormData) => {
     try {
+      // Convert empty string expiry_date to undefined/null for database
+      const productData = {
+        ...data,
+        expiry_date: data.expiry_date && data.expiry_date.trim() !== '' ? data.expiry_date : undefined,
+      };
+      
       if (editingProduct) {
-        await updateProduct(editingProduct.id, data);
+        await updateProduct(editingProduct.id, productData);
       } else {
-        await addProduct(data);
+        await addProduct(productData);
       }
       setIsDialogOpen(false);
       setEditingProduct(null);
@@ -276,7 +282,7 @@ export default function Products() {
                   name="expiry_date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Expiry Date</FormLabel>
+                      <FormLabel>Expiry Date (Optional)</FormLabel>
                       <FormControl>
                         <Input {...field} type="date" />
                       </FormControl>
