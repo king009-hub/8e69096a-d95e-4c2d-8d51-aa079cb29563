@@ -50,6 +50,7 @@ export default function PointOfSale() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [tinNumber, setTinNumber] = useState("");
   const [receiptPhone, setReceiptPhone] = useState("");
+  const [splitPayments, setSplitPayments] = useState<Array<{ method: string; amount: number }>>([]);
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -129,6 +130,35 @@ export default function PointOfSale() {
     }
   };
 
+  const addSplitPayment = () => {
+    const amount = parseFloat(paidAmount);
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+    if (totalPaid + amount > total) {
+      toast({
+        title: "Error",
+        description: "Total paid amount exceeds sale total",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSplitPayments(prev => [...prev, { method: paymentMethod, amount }]);
+    setPaidAmount("");
+  };
+
+  const removeSplitPayment = (index: number) => {
+    setSplitPayments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
@@ -172,11 +202,24 @@ export default function PointOfSale() {
   const taxAmount = posSettings.enable_tax ? (taxableAmount * (posSettings.tax_rate || 0)) / 100 : 0;
   const total = taxableAmount + taxAmount;
 
+  const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+  const remainingAmount = total - totalPaid;
+
   const handleCompleteSale = async () => {
     if (cart.length === 0) {
       toast({
         title: "Error",
         description: "Cart is empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if full amount is paid for split payments
+    if (splitPayments.length > 0 && remainingAmount > 0) {
+      toast({
+        title: "Error",
+        description: `Remaining amount: ${formatCurrency(remainingAmount)}`,
         variant: "destructive",
       });
       return;
@@ -193,6 +236,11 @@ export default function PointOfSale() {
         customerId = customer.id;
       }
 
+      // Determine payment method for database - if split, store as JSON
+      const finalPaymentMethod = splitPayments.length > 0 
+        ? JSON.stringify(splitPayments) 
+        : paymentMethod;
+
       const saleData = {
         customer_name: customerName || undefined,
         customer_phone: customerPhone || undefined,
@@ -200,7 +248,7 @@ export default function PointOfSale() {
         discount: discountAmount,
         tax_amount: taxAmount,
         final_amount: total,
-        payment_method: paymentMethod,
+        payment_method: finalPaymentMethod,
         sale_date: new Date().toISOString(),
         notes: undefined
       };
@@ -226,7 +274,10 @@ export default function PointOfSale() {
           taxAmount,
           taxName: posSettings.tax_name || "Tax",
           total,
-          paymentMethod,
+          paymentMethod: splitPayments.length > 0 ? "Split Payment" : paymentMethod,
+          splitPayments: splitPayments.length > 0 ? splitPayments : undefined,
+          tinNumber: tinNumber || undefined,
+          receiptPhone: receiptPhone || undefined,
           saleDate: sale.sale_date
         });
         receiptPrint.printReceipt();
@@ -243,6 +294,7 @@ export default function PointOfSale() {
         setPaidAmount("");
         setTinNumber("");
         setReceiptPhone("");
+        setSplitPayments([]);
       }, 1000);
     } catch (error) {
       toast({
@@ -286,7 +338,32 @@ export default function PointOfSale() {
                     <div className="text-2xl font-bold text-primary">
                       {formatCurrency(total)}
                     </div>
+                    {splitPayments.length > 0 && (
+                      <div className="text-sm mt-2">
+                        <div className="text-muted-foreground">Remaining: {formatCurrency(remainingAmount)}</div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Split Payments List */}
+                  {splitPayments.length > 0 && (
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium">Payments Added:</Label>
+                      {splitPayments.map((payment, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                          <span className="text-sm">{payment.method.toUpperCase()}: {formatCurrency(payment.amount)}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSplitPayment(index)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
                   <div>
                     <Label className="text-sm font-medium">Payment Method</Label>
@@ -322,7 +399,7 @@ export default function PointOfSale() {
 
                   {/* Amount Input with Keypad */}
                   <div>
-                    <Label className="text-sm font-medium">Amount Paid</Label>
+                    <Label className="text-sm font-medium">Amount for {paymentMethod.toUpperCase()}</Label>
                     <Input 
                       value={paidAmount}
                       onChange={(e) => setPaidAmount(e.target.value)}
@@ -332,7 +409,7 @@ export default function PointOfSale() {
                     />
                     
                     {/* Numeric Keypad */}
-                    <div className="grid grid-cols-3 gap-1.5 mt-3">
+                    <div className="grid grid-cols-3 gap-1.5 mt-2">
                       {["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "C"].map((key) => (
                         <Button
                           key={key}
@@ -344,6 +421,17 @@ export default function PointOfSale() {
                         </Button>
                       ))}
                     </div>
+
+                    {/* Add Payment Button for Split Payments */}
+                    <Button
+                      onClick={addSplitPayment}
+                      variant="secondary"
+                      className="w-full mt-2"
+                      disabled={!paidAmount || parseFloat(paidAmount) <= 0}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Payment
+                    </Button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -371,13 +459,18 @@ export default function PointOfSale() {
                     <Button 
                       onClick={handleCompleteSale}
                       className="flex-1 bg-success hover:bg-success/90"
+                      disabled={splitPayments.length === 0 && !paidAmount}
                     >
                       <Printer className="h-4 w-4 mr-2" />
-                      Pay & Print
+                      {splitPayments.length > 0 && remainingAmount === 0 ? "Complete & Print" : "Pay & Print"}
                     </Button>
                     <Button 
                       variant="outline" 
-                      onClick={() => setShowPaymentDialog(false)}
+                      onClick={() => {
+                        setShowPaymentDialog(false);
+                        setSplitPayments([]);
+                        setPaidAmount("");
+                      }}
                       className="flex-1"
                     >
                       Cancel

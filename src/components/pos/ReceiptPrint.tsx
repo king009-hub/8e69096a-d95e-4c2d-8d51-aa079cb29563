@@ -12,6 +12,9 @@ interface ReceiptPrintProps {
   taxName?: string;
   total: number;
   paymentMethod: string;
+  splitPayments?: Array<{ method: string; amount: number }>;
+  tinNumber?: string;
+  receiptPhone?: string;
   saleDate: string;
 }
 
@@ -26,6 +29,9 @@ export const ReceiptPrint = ({
   taxName = "Tax",
   total,
   paymentMethod,
+  splitPayments,
+  tinNumber,
+  receiptPhone,
   saleDate
 }: ReceiptPrintProps) => {
   
@@ -108,6 +114,8 @@ export const ReceiptPrint = ({
           <div>Cashier: Admin</div>
           ${customerName ? `<div>Customer: ${customerName}</div>` : ''}
           ${customerPhone ? `<div>Phone: ${customerPhone}</div>` : ''}
+          ${tinNumber ? `<div>TIN: ${tinNumber}</div>` : ''}
+          ${receiptPhone ? `<div>Receipt Phone: ${receiptPhone}</div>` : ''}
           
           <div class="line"></div>
           
@@ -144,10 +152,20 @@ export const ReceiptPrint = ({
             <span>TOTAL:</span>
             <span>$${total.toFixed(2)}</span>
           </div>
-          <div class="item-row">
-            <span>Payment (${paymentMethod.toUpperCase()}):</span>
-            <span>$${total.toFixed(2)}</span>
-          </div>
+          ${splitPayments && splitPayments.length > 0 ? `
+            <div class="bold" style="margin-top: 4px;">Payment Details:</div>
+            ${splitPayments.map(p => `
+              <div class="item-row">
+                <span>${p.method.toUpperCase()}:</span>
+                <span>$${p.amount.toFixed(2)}</span>
+              </div>
+            `).join('')}
+          ` : `
+            <div class="item-row">
+              <span>Payment (${paymentMethod.toUpperCase()}):</span>
+              <span>$${total.toFixed(2)}</span>
+            </div>
+          `}
           
           <div class="line"></div>
           <div class="center footer">
