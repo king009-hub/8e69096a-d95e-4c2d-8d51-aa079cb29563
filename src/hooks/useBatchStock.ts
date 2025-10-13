@@ -65,6 +65,21 @@ export function useBatchStock() {
 
   useEffect(() => {
     fetchBatchStock();
+
+    // Subscribe to real-time changes in product_batches
+    const subscription = supabase
+      .channel('product_batches_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'product_batches' },
+        () => {
+          fetchBatchStock();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return {
