@@ -290,7 +290,7 @@ export default function PointOfSale() {
                   
                   <div>
                     <Label className="text-sm font-medium">Payment Method</Label>
-                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
+                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 flex flex-col gap-2">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="cash" id="cash" />
                         <Label htmlFor="cash">Cash</Label>
