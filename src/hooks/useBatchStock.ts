@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Product } from "@/types/inventory";
 
 interface BatchStockData {
   [productId: string]: {
@@ -9,7 +10,7 @@ interface BatchStockData {
   };
 }
 
-export function useBatchStock() {
+export function useBatchStock(products?: Product[]) {
   const [batchStock, setBatchStock] = useState<BatchStockData>({});
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +53,14 @@ export function useBatchStock() {
   };
 
   const getProductStock = (productId: string) => {
-    return batchStock[productId]?.totalStock || 0;
+    // If there are batches for this product, use batch stock
+    if (batchStock[productId]?.totalStock > 0) {
+      return batchStock[productId].totalStock;
+    }
+    
+    // Otherwise, fallback to product's stock_quantity
+    const product = products?.find(p => p.id === productId);
+    return product?.stock_quantity || 0;
   };
 
   const getProductNextExpiry = (productId: string) => {

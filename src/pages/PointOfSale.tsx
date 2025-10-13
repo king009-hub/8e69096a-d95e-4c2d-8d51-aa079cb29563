@@ -27,7 +27,7 @@ export default function PointOfSale() {
   const { createSale } = useSales();
   const { findOrCreateCustomer } = useCustomers();
   const { getBatchesForSale } = useProductBatches();
-  const { getProductStock } = useBatchStock();
+  const { getProductStock } = useBatchStock(products);
   const { toast } = useToast();
   
   // Helper function for printing (to avoid double currency symbols)
