@@ -290,28 +290,32 @@ export default function PointOfSale() {
                   
                   <div>
                     <Label className="text-sm font-medium">Payment Method</Label>
-                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 flex flex-col gap-2">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="cash" id="cash" />
-                        <Label htmlFor="cash">Cash</Label>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="cash" id="cash" />
+                          <Label htmlFor="cash">Cash</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="momo" id="momo" />
+                          <Label htmlFor="momo">MOMO</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="airtel" id="airtel" />
+                          <Label htmlFor="airtel">Airtel Money</Label>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="momo" id="momo" />
-                        <Label htmlFor="momo">Mobile Money</Label>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="card" id="card" />
+                          <Label htmlFor="card">Card</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="loan" id="loan" />
+                          <Label htmlFor="loan">Loan Payment</Label>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="airtel" id="airtel" />
-                        <Label htmlFor="airtel">Airtel Money</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="card" id="card" />
-                        <Label htmlFor="card">Card</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="loan" id="loan" />
-                        <Label htmlFor="loan">Loan Payment</Label>
-                      </div>
-                    </RadioGroup>
+                    </div>
                   </div>
 
                   {/* Amount Input with Keypad */}
@@ -326,12 +330,12 @@ export default function PointOfSale() {
                     />
                     
                     {/* Numeric Keypad */}
-                    <div className="grid grid-cols-3 gap-2 mt-3">
+                    <div className="grid grid-cols-3 gap-1.5 mt-3">
                       {["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "C"].map((key) => (
                         <Button
                           key={key}
                           variant="outline"
-                          className="h-12 text-lg font-semibold"
+                          className="h-9 text-base font-semibold"
                           onClick={() => handleNumpadClick(key)}
                         >
                           {key}
