@@ -290,32 +290,34 @@ export default function PointOfSale() {
                   
                   <div>
                     <Label className="text-sm font-medium">Payment Method</Label>
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="cash" id="cash" />
-                          <Label htmlFor="cash">Cash</Label>
+                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <div className="grid grid-cols-2 gap-3 mt-2">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="cash" id="cash" />
+                            <Label htmlFor="cash">Cash</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="momo" id="momo" />
+                            <Label htmlFor="momo">MOMO</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="airtel" id="airtel" />
+                            <Label htmlFor="airtel">Airtel Money</Label>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="momo" id="momo" />
-                          <Label htmlFor="momo">MOMO</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="airtel" id="airtel" />
-                          <Label htmlFor="airtel">Airtel Money</Label>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="card" id="card" />
+                            <Label htmlFor="card">Card</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="loan" id="loan" />
+                            <Label htmlFor="loan">Loan Payment</Label>
+                          </div>
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="card" id="card" />
-                          <Label htmlFor="card">Card</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="loan" id="loan" />
-                          <Label htmlFor="loan">Loan Payment</Label>
-                        </div>
-                      </div>
-                    </div>
+                    </RadioGroup>
                   </div>
 
                   {/* Amount Input with Keypad */}
