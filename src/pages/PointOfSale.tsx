@@ -57,7 +57,7 @@ export default function PointOfSale() {
     product.barcode?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const addToCart = (productId: string) => {
+  const addToCart = async (productId: string) => {
     const product = products.find(p => p.id === productId);
     if (!product) {
       toast({
@@ -72,11 +72,11 @@ export default function PointOfSale() {
     const newQuantity = existingItem ? existingItem.quantity + 1 : 1;
     
     // Check batch availability using FEFO logic
-    const { canFulfill } = getBatchesForSale(productId, newQuantity);
+    const { canFulfill } = await getBatchesForSale(productId, newQuantity);
     if (!canFulfill) {
       toast({
         title: "Error",
-        description: "Insufficient stock in batches",
+        description: "Insufficient stock",
         variant: "destructive",
       });
       return;
@@ -159,18 +159,18 @@ export default function PointOfSale() {
     setSplitPayments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = async (productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
     }
 
     // Check batch availability using FEFO logic
-    const { canFulfill } = getBatchesForSale(productId, quantity);
+    const { canFulfill } = await getBatchesForSale(productId, quantity);
     if (!canFulfill) {
       toast({
         title: "Error",
-        description: "Cannot exceed available stock in batches",
+        description: "Cannot exceed available stock",
         variant: "destructive",
       });
       return;

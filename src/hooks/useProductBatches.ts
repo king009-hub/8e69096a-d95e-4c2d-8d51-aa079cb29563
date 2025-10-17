@@ -111,7 +111,7 @@ export function useProductBatches(productId?: string) {
     }
   };
 
-  const getBatchesForSale = (productId: string, quantity: number) => {
+  const getBatchesForSale = async (productId: string, quantity: number) => {
     // FEFO (First Expired First Out) logic
     const productBatches = batches
       .filter(b => b.product_id === productId && b.quantity > 0)
@@ -131,6 +131,23 @@ export function useProductBatches(productId?: string) {
       const takeQuantity = Math.min(batch.quantity, remainingQuantity);
       selectedBatches.push({ batch, quantity: takeQuantity });
       remainingQuantity -= takeQuantity;
+    }
+
+    // If no batches exist, check the product's main stock_quantity
+    if (productBatches.length === 0) {
+      try {
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', productId)
+          .single();
+        
+        if (product && product.stock_quantity >= quantity) {
+          return { selectedBatches: [], canFulfill: true };
+        }
+      } catch (error) {
+        console.error('Error checking product stock:', error);
+      }
     }
 
     return { selectedBatches, canFulfill: remainingQuantity === 0 };
