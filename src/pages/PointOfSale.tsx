@@ -215,14 +215,29 @@ export default function PointOfSale() {
       return;
     }
 
-    // Check if full amount is paid for split payments
-    if (splitPayments.length > 0 && remainingAmount > 0) {
-      toast({
-        title: "Error",
-        description: `Remaining amount: ${formatCurrency(remainingAmount)}`,
-        variant: "destructive",
-      });
-      return;
+    // For split payments, check if fully paid
+    if (splitPayments.length > 0) {
+      if (remainingAmount > 0.01) {
+        toast({
+          title: "Error",
+          description: `Remaining amount: ${formatCurrency(remainingAmount)}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // For single payment, add the paid amount as a split payment
+      const amount = parseFloat(paidAmount);
+      if (!amount || amount < total - 0.01) {
+        toast({
+          title: "Error",
+          description: "Please enter the full payment amount",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Add the single payment to splitPayments for processing
+      setSplitPayments([{ method: paymentMethod, amount: total }]);
     }
 
     setShowPaymentDialog(false);
@@ -326,14 +341,14 @@ export default function PointOfSale() {
                     Complete Sale
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
+              <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
                     Complete Payment
                   </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                   <div className="text-center p-4 bg-muted/30 rounded-lg">
                     <div className="text-2xl font-bold text-primary">
                       {formatCurrency(total)}
@@ -454,28 +469,28 @@ export default function PointOfSale() {
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={handleCompleteSale}
-                      className="flex-1 bg-success hover:bg-success/90"
-                      disabled={splitPayments.length === 0 && !paidAmount}
-                    >
-                      <Printer className="h-4 w-4 mr-2" />
-                      {splitPayments.length > 0 && remainingAmount === 0 ? "Complete & Print" : "Pay & Print"}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setShowPaymentDialog(false);
-                        setSplitPayments([]);
-                        setPaidAmount("");
-                      }}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
+                <div className="flex gap-2 flex-shrink-0 pt-4 border-t">
+                  <Button 
+                    onClick={handleCompleteSale}
+                    className="flex-1 bg-success hover:bg-success/90"
+                    disabled={remainingAmount > 0.01}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Complete & Print
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowPaymentDialog(false);
+                      setSplitPayments([]);
+                      setPaidAmount("");
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
