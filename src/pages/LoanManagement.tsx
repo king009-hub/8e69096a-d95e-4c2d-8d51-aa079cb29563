@@ -20,24 +20,27 @@ export default function LoanManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLoan, setSelectedLoan] = useState<string | null>(null);
 
-  const filteredLoans = loans.filter(loan =>
-    loan.loan_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loan.customer?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loan.customer?.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredLoans = loans.filter(loan => {
+    const search = searchTerm.toLowerCase();
+    return (
+      loan.loan_number?.toLowerCase().includes(search) ||
+      loan.customer?.name?.toLowerCase().includes(search) ||
+      loan.customer?.phone?.toLowerCase().includes(search)
+    );
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-blue-100 text-blue-800';
+        return 'default';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'outline';
       case 'overdue':
-        return 'bg-red-100 text-red-800';
+        return 'destructive';
       case 'cancelled':
-        return 'bg-gray-100 text-gray-800';
+        return 'secondary';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'secondary';
     }
   };
 
@@ -156,7 +159,7 @@ export default function LoanManagement() {
                       {loan.due_date ? format(new Date(loan.due_date), 'MMM dd, yyyy') : '-'}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(loan.status)}>
+                      <Badge variant={getStatusColor(loan.status) as any}>
                         {loan.status}
                       </Badge>
                     </TableCell>

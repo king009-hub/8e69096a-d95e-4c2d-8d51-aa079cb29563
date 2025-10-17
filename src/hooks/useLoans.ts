@@ -20,7 +20,25 @@ export function useLoans() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setLoans((data || []) as any);
+      
+      // Update overdue status for active loans
+      const loansData = (data || []) as any;
+      const now = new Date();
+      
+      for (const loan of loansData) {
+        if (loan.status === 'active' && loan.due_date) {
+          const dueDate = new Date(loan.due_date);
+          if (dueDate < now && loan.remaining_amount > 0) {
+            await supabase
+              .from('customer_loans')
+              .update({ status: 'overdue' })
+              .eq('id', loan.id);
+            loan.status = 'overdue';
+          }
+        }
+      }
+      
+      setLoans(loansData);
     } catch (error) {
       console.error('Error fetching loans:', error);
       toast({
@@ -77,17 +95,55 @@ export function useLoans() {
 
       if (itemsError) throw itemsError;
 
-      // Create stock movements for each item
+      // Create stock movements and deduct from batches for each item
       for (const item of items) {
-        await supabase
-          .from('stock_movements')
-          .insert({
-            product_id: item.product.id,
-            movement_type: 'out',
-            quantity: item.quantity,
-            reason: 'Loan',
-            reference_id: loan.id
-          });
+        // If product has batches, deduct from them (FIFO)
+        const { data: batches } = await supabase
+          .from('product_batches')
+          .select('*')
+          .eq('product_id', item.product.id)
+          .gt('quantity', 0)
+          .order('received_date', { ascending: true });
+
+        let remainingQty = item.quantity;
+        
+        if (batches && batches.length > 0) {
+          // Deduct from batches
+          for (const batch of batches) {
+            if (remainingQty <= 0) break;
+            
+            const deductQty = Math.min(batch.quantity, remainingQty);
+            
+            await supabase
+              .from('product_batches')
+              .update({ quantity: batch.quantity - deductQty })
+              .eq('id', batch.id);
+            
+            await supabase
+              .from('stock_movements')
+              .insert({
+                product_id: item.product.id,
+                batch_id: batch.id,
+                movement_type: 'out',
+                quantity: deductQty,
+                reason: 'Loan',
+                reference_id: loan.id
+              });
+            
+            remainingQty -= deductQty;
+          }
+        } else {
+          // No batches, deduct from main stock
+          await supabase
+            .from('stock_movements')
+            .insert({
+              product_id: item.product.id,
+              movement_type: 'out',
+              quantity: item.quantity,
+              reason: 'Loan',
+              reference_id: loan.id
+            });
+        }
       }
 
       toast({
