@@ -217,6 +217,9 @@ export default function PointOfSale() {
       return;
     }
 
+    // Prepare the payments array for processing
+    let paymentsToProcess = [...splitPayments];
+    
     // For split payments, check if fully paid
     if (splitPayments.length > 0) {
       if (remainingAmount > 0.01) {
@@ -228,7 +231,7 @@ export default function PointOfSale() {
         return;
       }
     } else {
-      // For single payment, add the paid amount as a split payment
+      // For single payment, add the paid amount
       const amount = parseFloat(paidAmount);
       if (!amount || amount < total - 0.01) {
         toast({
@@ -238,8 +241,20 @@ export default function PointOfSale() {
         });
         return;
       }
-      // Add the single payment to splitPayments for processing
-      setSplitPayments([{ method: paymentMethod, amount: total }]);
+      // Use single payment for processing
+      paymentsToProcess = [{ method: paymentMethod, amount: total }];
+    }
+
+    // Check if loan payment is being used and validate customer info BEFORE creating sale
+    const hasLoanPayment = paymentsToProcess.some(p => p.method === 'loan');
+    
+    if (hasLoanPayment && !customerName.trim()) {
+      toast({
+        title: "Error",
+        description: "Customer name is required for loan payment",
+        variant: "destructive",
+      });
+      return;
     }
 
     setShowPaymentDialog(false);
@@ -253,10 +268,10 @@ export default function PointOfSale() {
         customerId = customer.id;
       }
 
-      // Determine payment method for database - if split, store as JSON
-      const finalPaymentMethod = splitPayments.length > 0 
-        ? JSON.stringify(splitPayments) 
-        : paymentMethod;
+      // Determine payment method for database - store as JSON if multiple payments
+      const finalPaymentMethod = paymentsToProcess.length > 1 
+        ? JSON.stringify(paymentsToProcess) 
+        : paymentsToProcess[0].method;
 
       const saleData = {
         customer_name: customerName || undefined,
@@ -274,21 +289,8 @@ export default function PointOfSale() {
       const sale = await createSale(saleData, cart, customerId);
       setLastSale({ ...sale, customer_name: customerName, customer_phone: customerPhone });
 
-      // Check if loan payment was used - if so, create loan automatically
-      const hasLoanPayment = splitPayments.some(p => p.method === 'loan') || 
-                             (splitPayments.length === 0 && paymentMethod === 'loan');
-      
-      if (hasLoanPayment) {
-        if (!customerId) {
-          toast({
-            title: "Error",
-            description: "Customer information is required for loan payment",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Create loan with the cart items
+      // Create loan if loan payment was used
+      if (hasLoanPayment && customerId) {
         await createLoan(
           customerId,
           cart,
