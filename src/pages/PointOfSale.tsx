@@ -6,6 +6,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { useProductBatches } from "@/hooks/useProductBatches";
 import { useBatchStock } from "@/hooks/useBatchStock";
 import { useSettingsContext } from "@/contexts/SettingsContext";
+import { useLoans } from "@/hooks/useLoans";
 import { CartItem } from "@/types/inventory";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export default function PointOfSale() {
   const { findOrCreateCustomer } = useCustomers();
   const { getBatchesForSale } = useProductBatches();
   const { getProductStock } = useBatchStock(products);
+  const { createLoan } = useLoans();
   const { toast } = useToast();
   
   // Helper function for printing (to avoid double currency symbols)
@@ -272,10 +274,39 @@ export default function PointOfSale() {
       const sale = await createSale(saleData, cart, customerId);
       setLastSale({ ...sale, customer_name: customerName, customer_phone: customerPhone });
 
-      toast({
-        title: "Success",
-        description: `Sale ${sale.sale_number} completed successfully`,
-      });
+      // Check if loan payment was used - if so, create loan automatically
+      const hasLoanPayment = splitPayments.some(p => p.method === 'loan') || 
+                             (splitPayments.length === 0 && paymentMethod === 'loan');
+      
+      if (hasLoanPayment) {
+        if (!customerId) {
+          toast({
+            title: "Error",
+            description: "Customer information is required for loan payment",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Create loan with the cart items
+        await createLoan(
+          customerId,
+          cart,
+          undefined, // due_date - can be set later
+          0, // interest_rate - can be set later
+          `Auto-created from sale ${sale.sale_number}`
+        );
+
+        toast({
+          title: "Success",
+          description: `Sale ${sale.sale_number} completed and loan created successfully`,
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Sale ${sale.sale_number} completed successfully`,
+        });
+      }
 
       // Auto-print receipt after successful sale
       setTimeout(() => {
@@ -360,24 +391,7 @@ export default function PointOfSale() {
                     )}
                   </div>
 
-                  {/* Split Payments List */}
-                  {splitPayments.filter(p => p.method !== 'cash').length > 0 && (
-                    <div className="space-y-1">
-                      {splitPayments.filter(p => p.method !== 'cash').map((payment, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                          <span className="text-sm">{payment.method.toUpperCase()}: {formatCurrency(payment.amount)}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeSplitPayment(splitPayments.indexOf(payment))}
-                            className="h-6 w-6 p-0"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {/* Split Payments List - Hidden, but payment methods are still recorded */}
                   
                   <div>
                     <Label className="text-sm font-medium">Payment Method</Label>
