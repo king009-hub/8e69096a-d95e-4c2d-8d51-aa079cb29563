@@ -341,7 +341,7 @@ export default function PointOfSale() {
                     Complete Sale
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="w-[450px] h-[750px] flex flex-col overflow-hidden">
+              <DialogContent className="w-[500px] h-[750px] flex flex-col overflow-hidden">
                 <DialogHeader className="flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
@@ -361,16 +361,15 @@ export default function PointOfSale() {
                   </div>
 
                   {/* Split Payments List */}
-                  {splitPayments.length > 0 && (
+                  {splitPayments.filter(p => p.method !== 'cash').length > 0 && (
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium">Payments Added:</Label>
-                      {splitPayments.map((payment, index) => (
+                      {splitPayments.filter(p => p.method !== 'cash').map((payment, index) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                           <span className="text-sm">{payment.method.toUpperCase()}: {formatCurrency(payment.amount)}</span>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeSplitPayment(index)}
+                            onClick={() => removeSplitPayment(splitPayments.indexOf(payment))}
                             className="h-6 w-6 p-0"
                           >
                             <X className="h-3 w-3" />
