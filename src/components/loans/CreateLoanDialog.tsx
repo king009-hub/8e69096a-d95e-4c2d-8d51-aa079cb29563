@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,23 +15,46 @@ import { X, Plus } from "lucide-react";
 
 interface CreateLoanDialogProps {
   children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  prefilledCart?: CartItem[];
+  preselectedCustomerId?: string;
+  onLoanCreated?: () => void;
 }
 
-export function CreateLoanDialog({ children }: CreateLoanDialogProps) {
+export function CreateLoanDialog({ 
+  children, 
+  open: controlledOpen, 
+  onOpenChange: controlledOnOpenChange,
+  prefilledCart = [],
+  preselectedCustomerId = "",
+  onLoanCreated
+}: CreateLoanDialogProps) {
   const { createLoan } = useLoans();
   const { customers } = useCustomers();
   const { products } = useProducts();
   const { formatCurrency } = useSettingsContext();
   
-  const [open, setOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
+  
+  const [selectedCustomer, setSelectedCustomer] = useState(preselectedCustomerId);
   const [selectedProduct, setSelectedProduct] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [dueDate, setDueDate] = useState("");
   const [interestRate, setInterestRate] = useState(0);
   const [notes, setNotes] = useState("");
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(prefilledCart);
   const [loading, setLoading] = useState(false);
+
+  // Update cart and customer when prefilled data changes
+  useEffect(() => {
+    if (open) {
+      setCart(prefilledCart);
+      setSelectedCustomer(preselectedCustomerId);
+    }
+  }, [open, prefilledCart, preselectedCustomerId]);
 
   const addToCart = () => {
     if (!selectedProduct) return;
@@ -89,6 +112,11 @@ export function CreateLoanDialog({ children }: CreateLoanDialogProps) {
         interestRate || undefined,
         notes || undefined
       );
+      
+      // Call the callback if provided
+      if (onLoanCreated) {
+        onLoanCreated();
+      }
       
       // Reset form
       setSelectedCustomer("");

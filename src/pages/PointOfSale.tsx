@@ -53,6 +53,8 @@ export default function PointOfSale() {
   const [tinNumber, setTinNumber] = useState("");
   const [receiptPhone, setReceiptPhone] = useState("");
   const [splitPayments, setSplitPayments] = useState<Array<{ method: string; amount: number }>>([]);
+  const [showLoanDialog, setShowLoanDialog] = useState(false);
+  const [pendingSaleData, setPendingSaleData] = useState<any>(null);
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -268,6 +270,24 @@ export default function PointOfSale() {
         customerId = customer.id;
       }
 
+      // If loan payment is selected, open loan dialog first
+      if (hasLoanPayment && customerId) {
+        // Store sale data to complete after loan is created
+        setPendingSaleData({
+          customerName,
+          customerPhone,
+          subtotal,
+          discountAmount,
+          taxAmount,
+          total,
+          cart,
+          customerId,
+          paymentsToProcess
+        });
+        setShowLoanDialog(true);
+        return;
+      }
+
       // Determine payment method for database - store as JSON if multiple payments
       const finalPaymentMethod = paymentsToProcess.length > 1 
         ? JSON.stringify(paymentsToProcess) 
@@ -289,26 +309,10 @@ export default function PointOfSale() {
       const sale = await createSale(saleData, cart, customerId);
       setLastSale({ ...sale, customer_name: customerName, customer_phone: customerPhone });
 
-      // Create loan if loan payment was used
-      if (hasLoanPayment && customerId) {
-        await createLoan(
-          customerId,
-          cart,
-          undefined, // due_date - can be set later
-          0, // interest_rate - can be set later
-          `Auto-created from sale ${sale.sale_number}`
-        );
-
-        toast({
-          title: "Success",
-          description: `Sale ${sale.sale_number} completed and loan created successfully`,
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: `Sale ${sale.sale_number} completed successfully`,
-        });
-      }
+      toast({
+        title: "Success",
+        description: `Sale ${sale.sale_number} completed successfully`,
+      });
 
       // Auto-print receipt after successful sale
       setTimeout(() => {
@@ -348,6 +352,91 @@ export default function PointOfSale() {
       toast({
         title: "Error",
         description: "Failed to complete sale",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLoanCreated = async () => {
+    if (!pendingSaleData) return;
+
+    const { 
+      customerName, 
+      customerPhone, 
+      subtotal, 
+      discountAmount, 
+      taxAmount, 
+      total, 
+      cart, 
+      customerId,
+      paymentsToProcess 
+    } = pendingSaleData;
+
+    try {
+      // Determine payment method for database
+      const finalPaymentMethod = paymentsToProcess.length > 1 
+        ? JSON.stringify(paymentsToProcess) 
+        : paymentsToProcess[0].method;
+
+      const saleData = {
+        customer_name: customerName || undefined,
+        customer_phone: customerPhone || undefined,
+        total_amount: subtotal,
+        discount: discountAmount,
+        tax_amount: taxAmount,
+        final_amount: total,
+        payment_method: finalPaymentMethod,
+        sale_date: new Date().toISOString(),
+        notes: undefined
+      };
+
+      const sale = await createSale(saleData, cart, customerId);
+      setLastSale({ ...sale, customer_name: customerName, customer_phone: customerPhone });
+
+      toast({
+        title: "Success",
+        description: `Loan created and sale ${sale.sale_number} completed successfully`,
+      });
+
+      // Auto-print receipt
+      setTimeout(() => {
+        const receiptPrint = ReceiptPrint({
+          saleNumber: sale.sale_number,
+          customerName: customerName || undefined,
+          customerPhone: customerPhone || undefined,
+          items: cart,
+          subtotal,
+          discount: discountAmount,
+          taxAmount,
+          taxName: posSettings.tax_name || "Tax",
+          total,
+          paymentMethod: paymentsToProcess.length > 1 ? "Split Payment" : paymentsToProcess[0].method,
+          splitPayments: paymentsToProcess.length > 1 ? paymentsToProcess : undefined,
+          tinNumber: tinNumber || undefined,
+          receiptPhone: receiptPhone || undefined,
+          saleDate: sale.sale_date
+        });
+        receiptPrint.printReceipt();
+      }, 500);
+
+      // Clear everything
+      setTimeout(() => {
+        setCart([]);
+        setCustomerName("");
+        setCustomerPhone("");
+        setDiscount(0);
+        setPaymentMethod(posSettings.default_payment_method);
+        setSelectedProduct(null);
+        setPaidAmount("");
+        setTinNumber("");
+        setReceiptPhone("");
+        setSplitPayments([]);
+        setPendingSaleData(null);
+      }, 1000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to complete sale after loan creation",
         variant: "destructive",
       });
     }
@@ -510,7 +599,13 @@ export default function PointOfSale() {
               </DialogContent>
             </Dialog>
             
-            <CreateLoanDialog>
+            <CreateLoanDialog
+              open={showLoanDialog}
+              onOpenChange={setShowLoanDialog}
+              prefilledCart={pendingSaleData?.cart || []}
+              preselectedCustomerId={pendingSaleData?.customerId || ""}
+              onLoanCreated={handleLoanCreated}
+            >
               <Button 
                 className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                 disabled={cart.length === 0}
