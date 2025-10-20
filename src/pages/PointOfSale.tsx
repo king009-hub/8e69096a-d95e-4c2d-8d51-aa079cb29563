@@ -341,14 +341,14 @@ export default function PointOfSale() {
                     Complete Sale
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader className="flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
                     Complete Payment
                   </DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2">
                   <div className="text-center p-4 bg-muted/30 rounded-lg">
                     <div className="text-2xl font-bold text-primary">
                       {formatCurrency(total)}
