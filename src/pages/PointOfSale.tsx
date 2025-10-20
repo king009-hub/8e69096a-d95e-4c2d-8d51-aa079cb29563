@@ -341,7 +341,7 @@ export default function PointOfSale() {
                     Complete Sale
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+              <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
                 <DialogHeader className="flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
