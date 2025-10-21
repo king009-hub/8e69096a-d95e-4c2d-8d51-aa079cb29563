@@ -41,7 +41,7 @@ export function CreateLoanDialog({
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange || setInternalOpen;
   
-  const [selectedCustomer, setSelectedCustomer] = useState(preselectedCustomerId);
+  const [selectedCustomer, setSelectedCustomer] = useState("");
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [showNewCustomer, setShowNewCustomer] = useState(false);
@@ -53,13 +53,12 @@ export function CreateLoanDialog({
   const [cart, setCart] = useState<CartItem[]>(prefilledCart);
   const [loading, setLoading] = useState(false);
 
-  // Update cart and customer when prefilled data changes
+  // Update cart when prefilled data changes
   useEffect(() => {
     if (open) {
       setCart(prefilledCart);
-      setSelectedCustomer(preselectedCustomerId);
     }
-  }, [open, prefilledCart, preselectedCustomerId]);
+  }, [open, prefilledCart]);
 
   const addToCart = () => {
     if (!selectedProduct) return;

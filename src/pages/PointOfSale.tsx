@@ -355,7 +355,7 @@ export default function PointOfSale() {
     }
   };
 
-  const handleLoanCreated = async () => {
+  const handleLoanCreated = async (loan: any) => {
     if (!pendingSaleData) return;
 
     const { 
@@ -366,11 +366,13 @@ export default function PointOfSale() {
       taxAmount, 
       total, 
       cart, 
-      customerId,
-      paymentsToProcess 
+      paymentsToProcess
     } = pendingSaleData;
 
     try {
+      // Use the customer from the loan
+      const customerId = loan?.customer_id;
+      
       // Determine payment method for database
       const finalPaymentMethod = paymentsToProcess.length > 1 
         ? JSON.stringify(paymentsToProcess) 
