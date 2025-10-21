@@ -247,15 +247,33 @@ export default function PointOfSale() {
       paymentsToProcess = [{ method: paymentMethod, amount: total }];
     }
 
-    // Check if loan payment is being used and validate customer info BEFORE creating sale
+    // Check if loan payment is being used
     const hasLoanPayment = paymentsToProcess.some(p => p.method === 'loan');
     
-    if (hasLoanPayment && !customerName.trim()) {
-      toast({
-        title: "Error",
-        description: "Customer name is required for loan payment",
-        variant: "destructive",
+    // If loan payment is selected, open loan dialog immediately
+    if (hasLoanPayment) {
+      setShowPaymentDialog(false);
+      
+      let customerId;
+      // Create or find customer if name is provided
+      if (customerName.trim()) {
+        const customer = await findOrCreateCustomer(customerName.trim(), customerPhone.trim() || undefined);
+        customerId = customer.id;
+      }
+      
+      // Store sale data to complete after loan is created
+      setPendingSaleData({
+        customerName,
+        customerPhone,
+        subtotal,
+        discountAmount,
+        taxAmount,
+        total,
+        cart,
+        customerId,
+        paymentsToProcess
       });
+      setShowLoanDialog(true);
       return;
     }
 
@@ -268,24 +286,6 @@ export default function PointOfSale() {
       if (customerName.trim()) {
         const customer = await findOrCreateCustomer(customerName.trim(), customerPhone.trim() || undefined);
         customerId = customer.id;
-      }
-
-      // If loan payment is selected, open loan dialog first
-      if (hasLoanPayment && customerId) {
-        // Store sale data to complete after loan is created
-        setPendingSaleData({
-          customerName,
-          customerPhone,
-          subtotal,
-          discountAmount,
-          taxAmount,
-          total,
-          cart,
-          customerId,
-          paymentsToProcess
-        });
-        setShowLoanDialog(true);
-        return;
       }
 
       // Determine payment method for database - store as JSON if multiple payments
