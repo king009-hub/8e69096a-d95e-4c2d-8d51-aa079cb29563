@@ -14,12 +14,13 @@ import { CartItem } from "@/types/inventory";
 import { X, Plus } from "lucide-react";
 
 interface CreateLoanDialogProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   prefilledCart?: CartItem[];
   preselectedCustomerId?: string;
-  onLoanCreated?: () => void;
+  onLoanCreated?: (loan: any) => void;
+  prefilledAmount?: number;
 }
 
 export function CreateLoanDialog({ 
@@ -28,7 +29,8 @@ export function CreateLoanDialog({
   onOpenChange: controlledOnOpenChange,
   prefilledCart = [],
   preselectedCustomerId = "",
-  onLoanCreated
+  onLoanCreated,
+  prefilledAmount
 }: CreateLoanDialogProps) {
   const { createLoan } = useLoans();
   const { customers } = useCustomers();
@@ -101,11 +103,14 @@ export function CreateLoanDialog({
   const totalAmount = cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
 
   const handleSubmit = async () => {
-    if (!selectedCustomer || cart.length === 0) return;
+    if (!selectedCustomer) return;
+    
+    // If prefilledAmount, no cart validation needed
+    if (!prefilledAmount && cart.length === 0) return;
 
     setLoading(true);
     try {
-      await createLoan(
+      const loan = await createLoan(
         selectedCustomer,
         cart,
         dueDate || undefined,
@@ -115,7 +120,7 @@ export function CreateLoanDialog({
       
       // Call the callback if provided
       if (onLoanCreated) {
-        onLoanCreated();
+        onLoanCreated(loan);
       }
       
       // Reset form
@@ -134,9 +139,11 @@ export function CreateLoanDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      {children && (
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Loan</DialogTitle>
@@ -145,10 +152,10 @@ export function CreateLoanDialog({
         <div className="space-y-6">
           {/* Customer Selection */}
           <div className="space-y-2">
-            <Label htmlFor="customer">Customer</Label>
+            <Label htmlFor="customer">Customer *</Label>
             <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
               <SelectTrigger>
-                <SelectValue placeholder="Select customer" />
+                <SelectValue placeholder="Select or create customer" />
               </SelectTrigger>
               <SelectContent>
                 {customers.map((customer) => (
@@ -160,8 +167,17 @@ export function CreateLoanDialog({
             </Select>
           </div>
 
-          {/* Add Products */}
-          <div className="space-y-4">
+          {/* Show Loan Amount if prefilled */}
+          {prefilledAmount && (
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Loan Amount</p>
+              <p className="text-2xl font-bold">{formatCurrency(prefilledAmount)}</p>
+            </div>
+          )}
+
+          {/* Add Products - Only show if not using prefilled amount */}
+          {!prefilledAmount && (
+            <div className="space-y-4">
             <h3 className="text-lg font-medium">Add Products</h3>
             <div className="flex space-x-2">
               <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -188,10 +204,11 @@ export function CreateLoanDialog({
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-          </div>
+            </div>
+          )}
 
-          {/* Cart Items */}
-          {cart.length > 0 && (
+          {/* Cart Items - Only show if not using prefilled amount */}
+          {!prefilledAmount && cart.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-lg font-medium">Loan Items</h3>
               <Table>
@@ -282,7 +299,7 @@ export function CreateLoanDialog({
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!selectedCustomer || cart.length === 0 || loading}
+              disabled={!selectedCustomer || (!prefilledAmount && cart.length === 0) || loading}
             >
               {loading ? "Creating..." : "Create Loan"}
             </Button>

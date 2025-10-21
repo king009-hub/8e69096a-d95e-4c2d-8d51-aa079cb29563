@@ -254,13 +254,6 @@ export default function PointOfSale() {
     if (hasLoanPayment) {
       setShowPaymentDialog(false);
       
-      let customerId;
-      // Create or find customer if name is provided
-      if (customerName.trim()) {
-        const customer = await findOrCreateCustomer(customerName.trim(), customerPhone.trim() || undefined);
-        customerId = customer.id;
-      }
-      
       // Store sale data to complete after loan is created
       setPendingSaleData({
         customerName,
@@ -270,7 +263,7 @@ export default function PointOfSale() {
         taxAmount,
         total,
         cart,
-        customerId,
+        customerId: undefined, // Will be set in loan dialog
         paymentsToProcess
       });
       setShowLoanDialog(true);
@@ -602,10 +595,11 @@ export default function PointOfSale() {
             <CreateLoanDialog
               open={showLoanDialog}
               onOpenChange={setShowLoanDialog}
-              prefilledCart={pendingSaleData?.cart || []}
-              preselectedCustomerId={pendingSaleData?.customerId || ""}
+              prefilledAmount={pendingSaleData?.total}
               onLoanCreated={handleLoanCreated}
-            >
+            />
+            
+            <CreateLoanDialog>
               <Button 
                 className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                 disabled={cart.length === 0}
