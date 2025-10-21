@@ -131,7 +131,8 @@ export function CreateLoanDialog({
         cart,
         dueDate || undefined,
         interestRate || undefined,
-        notes || undefined
+        notes || undefined,
+        prefilledAmount || undefined
       );
       
       // Call the callback if provided
