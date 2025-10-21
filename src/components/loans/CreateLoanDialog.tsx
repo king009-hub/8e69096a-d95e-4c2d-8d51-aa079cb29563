@@ -33,7 +33,7 @@ export function CreateLoanDialog({
   prefilledAmount
 }: CreateLoanDialogProps) {
   const { createLoan } = useLoans();
-  const { customers } = useCustomers();
+  const { customers, findOrCreateCustomer } = useCustomers();
   const { products } = useProducts();
   const { formatCurrency } = useSettingsContext();
   
@@ -42,6 +42,9 @@ export function CreateLoanDialog({
   const setOpen = controlledOnOpenChange || setInternalOpen;
   
   const [selectedCustomer, setSelectedCustomer] = useState(preselectedCustomerId);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [dueDate, setDueDate] = useState("");
@@ -103,7 +106,20 @@ export function CreateLoanDialog({
   const totalAmount = cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
 
   const handleSubmit = async () => {
-    if (!selectedCustomer) return;
+    let finalCustomerId = selectedCustomer;
+    
+    // Create new customer if needed
+    if (showNewCustomer && newCustomerName.trim()) {
+      try {
+        const customer = await findOrCreateCustomer(newCustomerName.trim(), newCustomerPhone.trim() || undefined);
+        finalCustomerId = customer.id;
+      } catch (error) {
+        console.error('Error creating customer:', error);
+        return;
+      }
+    }
+    
+    if (!finalCustomerId) return;
     
     // If prefilledAmount, no cart validation needed
     if (!prefilledAmount && cart.length === 0) return;
@@ -111,7 +127,7 @@ export function CreateLoanDialog({
     setLoading(true);
     try {
       const loan = await createLoan(
-        selectedCustomer,
+        finalCustomerId,
         cart,
         dueDate || undefined,
         interestRate || undefined,
@@ -125,6 +141,9 @@ export function CreateLoanDialog({
       
       // Reset form
       setSelectedCustomer("");
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setShowNewCustomer(false);
       setCart([]);
       setDueDate("");
       setInterestRate(0);
@@ -153,18 +172,57 @@ export function CreateLoanDialog({
           {/* Customer Selection */}
           <div className="space-y-2">
             <Label htmlFor="customer">Customer *</Label>
-            <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select or create customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name} {customer.phone && `(${customer.phone})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!showNewCustomer ? (
+              <div className="space-y-2">
+                <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select existing customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name} {customer.phone && `(${customer.phone})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewCustomer(true)}
+                  className="w-full"
+                >
+                  + Create New Customer
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2 p-3 border rounded-lg">
+                <Input
+                  placeholder="Customer Name *"
+                  value={newCustomerName}
+                  onChange={(e) => setNewCustomerName(e.target.value)}
+                />
+                <Input
+                  placeholder="Phone Number (Optional)"
+                  value={newCustomerPhone}
+                  onChange={(e) => setNewCustomerPhone(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowNewCustomer(false);
+                    setNewCustomerName("");
+                    setNewCustomerPhone("");
+                  }}
+                  className="w-full"
+                >
+                  Cancel - Select Existing
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Show Loan Amount if prefilled */}
@@ -299,7 +357,7 @@ export function CreateLoanDialog({
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!selectedCustomer || (!prefilledAmount && cart.length === 0) || loading}
+              disabled={(!selectedCustomer && !newCustomerName.trim()) || (!prefilledAmount && cart.length === 0) || loading}
             >
               {loading ? "Creating..." : "Create Loan"}
             </Button>
