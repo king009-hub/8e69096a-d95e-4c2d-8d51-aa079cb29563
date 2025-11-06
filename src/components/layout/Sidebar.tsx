@@ -9,9 +9,11 @@ import {
   Bell,
   ScanLine,
   CreditCard,
-  Settings
+  Settings,
+  Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -26,7 +28,13 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+const ownerNavigation = [
+  { name: "Owner Dashboard", href: "/owner", icon: Shield },
+];
+
 export function Sidebar() {
+  const { userRole } = useAuth();
+  
   return (
     <div className="w-56 md:w-64 bg-card border-r border-border h-screen shadow-lg">
       <div className="p-4 md:p-6">
@@ -35,6 +43,34 @@ export function Sidebar() {
       </div>
       
       <nav className="mt-6 md:mt-8 px-3 md:px-4">
+        {/* Owner Dashboard - Only for admins */}
+        {userRole === 'admin' && (
+          <div className="mb-4">
+            <ul className="space-y-1 md:space-y-2">
+              {ownerNavigation.map((item) => (
+                <li key={item.name}>
+                  <NavLink
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center px-3 md:px-4 py-2 md:py-3 text-sm font-medium rounded-lg transition-colors border-2 border-primary/30",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-primary hover:text-primary-foreground hover:bg-primary/90"
+                      )
+                    }
+                  >
+                    <item.icon className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3" />
+                    <span className="text-xs md:text-sm font-bold">{item.name}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+            <div className="border-b border-border my-4"></div>
+          </div>
+        )}
+
+        {/* Regular Navigation */}
         <ul className="space-y-1 md:space-y-2">
           {navigation.map((item) => (
             <li key={item.name}>

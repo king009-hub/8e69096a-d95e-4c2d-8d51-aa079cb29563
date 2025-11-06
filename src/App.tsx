@@ -17,6 +17,7 @@ import Scanner from "./pages/Scanner";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import LoanManagement from "./pages/LoanManagement";
+import OwnerDashboard from "./pages/OwnerDashboard";
 import Auth from "./pages/Auth";
 import AdminSetup from "./pages/AdminSetup";
 import NotFound from "./pages/NotFound";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin-setup" element={<AdminSetup />} />
               <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
+              <Route path="/owner" element={<ProtectedRoute><Layout><OwnerDashboard /></Layout></ProtectedRoute>} />
               <Route path="/products" element={<ProtectedRoute><Layout><Products /></Layout></ProtectedRoute>} />
               <Route path="/pos" element={<ProtectedRoute><PointOfSale /></ProtectedRoute>} />
               <Route path="/stock" element={<ProtectedRoute><StockManagement /></ProtectedRoute>} />
