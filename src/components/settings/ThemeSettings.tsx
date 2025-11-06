@@ -31,11 +31,17 @@ export function ThemeSettings() {
   const form = useForm<z.infer<typeof themeFormSchema>>({
     resolver: zodResolver(themeFormSchema),
     defaultValues: {
-      primary_color: "hsl(221.2, 83.2%, 53.3%)",
+      primary_color: "221.2 83.2% 53.3%",
       dark_mode: false,
       font_size: "medium",
     },
   });
+
+  // Apply primary color dynamically
+  const applyPrimaryColor = (color: string) => {
+    document.documentElement.style.setProperty('--primary', color);
+    document.documentElement.style.setProperty('--ring', color);
+  };
 
   // Update form values when data loads
   useEffect(() => {
@@ -45,11 +51,22 @@ export function ThemeSettings() {
         return acc;
       }, {} as Record<string, any>);
 
+      const primaryColor = settingsMap.primary_color || "221.2 83.2% 53.3%";
+      const darkMode = Boolean(settingsMap.dark_mode);
+
       form.reset({
-        primary_color: settingsMap.primary_color || "hsl(221.2, 83.2%, 53.3%)",
-        dark_mode: Boolean(settingsMap.dark_mode),
+        primary_color: primaryColor,
+        dark_mode: darkMode,
         font_size: settingsMap.font_size || "medium",
       });
+
+      // Apply theme on load
+      applyPrimaryColor(primaryColor);
+      if (darkMode) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     }
   }, [settings, isLoading, form]);
 
@@ -63,6 +80,7 @@ export function ThemeSettings() {
     }
 
     // Apply theme changes immediately
+    applyPrimaryColor(values.primary_color);
     if (values.dark_mode) {
       document.documentElement.classList.add("dark");
     } else {
@@ -79,12 +97,13 @@ export function ThemeSettings() {
   }
 
   const presetColors = [
-    { name: "Blue", value: "hsl(221.2, 83.2%, 53.3%)" },
-    { name: "Green", value: "hsl(142.1, 76.2%, 36.3%)" },
-    { name: "Purple", value: "hsl(262.1, 83.3%, 57.8%)" },
-    { name: "Red", value: "hsl(346.8, 77.2%, 49.8%)" },
-    { name: "Orange", value: "hsl(24.6, 95%, 53.1%)" },
-    { name: "Pink", value: "hsl(330.4, 81.2%, 60.4%)" },
+    { name: "Blue", value: "221.2 83.2% 53.3%" },
+    { name: "Green", value: "142.1 76.2% 36.3%" },
+    { name: "Purple", value: "262.1 83.3% 57.8%" },
+    { name: "Red", value: "346.8 77.2% 49.8%" },
+    { name: "Orange", value: "24.6 95% 53.1%" },
+    { name: "Gold", value: "45 100% 51%" },
+    { name: "Pink", value: "330.4 81.2% 60.4%" },
   ];
 
   return (
@@ -99,7 +118,7 @@ export function ThemeSettings() {
               <FormControl>
                 <div className="space-y-4">
                   <Input
-                    placeholder="hsl(221.2, 83.2%, 53.3%)"
+                    placeholder="221.2 83.2% 53.3%"
                     {...field}
                   />
                   <div className="flex gap-2 flex-wrap">
@@ -110,8 +129,11 @@ export function ThemeSettings() {
                         variant="outline"
                         size="sm"
                         className="h-8"
-                        onClick={() => field.onChange(color.value)}
-                        style={{ backgroundColor: color.value, color: "white" }}
+                        onClick={() => {
+                          field.onChange(color.value);
+                          applyPrimaryColor(color.value);
+                        }}
+                        style={{ backgroundColor: `hsl(${color.value})`, color: "white" }}
                       >
                         {color.name}
                       </Button>
@@ -120,7 +142,7 @@ export function ThemeSettings() {
                 </div>
               </FormControl>
               <FormDescription>
-                Primary color used throughout the application (HSL format)
+                Primary color in HSL format (e.g., 221.2 83.2% 53.3%)
               </FormDescription>
               <FormMessage />
             </FormItem>
