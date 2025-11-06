@@ -118,10 +118,16 @@ export function CreateLoanDialog({
       }
     }
     
-    if (!finalCustomerId) return;
+    if (!finalCustomerId) {
+      console.error('No customer selected');
+      return;
+    }
     
     // If prefilledAmount, no cart validation needed
-    if (!prefilledAmount && cart.length === 0) return;
+    if (!prefilledAmount && cart.length === 0) {
+      console.error('No cart items and no prefilled amount');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -134,12 +140,9 @@ export function CreateLoanDialog({
         prefilledAmount || undefined
       );
       
-      // Call the callback if provided
-      if (onLoanCreated) {
-        onLoanCreated(loan);
-      }
+      console.log('Loan created successfully:', loan);
       
-      // Reset form
+      // Reset form first
       setSelectedCustomer("");
       setNewCustomerName("");
       setNewCustomerPhone("");
@@ -149,8 +152,15 @@ export function CreateLoanDialog({
       setInterestRate(0);
       setNotes("");
       setOpen(false);
+      
+      // Call the callback after closing dialog
+      if (onLoanCreated && loan) {
+        console.log('Calling onLoanCreated with loan:', loan);
+        onLoanCreated(loan);
+      }
     } catch (error) {
       console.error('Error creating loan:', error);
+      // Keep dialog open on error
     } finally {
       setLoading(false);
     }

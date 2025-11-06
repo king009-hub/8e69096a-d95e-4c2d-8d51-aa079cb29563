@@ -356,7 +356,27 @@ export default function PointOfSale() {
   };
 
   const handleLoanCreated = async (loan: any) => {
-    if (!pendingSaleData) return;
+    console.log('handleLoanCreated called with loan:', loan);
+    
+    if (!pendingSaleData) {
+      console.error('No pending sale data');
+      toast({
+        title: "Error",
+        description: "No pending sale data found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!loan) {
+      console.error('No loan object received');
+      toast({
+        title: "Error",
+        description: "Loan creation failed - no loan object",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { 
       customerName, 
@@ -369,9 +389,14 @@ export default function PointOfSale() {
       paymentsToProcess
     } = pendingSaleData;
 
+    // Close loan dialog
+    setShowLoanDialog(false);
+
     try {
       // Use the customer from the loan
-      const customerId = loan?.customer_id;
+      const customerId = loan.customer_id;
+      
+      console.log('Creating sale with customerId:', customerId);
       
       // Determine payment method for database
       const finalPaymentMethod = paymentsToProcess.length > 1 
@@ -434,9 +459,10 @@ export default function PointOfSale() {
         setPendingSaleData(null);
       }, 1000);
     } catch (error) {
+      console.error('Error completing sale after loan:', error);
       toast({
         title: "Error",
-        description: "Failed to complete sale after loan creation",
+        description: error instanceof Error ? error.message : "Failed to complete sale after loan creation",
         variant: "destructive",
       });
     }
