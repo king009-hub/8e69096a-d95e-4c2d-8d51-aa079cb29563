@@ -18,6 +18,7 @@ import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import LoanManagement from "./pages/LoanManagement";
 import OwnerDashboard from "./pages/OwnerDashboard";
+import Customers from "./pages/Customers";
 import Auth from "./pages/Auth";
 import AdminSetup from "./pages/AdminSetup";
 import NotFound from "./pages/NotFound";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/loans" element={<ProtectedRoute><LoanManagement /></ProtectedRoute>} />
+              <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
