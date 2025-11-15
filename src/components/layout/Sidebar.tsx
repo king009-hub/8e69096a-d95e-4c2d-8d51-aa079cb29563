@@ -10,7 +10,8 @@ import {
   ScanLine,
   CreditCard,
   Settings,
-  Shield
+  Shield,
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Point of Sale", href: "/pos", icon: ShoppingCart },
   { name: "Stock Management", href: "/stock", icon: Truck },
   { name: "Sales History", href: "/sales", icon: TrendingUp },
+  { name: "Customers", href: "/customers", icon: Users },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Scanner", href: "/scanner", icon: ScanLine },
   { name: "Notifications", href: "/notifications", icon: Bell },

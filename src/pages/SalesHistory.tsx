@@ -5,15 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Eye, Calendar, DollarSign } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Search, Eye, Calendar, DollarSign, Trash2 } from "lucide-react";
 import { useSales } from "@/hooks/useSales";
 import { Sale } from "@/types/inventory";
 import { format } from "date-fns";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function SalesHistory() {
-  const { sales, loading } = useSales();
+  const { sales, loading, refreshSales } = useSales();
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
+  const [deleteSale, setDeleteSale] = useState<Sale | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const filtered = sales.filter((sale) =>
@@ -44,6 +58,27 @@ export default function SalesHistory() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteSale) return;
+    try {
+      await supabase.from("sale_items").delete().eq("sale_id", deleteSale.id);
+      await supabase.from("sales").delete().eq("id", deleteSale.id);
+      
+      toast({
+        title: "Success",
+        description: "Sale deleted successfully",
+      });
+      setDeleteSale(null);
+      refreshSales();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete sale",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -51,7 +86,6 @@ export default function SalesHistory() {
           <h1 className="text-3xl font-bold text-foreground">Sales History</h1>
         </div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -91,7 +125,6 @@ export default function SalesHistory() {
           </Card>
         </div>
 
-        {/* Search and Filters */}
         <Card>
           <CardHeader>
             <CardTitle>Sales Records</CardTitle>
@@ -99,7 +132,7 @@ export default function SalesHistory() {
           <CardContent>
             <div className="flex items-center space-x-2 mb-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by sale number, customer, or payment method..."
                   value={searchTerm}
@@ -109,63 +142,87 @@ export default function SalesHistory() {
               </div>
             </div>
 
-            {loading ? (
-              <div className="flex justify-center py-4">
-                <div className="text-muted-foreground">Loading sales...</div>
-              </div>
-            ) : (
+            <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Sale Number</TableHead>
+                    <TableHead>Sale #</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Total Amount</TableHead>
-                    <TableHead>Payment Method</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSales.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell className="font-medium">{sale.sale_number}</TableCell>
-                      <TableCell>
-                        {format(new Date(sale.sale_date), 'MMM dd, yyyy HH:mm')}
-                      </TableCell>
-                      <TableCell>
-                        {sale.customer_name || 'Walk-in Customer'}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatCurrency(sale.final_amount)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getPaymentMethodColor(sale.payment_method)}>
-                          {sale.payment_method}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {/* View details functionality */}}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        Loading sales...
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : filteredSales.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        No sales found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredSales.map((sale) => (
+                      <TableRow key={sale.id}>
+                        <TableCell className="font-medium">{sale.sale_number}</TableCell>
+                        <TableCell>{format(new Date(sale.sale_date), 'MMM dd, yyyy')}</TableCell>
+                        <TableCell>{sale.customer_name || 'Walk-in'}</TableCell>
+                        <TableCell className="font-medium">{formatCurrency(sale.final_amount)}</TableCell>
+                        <TableCell>
+                          <Badge className={getPaymentMethodColor(sale.payment_method)}>
+                            {sale.payment_method}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => setDeleteSale(sale)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
-            )}
-
-            {!loading && filteredSales.length === 0 && (
-              <div className="text-center py-4 text-muted-foreground">
-                {searchTerm ? 'No sales found matching your search.' : 'No sales recorded yet.'}
-              </div>
-            )}
+            </div>
           </CardContent>
         </Card>
+
+        <AlertDialog
+          open={!!deleteSale}
+          onOpenChange={() => setDeleteSale(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Sale</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete sale {deleteSale?.sale_number}?
+                This will also delete all associated sale items. This action
+                cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
