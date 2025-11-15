@@ -853,18 +853,9 @@ export type Database = {
         Args: { product_uuid: string }
         Returns: number
       }
-      generate_loan_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_sale_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_loan_number: { Args: never; Returns: string }
+      generate_sale_number: { Args: never; Returns: string }
+      get_current_user_role: { Args: never; Returns: string }
       get_user_by_email: {
         Args: { user_email: string }
         Returns: {
@@ -873,34 +864,28 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_user_count: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      get_user_count: { Args: never; Returns: number }
+      is_admin: { Args: never; Returns: boolean }
       log_security_event: {
         Args: { details?: Json; event_type: string; user_id_param?: string }
         Returns: undefined
       }
-      reset_admin_password: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      safe_update_user_role: {
-        Args:
-          | {
+      reset_admin_password: { Args: never; Returns: string }
+      safe_update_user_role:
+        | {
+            Args: { new_role: string; target_user_id: string }
+            Returns: boolean
+          }
+        | {
+            Args: {
               ip_address?: string
               new_role: string
               reason?: string
               target_user_id: string
               user_agent?: string
             }
-          | { new_role: string; target_user_id: string }
-        Returns: boolean
-      }
+            Returns: boolean
+          }
     }
     Enums: {
       [_ in never]: never
