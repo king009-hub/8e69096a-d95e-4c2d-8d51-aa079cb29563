@@ -15,18 +15,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, Eye, Calendar, DollarSign, Trash2 } from "lucide-react";
+import { Search, Eye, Calendar, DollarSign, Trash2, Download, CheckSquare } from "lucide-react";
 import { useSales } from "@/hooks/useSales";
 import { Sale } from "@/types/inventory";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { SaleDetailsDialog } from "@/components/sales/SaleDetailsDialog";
+import { exportToExcel, exportToCSV } from "@/lib/export";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function SalesHistory() {
   const { sales, loading, refreshSales } = useSales();
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [deleteSale, setDeleteSale] = useState<Sale | null>(null);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedSales, setSelectedSales] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,6 +83,54 @@ export default function SalesHistory() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleExportExcel = () => {
+    const exportData = filteredSales.map(s => ({
+      'Sale Number': s.sale_number,
+      'Date': format(new Date(s.sale_date), 'yyyy-MM-dd'),
+      'Customer': s.customer_name || 'Walk-in',
+      'Payment Method': s.payment_method,
+      'Total Amount': s.total_amount,
+      'Discount': s.discount,
+      'Tax': s.tax_amount || 0,
+      'Final Amount': s.final_amount,
+    }));
+    exportToExcel(exportData, `sales-${new Date().toISOString().split('T')[0]}`, 'Sales');
+    toast({ title: "Success", description: "Sales exported to Excel" });
+  };
+
+  const handleExportCSV = () => {
+    const exportData = filteredSales.map(s => ({
+      'Sale Number': s.sale_number,
+      'Date': format(new Date(s.sale_date), 'yyyy-MM-dd'),
+      'Customer': s.customer_name || 'Walk-in',
+      'Payment Method': s.payment_method,
+      'Total Amount': s.total_amount,
+      'Discount': s.discount,
+      'Tax': s.tax_amount || 0,
+      'Final Amount': s.final_amount,
+    }));
+    exportToCSV(exportData, `sales-${new Date().toISOString().split('T')[0]}`);
+    toast({ title: "Success", description: "Sales exported to CSV" });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedSales.size === filteredSales.length) {
+      setSelectedSales(new Set());
+    } else {
+      setSelectedSales(new Set(filteredSales.map(s => s.id)));
+    }
+  };
+
+  const toggleSale = (id: string) => {
+    const newSelected = new Set(selectedSales);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedSales(newSelected);
   };
 
   return (
@@ -140,12 +194,28 @@ export default function SalesHistory() {
                   className="pl-10"
                 />
               </div>
+              <div className="flex gap-2">
+                <Button onClick={handleExportExcel} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Excel
+                </Button>
+                <Button onClick={handleExportCSV} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  CSV
+                </Button>
+              </div>
             </div>
 
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedSales.size === filteredSales.length && filteredSales.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
                     <TableHead>Sale #</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Customer</TableHead>
@@ -157,19 +227,25 @@ export default function SalesHistory() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                         Loading sales...
                       </TableCell>
                     </TableRow>
                   ) : filteredSales.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                         No sales found
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredSales.map((sale) => (
                       <TableRow key={sale.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedSales.has(sale.id)}
+                            onCheckedChange={() => toggleSale(sale.id)}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{sale.sale_number}</TableCell>
                         <TableCell>{format(new Date(sale.sale_date), 'MMM dd, yyyy')}</TableCell>
                         <TableCell>{sale.customer_name || 'Walk-in'}</TableCell>
@@ -181,7 +257,11 @@ export default function SalesHistory() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setSelectedSale(sale); setDetailsOpen(true); }}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
                             <Button
@@ -223,6 +303,12 @@ export default function SalesHistory() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <SaleDetailsDialog
+          sale={selectedSale}
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+        />
       </div>
     </Layout>
   );
