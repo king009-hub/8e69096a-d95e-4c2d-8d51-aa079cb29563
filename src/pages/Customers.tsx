@@ -138,6 +138,53 @@ export default function Customers() {
     setEditingCustomer(null);
   };
 
+  const handleExportExcel = () => {
+    const exportData = filteredCustomers.map(c => ({
+      Name: c.name,
+      Phone: c.phone || '',
+      Email: c.email || '',
+      Address: c.address || '',
+    }));
+    exportToExcel(exportData, `customers-${new Date().toISOString().split('T')[0]}`, 'Customers');
+    toast({ title: "Success", description: "Customers exported to Excel" });
+  };
+
+  const handleExportCSV = () => {
+    const exportData = filteredCustomers.map(c => ({
+      Name: c.name,
+      Phone: c.phone || '',
+      Email: c.email || '',
+      Address: c.address || '',
+    }));
+    exportToCSV(exportData, `customers-${new Date().toISOString().split('T')[0]}`);
+    toast({ title: "Success", description: "Customers exported to CSV" });
+  };
+
+  const handleBulkUpdate = async (updates: Record<string, any>) => {
+    try {
+      const ids = Array.from(selectedCustomers);
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, value]) => value !== '' && value !== undefined)
+      );
+      await supabase.from('customers').update(cleanUpdates).in('id', ids);
+      toast({ title: "Success", description: `${ids.length} customers updated` });
+      setSelectedCustomers(new Set());
+      refreshCustomers();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update customers", variant: "destructive" });
+    }
+  };
+
+  const toggleCustomer = (id: string) => {
+    const newSelected = new Set(selectedCustomers);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedCustomers(newSelected);
+  };
+
   const handleDialogClose = (open: boolean) => {
     setDialogOpen(open);
     if (!open) resetForm();
@@ -308,6 +355,12 @@ export default function Customers() {
                 ) : (
                   filteredCustomers.map((customer) => (
                     <TableRow key={customer.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedCustomers.has(customer.id)}
+                          onCheckedChange={() => toggleCustomer(customer.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         {customer.name}
                       </TableCell>
@@ -316,6 +369,13 @@ export default function Customers() {
                       <TableCell>{customer.address || "-"}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setSelectedCustomer(customer); setDetailsOpen(true); }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -360,6 +420,24 @@ export default function Customers() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <CustomerDetailsDialog
+          customer={selectedCustomer}
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+        />
+
+        <BulkUpdateDialog
+          open={bulkUpdateOpen}
+          onOpenChange={setBulkUpdateOpen}
+          onUpdate={handleBulkUpdate}
+          selectedCount={selectedCustomers.size}
+          fields={[
+            { key: 'phone', label: 'Phone', type: 'text' },
+            { key: 'email', label: 'Email', type: 'text' },
+            { key: 'address', label: 'Address', type: 'text' },
+          ]}
+        />
       </div>
     </Layout>
   );
