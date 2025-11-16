@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useProducts } from "@/hooks/useProducts";
 import { useStockMovements } from "@/hooks/useStockMovements";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { format } from "date-fns";
 export function StockManagement() {
   const { products, refreshProducts } = useProducts();
   const { stockMovements, addStockMovement, loading } = useStockMovements();
+  const { formatDate, stockSettings } = useSettingsContext();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -27,7 +29,7 @@ export function StockManagement() {
   const [notes, setNotes] = useState("");
 
   const lowStockProducts = products.filter(product => 
-    product.stock_quantity <= (product.min_stock_threshold || 0)
+    product.stock_quantity <= (product.min_stock_threshold || stockSettings.low_stock_threshold)
   );
 
   const handleSubmitMovement = async () => {

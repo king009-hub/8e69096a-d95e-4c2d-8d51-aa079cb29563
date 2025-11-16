@@ -1,4 +1,5 @@
 import { CartItem } from "@/types/inventory";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 import QRCode from 'qrcode';
 
 interface ReceiptPrintProps {
@@ -34,6 +35,7 @@ export const ReceiptPrint = ({
   receiptPhone,
   saleDate
 }: ReceiptPrintProps) => {
+  const { receiptSettings, companyProfile, getCurrencySymbol, formatDate } = useSettingsContext();
   
   const printReceipt = async () => {
     // Generate QR code with receipt data
@@ -53,6 +55,8 @@ export const ReceiptPrint = ({
       }
     });
 
+    const paperSize = receiptSettings.paper_size === 'a4' ? '210mm 297mm' : '80mm auto';
+
     const receiptContent = `
       <!DOCTYPE html>
       <html>
@@ -60,7 +64,7 @@ export const ReceiptPrint = ({
           <title>Receipt - ${saleNumber}</title>
           <style>
             @media print {
-              @page { margin: 0; size: 80mm auto; }
+              @page { margin: 0; size: ${paperSize}; }
               body { margin: 0; padding: 0; }
             }
             body { 
@@ -68,7 +72,7 @@ export const ReceiptPrint = ({
               font-size: 11px; 
               margin: 0; 
               padding: 8px; 
-              width: 72mm; 
+              width: ${receiptSettings.paper_size === 'a4' ? '190mm' : '72mm'}; 
               line-height: 1.2;
             }
             .center { text-align: center; }
@@ -97,21 +101,25 @@ export const ReceiptPrint = ({
             }
             .header { margin-bottom: 5px; }
             .footer { margin-top: 8px; font-size: 10px; }
+            .logo { max-width: 100px; margin: 5px auto; }
           </style>
         </head>
         <body>
           <div class="header center bold">
-            PERFECT RETAIL SYSTEM<br>
-            Your Business Address<br>
-            City, State 12345<br>
-            Tel: (555) 123-4567
+            ${receiptSettings.show_logo && companyProfile?.logo_url ? 
+              `<img src="${companyProfile.logo_url}" class="logo" alt="Logo" />` : ''}
+            ${companyProfile?.company_name || 'RETAIL SYSTEM'}<br>
+            ${companyProfile?.address || 'Your Business Address'}<br>
+            ${companyProfile?.phone ? `Tel: ${companyProfile.phone}<br>` : ''}
+            ${companyProfile?.email ? `Email: ${companyProfile.email}<br>` : ''}
+            ${companyProfile?.tax_number ? `Tax No: ${companyProfile.tax_number}<br>` : ''}
+            ${receiptSettings.header_text ? `<div style="margin-top:5px;">${receiptSettings.header_text}</div>` : ''}
           </div>
           <div class="line"></div>
           
           <div>Receipt #: ${saleNumber}</div>
-          <div>Date: ${new Date(saleDate).toLocaleDateString()}</div>
+          <div>Date: ${formatDate(saleDate)}</div>
           <div>Time: ${new Date(saleDate).toLocaleTimeString()}</div>
-          <div>Cashier: Admin</div>
           ${customerName ? `<div>Customer: ${customerName}</div>` : ''}
           ${customerPhone ? `<div>Phone: ${customerPhone}</div>` : ''}
           ${tinNumber ? `<div>TIN: ${tinNumber}</div>` : ''}
@@ -124,78 +132,84 @@ export const ReceiptPrint = ({
               <span class="item-name">${item.product.name}</span>
             </div>
             <div class="item-row">
-              <span>${item.quantity} x $${item.unit_price.toFixed(2)}</span>
-              <span class="item-price">$${(item.quantity * item.unit_price).toFixed(2)}</span>
+              <span>${item.quantity} x ${getCurrencySymbol()}${item.unit_price.toFixed(2)}</span>
+              <span class="item-price">${getCurrencySymbol()}${(item.quantity * item.unit_price).toFixed(2)}</span>
             </div>
           `).join('')}
           
+          <div class="double-line"></div>
+          
+          <div class="total-row">
+            <span>SUBTOTAL:</span>
+            <span>${getCurrencySymbol()}${subtotal.toFixed(2)}</span>
+          </div>
+          
+          ${discount > 0 ? `
+            <div class="total-row">
+              <span>DISCOUNT:</span>
+              <span>-${getCurrencySymbol()}${discount.toFixed(2)}</span>
+            </div>
+          ` : ''}
+          
+          ${taxAmount > 0 ? `
+            <div class="total-row">
+              <span>${taxName}:</span>
+              <span>${getCurrencySymbol()}${taxAmount.toFixed(2)}</span>
+            </div>
+          ` : ''}
+          
+          <div class="double-line"></div>
+          
+          <div class="total-row" style="font-size: 14px;">
+            <span>TOTAL:</span>
+            <span>${getCurrencySymbol()}${total.toFixed(2)}</span>
+          </div>
+          
           <div class="line"></div>
           
-          <div class="item-row">
-            <span>Subtotal:</span>
-            <span>$${subtotal.toFixed(2)}</span>
-          </div>
-          ${discount > 0 ? `
-          <div class="item-row">
-            <span>Discount:</span>
-            <span>-$${discount.toFixed(2)}</span>
-          </div>
-          ` : ''}
-          ${taxAmount > 0 ? `
-          <div class="item-row">
-            <span>${taxName}:</span>
-            <span>$${taxAmount.toFixed(2)}</span>
-          </div>
-          ` : ''}
-          <div class="double-line"></div>
-          <div class="total-row">
-            <span>TOTAL:</span>
-            <span>$${total.toFixed(2)}</span>
-          </div>
           ${splitPayments && splitPayments.length > 0 ? `
-            <div class="bold" style="margin-top: 4px;">Payment Details:</div>
+            <div class="bold">Payment Methods:</div>
             ${splitPayments.map(p => `
               <div class="item-row">
-                <span>${p.method.toUpperCase()}:</span>
-                <span>$${p.amount.toFixed(2)}</span>
+                <span>${p.method}:</span>
+                <span>${getCurrencySymbol()}${p.amount.toFixed(2)}</span>
               </div>
             `).join('')}
           ` : `
-            <div class="item-row">
-              <span>Payment (${paymentMethod.toUpperCase()}):</span>
-              <span>$${total.toFixed(2)}</span>
-            </div>
+            <div>Payment Method: ${paymentMethod}</div>
           `}
           
-          <div class="line"></div>
-          <div class="center footer">
-            Thank you for your purchase!<br>
-            Please come again<br><br>
-            <div style="margin: 10px 0;">
-              <img src="${qrCodeDataURL}" alt="Receipt QR Code" style="width: 60px; height: 60px; margin: 0 auto; display: block;" />
-              <div style="font-size: 8px; margin-top: 3px;">Scan for receipt details</div>
-            </div>
-            Visit us at www.perfectretail.com<br>
-            Return policy: 30 days with receipt<br>
-            Customer service: support@perfectretail.com
+          <div class="center" style="margin-top: 10px;">
+            <img src="${qrCodeDataURL}" alt="QR Code" />
           </div>
           
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 1000);
-            }
-          </script>
+          <div class="footer center">
+            ${receiptSettings.footer_text || 'Thank you for your business!<br>Please come again!'}
+            <br>
+            <div style="margin-top: 5px; font-size: 9px;">
+              Powered by Perfect Retail System
+            </div>
+          </div>
         </body>
       </html>
     `;
-    
-    const printWindow = window.open('', '_blank', 'width=300,height=600');
+
+    const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(receiptContent);
       printWindow.document.close();
+      
+      // Wait for images to load before printing
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 250);
+      };
     }
   };
 
-  return { printReceipt };
+  // Auto-trigger print when component mounts
+  printReceipt();
+
+  return null;
 };

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { BarChart3, TrendingUp, TrendingDown, AlertTriangle, Calendar, Download, FileText, Filter } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
 import { useSales } from "@/hooks/useSales";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 import { Product, Sale } from "@/types/inventory";
 import { format, subDays, isAfter, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import jsPDF from 'jspdf';
@@ -20,6 +21,7 @@ export default function Reports() {
   const { products } = useProducts();
   const { sales } = useSales();
   const { toast } = useToast();
+  const { formatCurrency, formatDate, stockSettings } = useSettingsContext();
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [dateRange, setDateRange] = useState("7days");
@@ -27,9 +29,9 @@ export default function Reports() {
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
-    // Filter low stock products
+    // Filter low stock products using settings threshold
     const lowStock = products.filter(
-      (product) => product.stock_quantity <= product.min_stock_threshold
+      (product) => product.stock_quantity <= (product.min_stock_threshold || stockSettings.low_stock_threshold)
     );
     setLowStockProducts(lowStock);
 
@@ -84,14 +86,7 @@ export default function Reports() {
     }
 
     setFilteredSales(filteredByDate);
-  }, [products, sales, dateRange, searchTerm]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+  }, [products, sales, dateRange, searchTerm, stockSettings.low_stock_threshold]);
 
   const generatePDF = (reportType: string) => {
     const doc = new jsPDF();
