@@ -42,6 +42,26 @@ export default function PointOfSale() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [discount, setDiscount] = useState(0);
+  
+  const handleDiscountChange = (value: number) => {
+    if (!posSettings.enable_discounts) {
+      toast({
+        title: "Disabled",
+        description: "Discounts are disabled in settings",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (value > (posSettings.max_discount_percent || 100)) {
+      toast({
+        title: "Error",
+        description: `Maximum discount is ${posSettings.max_discount_percent}%`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setDiscount(value);
+  };
   const [paymentMethod, setPaymentMethod] = useState(posSettings.default_payment_method);
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState(0);
