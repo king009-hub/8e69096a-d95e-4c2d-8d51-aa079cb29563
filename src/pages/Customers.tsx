@@ -37,10 +37,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, User } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Eye, Download, CheckSquare } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Customer } from "@/hooks/useCustomers";
+import { CustomerDetailsDialog } from "@/components/customers/CustomerDetailsDialog";
+import { BulkUpdateDialog } from "@/components/common/BulkUpdateDialog";
+import { exportToExcel, exportToCSV } from "@/lib/export";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Customers() {
   const { customers, loading, refreshCustomers } = useCustomers();
@@ -48,6 +52,10 @@ export default function Customers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [deleteCustomer, setDeleteCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+  const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -229,8 +237,8 @@ export default function Customers() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <div className="relative">
+            <div className="mb-4 flex gap-2">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, phone, or email..."
@@ -239,11 +247,39 @@ export default function Customers() {
                   className="pl-10"
                 />
               </div>
+              <div className="flex gap-2">
+                {selectedCustomers.size > 0 && (
+                  <Button onClick={() => setBulkUpdateOpen(true)} variant="outline" size="sm">
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Update ({selectedCustomers.size})
+                  </Button>
+                )}
+                <Button onClick={handleExportExcel} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Excel
+                </Button>
+                <Button onClick={handleExportCSV} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  CSV
+                </Button>
+              </div>
             </div>
 
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedCustomers.size === filteredCustomers.length && filteredCustomers.length > 0}
+                      onCheckedChange={() => {
+                        if (selectedCustomers.size === filteredCustomers.length) {
+                          setSelectedCustomers(new Set());
+                        } else {
+                          setSelectedCustomers(new Set(filteredCustomers.map(c => c.id)));
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Email</TableHead>
@@ -254,13 +290,13 @@ export default function Customers() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       <div className="py-8">
                         <User className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
                         <p className="text-muted-foreground">

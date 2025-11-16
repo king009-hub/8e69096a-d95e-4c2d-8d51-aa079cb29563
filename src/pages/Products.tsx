@@ -10,10 +10,14 @@ import { useForm } from "react-hook-form";
 import { useProducts } from "@/hooks/useProducts";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { Product } from "@/types/inventory";
-import { Plus, Search, Edit, Trash2, Package, AlertTriangle, Layers, Upload, X } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, AlertTriangle, Layers, Upload, X, Eye, Download, CheckSquare } from "lucide-react";
 import { ProductBatchesDialog } from "@/components/products/ProductBatchesDialog";
+import { ProductDetailsDialog } from "@/components/products/ProductDetailsDialog";
+import { BulkUpdateDialog } from "@/components/common/BulkUpdateDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { exportToExcel, exportToCSV } from "@/lib/export";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type ProductFormData = Omit<Product, 'id' | 'created_at' | 'updated_at'>;
 
@@ -27,6 +31,10 @@ export default function Products() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
 
   const form = useForm<ProductFormData>({
     defaultValues: {
@@ -162,6 +170,75 @@ export default function Products() {
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+  };
+
+  const handleExportExcel = () => {
+    const exportData = filteredProducts.map(p => ({
+      Name: p.name,
+      Barcode: p.barcode || '',
+      Category: p.category || '',
+      'Purchase Price': p.purchase_price,
+      'Selling Price': p.selling_price,
+      'Stock': p.stock_quantity,
+      'Min Threshold': p.min_stock_threshold,
+      'Expiry Date': p.expiry_date || '',
+    }));
+    exportToExcel(exportData, `products-${new Date().toISOString().split('T')[0]}`, 'Products');
+    toast({ title: "Success", description: "Products exported to Excel" });
+  };
+
+  const handleExportCSV = () => {
+    const exportData = filteredProducts.map(p => ({
+      Name: p.name,
+      Barcode: p.barcode || '',
+      Category: p.category || '',
+      'Purchase Price': p.purchase_price,
+      'Selling Price': p.selling_price,
+      'Stock': p.stock_quantity,
+      'Min Threshold': p.min_stock_threshold,
+      'Expiry Date': p.expiry_date || '',
+    }));
+    exportToCSV(exportData, `products-${new Date().toISOString().split('T')[0]}`);
+    toast({ title: "Success", description: "Products exported to CSV" });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.size === filteredProducts.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(filteredProducts.map(p => p.id)));
+    }
+  };
+
+  const toggleProduct = (id: string) => {
+    const newSelected = new Set(selectedProducts);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedProducts(newSelected);
+  };
+
+  const handleBulkUpdate = async (updates: Record<string, any>) => {
+    try {
+      const ids = Array.from(selectedProducts);
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, value]) => value !== '' && value !== undefined)
+      );
+      
+      await supabase.from('products').update(cleanUpdates).in('id', ids);
+      
+      toast({ title: "Success", description: `${ids.length} products updated` });
+      setSelectedProducts(new Set());
+      refreshProducts();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update products", variant: "destructive" });
+    }
+  };
+
+  const refreshProducts = async () => {
+    window.location.reload();
   };
 
       if (loading) {
@@ -425,17 +502,36 @@ export default function Products() {
             className="pl-10"
           />
         </div>
-        <Badge variant="outline" className="self-center sm:self-auto">
-          {filteredProducts.length} products
-        </Badge>
+        <div className="flex gap-2">
+          {selectedProducts.size > 0 && (
+            <Button onClick={() => setBulkUpdateOpen(true)} variant="outline" size="sm">
+              <CheckSquare className="h-4 w-4 mr-2" />
+              Update ({selectedProducts.size})
+            </Button>
+          )}
+          <Button onClick={handleExportExcel} variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Excel
+          </Button>
+          <Button onClick={handleExportCSV} variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            CSV
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {filteredProducts.map((product) => (
           <Card key={product.id} className="relative">
+            <div className="absolute top-2 left-2 z-10">
+              <Checkbox
+                checked={selectedProducts.has(product.id)}
+                onCheckedChange={() => toggleProduct(product.id)}
+              />
+            </div>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 ml-6">
                   <CardTitle className="text-base md:text-lg truncate">{product.name}</CardTitle>
                   <CardDescription className="mt-1">
                     {product.barcode && (
@@ -444,6 +540,14 @@ export default function Products() {
                   </CardDescription>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setSelectedProduct(product); setDetailsOpen(true); }}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Eye className="h-3 w-3 md:h-4 md:w-4" />
+                  </Button>
                   <ProductBatchesDialog
                     product={product}
                     trigger={
@@ -533,15 +637,32 @@ export default function Products() {
                 : "Get started by adding your first product to the inventory."
               }
             </p>
-            {!searchTerm && (
-              <Button onClick={handleAddNew}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Product
-              </Button>
-            )}
+            <Button onClick={handleAddNew}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add First Product
+            </Button>
           </CardContent>
         </Card>
       )}
+
+      <ProductDetailsDialog
+        product={selectedProduct}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
+
+      <BulkUpdateDialog
+        open={bulkUpdateOpen}
+        onOpenChange={setBulkUpdateOpen}
+        onUpdate={handleBulkUpdate}
+        selectedCount={selectedProducts.size}
+        fields={[
+          { key: 'category', label: 'Category', type: 'text' },
+          { key: 'purchase_price', label: 'Purchase Price', type: 'number' },
+          { key: 'selling_price', label: 'Selling Price', type: 'number' },
+          { key: 'min_stock_threshold', label: 'Min Stock Threshold', type: 'number' },
+        ]}
+      />
     </div>
   );
 }
