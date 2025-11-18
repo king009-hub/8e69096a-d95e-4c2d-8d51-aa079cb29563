@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useProducts } from "@/hooks/useProducts";
 import { useSales } from "@/hooks/useSales";
@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ReceiptPrint } from "@/components/pos/ReceiptPrint";
 import { CustomerDisplay } from "@/components/pos/CustomerDisplay";
 import { CreateLoanDialog } from "@/components/loans/CreateLoanDialog";
+import { BarcodeScanner } from "@/components/pos/BarcodeScanner";
 
 export default function PointOfSale() {
   const { formatCurrency, posSettings, getCurrencySymbol } = useSettingsContext();
@@ -75,11 +76,65 @@ export default function PointOfSale() {
   const [splitPayments, setSplitPayments] = useState<Array<{ method: string; amount: number }>>([]);
   const [showLoanDialog, setShowLoanDialog] = useState(false);
   const [pendingSaleData, setPendingSaleData] = useState<any>(null);
+  
+  // Barcode scanner support for physical scanners
+  const barcodeBuffer = useRef("");
+  const barcodeTimeout = useRef<NodeJS.Timeout>();
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.barcode?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Handle barcode scan from physical scanner or camera
+  const handleBarcodeScan = (barcode: string) => {
+    const product = products.find(p => p.barcode === barcode);
+    if (product) {
+      addToCart(product.id);
+      toast({
+        title: "Product Added",
+        description: `${product.name} added to cart`,
+      });
+    } else {
+      toast({
+        title: "Not Found",
+        description: `No product with barcode: ${barcode}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Listen for physical barcode scanner input
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key === "Enter") {
+        if (barcodeBuffer.current.length > 0) {
+          handleBarcodeScan(barcodeBuffer.current);
+          barcodeBuffer.current = "";
+        }
+      } else if (e.key.length === 1) {
+        // Accumulate characters
+        barcodeBuffer.current += e.key;
+        
+        // Clear buffer after 100ms of inactivity
+        clearTimeout(barcodeTimeout.current);
+        barcodeTimeout.current = setTimeout(() => {
+          barcodeBuffer.current = "";
+        }, 100);
+      }
+    };
+
+    window.addEventListener("keypress", handleKeyPress);
+    return () => {
+      window.removeEventListener("keypress", handleKeyPress);
+      clearTimeout(barcodeTimeout.current);
+    };
+  }, [products]);
 
   const addToCart = async (productId: string) => {
     const product = products.find(p => p.id === productId);
@@ -749,14 +804,17 @@ export default function PointOfSale() {
                 <div className="h-full bg-background">
                   {/* Search */}
                   <div className="p-4 border-b border-border">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search products..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 h-9"
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search products or scan barcode..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 h-9"
+                        />
+                      </div>
+                      <BarcodeScanner onScan={handleBarcodeScan} />
                     </div>
                   </div>
 
