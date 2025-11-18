@@ -430,6 +430,84 @@ export default function PointOfSale() {
     }
   };
 
+  // Payment dialog keyboard support
+  useEffect(() => {
+    if (!showPaymentDialog) return;
+
+    const handlePaymentKeyboard = (e: KeyboardEvent) => {
+      // Ignore if user is typing in a non-payment input field
+      const target = e.target as HTMLElement;
+      if (target instanceof HTMLInputElement && !target.readOnly) {
+        return;
+      }
+
+      // Number keys for numpad
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handleNumpadClick(e.key);
+      }
+      
+      // Decimal point
+      else if (e.key === '.') {
+        e.preventDefault();
+        handleNumpadClick('.');
+      }
+      
+      // Backspace or Delete to clear
+      else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        handleNumpadClick('C');
+      }
+      
+      // Enter to complete payment
+      else if (e.key === 'Enter' && remainingAmount <= 0.01) {
+        e.preventDefault();
+        handleCompleteSale();
+      }
+      
+      // Escape to cancel
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowPaymentDialog(false);
+        setSplitPayments([]);
+        setPaidAmount("");
+      }
+      
+      // Plus or Equals to add split payment
+      else if ((e.key === '+' || e.key === '=') && paidAmount && parseFloat(paidAmount) > 0) {
+        e.preventDefault();
+        addSplitPayment();
+      }
+      
+      // Payment method shortcuts (case insensitive)
+      else if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPaymentMethod('cash');
+      }
+      else if (e.key.toLowerCase() === 'd' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPaymentMethod('card');
+      }
+      else if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPaymentMethod('momo');
+      }
+      else if (e.key.toLowerCase() === 'a' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPaymentMethod('airtel');
+      }
+      else if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPaymentMethod('loan');
+      }
+    };
+
+    window.addEventListener('keydown', handlePaymentKeyboard);
+    return () => {
+      window.removeEventListener('keydown', handlePaymentKeyboard);
+    };
+  }, [showPaymentDialog, remainingAmount, paidAmount]);
+
   const handleLoanCreated = async (loan: any) => {
     console.log('handleLoanCreated called with loan:', loan);
     
@@ -570,6 +648,10 @@ export default function PointOfSale() {
                     <CreditCard className="h-5 w-5" />
                     Complete Payment
                   </DialogTitle>
+                  <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                    <p>💡 Keyboard shortcuts: <kbd className="px-1 py-0.5 bg-muted rounded text-xs">0-9</kbd> numpad, <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Enter</kbd> complete, <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Esc</kbd> cancel</p>
+                    <p>Payment methods: <kbd className="px-1 py-0.5 bg-muted rounded text-xs">C</kbd> Cash, <kbd className="px-1 py-0.5 bg-muted rounded text-xs">D</kbd> Card, <kbd className="px-1 py-0.5 bg-muted rounded text-xs">M</kbd> MOMO, <kbd className="px-1 py-0.5 bg-muted rounded text-xs">A</kbd> Airtel, <kbd className="px-1 py-0.5 bg-muted rounded text-xs">L</kbd> Loan</p>
+                  </div>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto space-y-6 pr-2">
                   <div className="text-center p-4 bg-muted/30 rounded-lg">
@@ -592,25 +674,35 @@ export default function PointOfSale() {
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="cash" id="cash" />
-                            <Label htmlFor="cash">Cash</Label>
+                            <Label htmlFor="cash" className="cursor-pointer">
+                              Cash <kbd className="ml-1 px-1 py-0.5 bg-muted rounded text-xs">C</kbd>
+                            </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="momo" id="momo" />
-                            <Label htmlFor="momo">MOMO</Label>
+                            <Label htmlFor="momo" className="cursor-pointer">
+                              MOMO <kbd className="ml-1 px-1 py-0.5 bg-muted rounded text-xs">M</kbd>
+                            </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="airtel" id="airtel" />
-                            <Label htmlFor="airtel">Airtel Money</Label>
+                            <Label htmlFor="airtel" className="cursor-pointer">
+                              Airtel Money <kbd className="ml-1 px-1 py-0.5 bg-muted rounded text-xs">A</kbd>
+                            </Label>
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="card" id="card" />
-                            <Label htmlFor="card">Card</Label>
+                            <Label htmlFor="card" className="cursor-pointer">
+                              Card <kbd className="ml-1 px-1 py-0.5 bg-muted rounded text-xs">D</kbd>
+                            </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="loan" id="loan" />
-                            <Label htmlFor="loan">Loan Payment</Label>
+                            <Label htmlFor="loan" className="cursor-pointer">
+                              Loan Payment <kbd className="ml-1 px-1 py-0.5 bg-muted rounded text-xs">L</kbd>
+                            </Label>
                           </div>
                         </div>
                       </div>
