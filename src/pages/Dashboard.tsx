@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardStats } from "@/types/inventory";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { useProfitAnalysis } from "@/hooks/useProfitAnalysis";
+import { useDashboardAnalytics } from "@/hooks/useDashboardAnalytics";
 import { 
   Package, 
   ShoppingCart, 
@@ -17,9 +19,12 @@ import {
   TrendingUp,
   Calendar,
   Target,
-  CalendarRange
+  CalendarRange,
+  BarChart3,
+  Trophy
 } from "lucide-react";
 import { format, addDays } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 
 export default function Dashboard() {
   const { formatCurrency, formatDate, stockSettings, companyProfile } = useSettingsContext();
@@ -32,6 +37,7 @@ export default function Dashboard() {
     todayRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [chartDays, setChartDays] = useState(7);
   
   // Profit analysis state
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'>('daily');
@@ -40,6 +46,7 @@ export default function Dashboard() {
   const [dateTo, setDateTo] = useState<Date>();
   
   const { profitAnalysis, loading: profitLoading } = useProfitAnalysis(customDateRange);
+  const { salesChartData, topProducts, lowStockProducts, loading: analyticsLoading } = useDashboardAnalytics(chartDays);
 
   useEffect(() => {
     fetchDashboardData();
@@ -364,6 +371,179 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Sales Analytics Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  Sales & Revenue Analytics
+                </CardTitle>
+                <CardDescription>
+                  Track your sales performance over time
+                </CardDescription>
+              </div>
+              <Select value={chartDays.toString()} onValueChange={(value) => setChartDays(Number(value))}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="14">Last 14 days</SelectItem>
+                  <SelectItem value="30">Last 30 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {analyticsLoading ? (
+              <div className="h-80 flex items-center justify-center">
+                <div className="animate-pulse text-muted-foreground">Loading chart data...</div>
+              </div>
+            ) : (
+              <ChartContainer
+                config={{
+                  revenue: {
+                    label: "Revenue",
+                    color: "hsl(var(--primary))",
+                  },
+                  sales: {
+                    label: "Sales",
+                    color: "hsl(var(--success))",
+                  },
+                }}
+                className="h-80"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={salesChartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="date" 
+                      className="text-xs"
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis 
+                      className="text-xs"
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar 
+                      dataKey="revenue" 
+                      fill="hsl(var(--primary))" 
+                      radius={[8, 8, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Selling Products & Low Stock Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-warning" />
+              Top Selling Products
+            </CardTitle>
+            <CardDescription>
+              Best performing products by quantity sold
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analyticsLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
+                    <div className="h-4 bg-muted rounded w-1/2"></div>
+                    <div className="h-4 bg-muted rounded w-1/4"></div>
+                  </div>
+                ))}
+              </div>
+            ) : topProducts.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No sales data available</p>
+            ) : (
+              <div className="space-y-3">
+                {topProducts.map((product, index) => (
+                  <div 
+                    key={product.id} 
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge variant={index < 3 ? "default" : "outline"} className="w-8 h-8 flex items-center justify-center">
+                        {index + 1}
+                      </Badge>
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        {product.category && (
+                          <p className="text-xs text-muted-foreground">{product.category}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">{product.totalQuantity} sold</p>
+                      <p className="text-xs text-muted-foreground">{formatCurrency(product.totalRevenue)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Low Stock Alerts
+            </CardTitle>
+            <CardDescription>
+              Products running low on inventory
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analyticsLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
+                    <div className="h-4 bg-muted rounded w-1/2"></div>
+                    <div className="h-4 bg-muted rounded w-1/4"></div>
+                  </div>
+                ))}
+              </div>
+            ) : lowStockProducts.length === 0 ? (
+              <p className="text-sm text-success text-center py-8">All products are well stocked! 🎉</p>
+            ) : (
+              <div className="space-y-3">
+                {lowStockProducts.map((product) => (
+                  <div 
+                    key={product.id} 
+                    className="flex items-center justify-between p-3 border border-warning/30 rounded-lg hover:bg-warning/10 transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      {product.category && (
+                        <p className="text-xs text-muted-foreground">{product.category}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="outline" className="border-warning text-warning">
+                        {product.stock} / {product.threshold}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">units left</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
@@ -398,7 +578,7 @@ export default function Dashboard() {
               href="/reports" 
               className="flex flex-col items-center p-4 border rounded-lg hover:bg-accent transition-colors"
             >
-              <AlertTriangle className="h-8 w-8 mb-2 text-primary" />
+              <DollarSign className="h-8 w-8 mb-2 text-primary" />
               <span className="text-sm font-medium">View Reports</span>
             </a>
           </div>
