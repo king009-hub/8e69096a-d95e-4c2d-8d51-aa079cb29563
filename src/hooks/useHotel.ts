@@ -23,6 +23,26 @@ export function useHotelInfo() {
   });
 }
 
+export function useUpdateHotelInfo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...info }: Partial<HotelInfo> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('hotel_info')
+        .update(info)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hotel-info'] });
+    },
+    onError: (error: Error) => toast.error(error.message)
+  });
+}
+
 // Rooms
 export function useHotelRooms() {
   return useQuery({

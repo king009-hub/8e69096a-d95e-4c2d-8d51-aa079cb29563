@@ -11,12 +11,21 @@ import {
   CreditCard,
   Settings,
   Shield,
-  Users
+  Users,
+  BedDouble,
+  CalendarDays,
+  UserCheck,
+  Receipt,
+  Sparkles,
+  Building,
+  Hotel
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppMode } from "@/contexts/AppModeContext";
+import { ModeSwitcher } from "@/components/common/ModeSwitcher";
 
-const navigation = [
+const posNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
   { name: "Point of Sale", href: "/pos", icon: ShoppingCart },
@@ -30,23 +39,50 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+const hotelNavigation = [
+  { name: "Dashboard", href: "/hotel", icon: LayoutDashboard },
+  { name: "Rooms", href: "/hotel/rooms", icon: BedDouble },
+  { name: "Bookings", href: "/hotel/bookings", icon: CalendarDays },
+  { name: "Check In/Out", href: "/hotel/check-in-out", icon: UserCheck },
+  { name: "Guests", href: "/hotel/guests", icon: Users },
+  { name: "Billing", href: "/hotel/billing", icon: Receipt },
+  { name: "Housekeeping", href: "/hotel/housekeeping", icon: Sparkles },
+  { name: "Staff", href: "/hotel/staff", icon: Building },
+  { name: "Reports", href: "/hotel/reports", icon: BarChart3 },
+  { name: "Settings", href: "/hotel/settings", icon: Settings },
+];
+
 const ownerNavigation = [
   { name: "Owner Dashboard", href: "/owner", icon: Shield },
 ];
 
 export function Sidebar() {
   const { userRole } = useAuth();
+  const { mode } = useAppMode();
+  
+  const navigation = mode === 'hotel' ? hotelNavigation : posNavigation;
+  const title = mode === 'hotel' ? 'Hotel Manager' : 'StockFlow';
+  const subtitle = mode === 'hotel' ? 'Hotel Management' : 'Inventory Management';
   
   return (
-    <div className="w-56 md:w-64 bg-card border-r border-border h-screen shadow-lg">
+    <div className="w-56 md:w-64 bg-card border-r border-border h-screen shadow-lg flex flex-col">
       <div className="p-4 md:p-6">
-        <h2 className="text-xl md:text-2xl font-bold text-primary">StockFlow</h2>
-        <p className="text-xs md:text-sm text-muted-foreground">Inventory Management</p>
+        <div className="flex items-center gap-2">
+          {mode === 'hotel' ? (
+            <Hotel className="h-6 w-6 text-primary" />
+          ) : (
+            <Package className="h-6 w-6 text-primary" />
+          )}
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold text-primary">{title}</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">{subtitle}</p>
+          </div>
+        </div>
       </div>
       
-      <nav className="mt-6 md:mt-8 px-3 md:px-4">
+      <nav className="flex-1 mt-2 md:mt-4 px-3 md:px-4 overflow-y-auto">
         {/* Owner Dashboard - Only for admins */}
-        {userRole === 'admin' && (
+        {userRole === 'admin' && mode === 'pos' && (
           <div className="mb-4">
             <ul className="space-y-1 md:space-y-2">
               {ownerNavigation.map((item) => (
@@ -94,6 +130,11 @@ export function Sidebar() {
           ))}
         </ul>
       </nav>
+      
+      {/* Mode Switcher at bottom */}
+      <div className="p-3 md:p-4 border-t border-border">
+        <ModeSwitcher />
+      </div>
     </div>
   );
 }
