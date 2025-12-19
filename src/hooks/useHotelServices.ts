@@ -352,3 +352,29 @@ async function recalculateInvoiceTotals(invoiceId: string) {
     })
     .eq('id', invoiceId);
 }
+
+// Fetch invoice with items for printing
+export async function fetchInvoiceWithItems(invoiceId: string) {
+  const { data: invoice, error } = await supabase
+    .from('hotel_invoices')
+    .select(`
+      *,
+      guest:hotel_guests(*),
+      booking:hotel_bookings(
+        *,
+        room:hotel_rooms(*)
+      )
+    `)
+    .eq('id', invoiceId)
+    .single();
+
+  if (error) throw error;
+
+  const { data: items } = await supabase
+    .from('hotel_invoice_items')
+    .select('*')
+    .eq('invoice_id', invoiceId)
+    .order('created_at');
+
+  return { ...invoice, items: items || [] };
+}
