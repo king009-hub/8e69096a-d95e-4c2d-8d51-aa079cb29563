@@ -4,7 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHotelBookings, useUpdateBookingStatus } from '@/hooks/useHotel';
-import { CalendarCheck, CalendarX, Loader2, User, BedDouble, DollarSign } from 'lucide-react';
+import { HotelBooking } from '@/types/hotel';
+import { GuestServicesDialog } from '@/components/hotel/GuestServicesDialog';
+import { CheckoutDialog } from '@/components/hotel/CheckoutDialog';
+import { 
+  CalendarCheck, CalendarX, Loader2, User, BedDouble, DollarSign, 
+  Coffee, Receipt, ShoppingBag 
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -12,6 +18,8 @@ export default function HotelCheckInOut() {
   const { data: bookings, isLoading } = useHotelBookings();
   const updateStatus = useUpdateBookingStatus();
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [servicesBooking, setServicesBooking] = useState<HotelBooking | null>(null);
+  const [checkoutBooking, setCheckoutBooking] = useState<HotelBooking | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -41,20 +49,6 @@ export default function HotelCheckInOut() {
     }
   };
 
-  const handleCheckOut = async (bookingId: string) => {
-    setProcessingId(bookingId);
-    try {
-      await updateStatus.mutateAsync({ 
-        id: bookingId, 
-        status: 'checked_out',
-        roomStatus: 'cleaning'
-      });
-      toast.success('Guest checked out successfully');
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -68,7 +62,7 @@ export default function HotelCheckInOut() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Check-in / Check-out</h1>
-        <p className="text-muted-foreground">Manage today's arrivals and departures</p>
+        <p className="text-muted-foreground">Manage today's arrivals, departures, and guest services</p>
       </div>
 
       {/* Stats */}
@@ -220,25 +214,27 @@ export default function HotelCheckInOut() {
                             <span>Check-in: {format(new Date(booking.check_in_date), 'MMM dd')}</span>
                             <div className="flex items-center gap-1">
                               <DollarSign className="h-4 w-4" />
-                              Balance: ${(booking.total_amount - booking.paid_amount).toFixed(2)}
+                              Balance: ${(Number(booking.total_amount) - Number(booking.paid_amount)).toFixed(2)}
                             </div>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <Badge className="bg-green-100 text-green-800">Checked In</Badge>
                         <Button
                           variant="outline"
-                          onClick={() => handleCheckOut(booking.id)}
-                          disabled={processingId === booking.id}
+                          onClick={() => setServicesBooking(booking)}
                           className="gap-2"
                         >
-                          {processingId === booking.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CalendarX className="h-4 w-4" />
-                          )}
-                          Check Out
+                          <ShoppingBag className="h-4 w-4" />
+                          Services
+                        </Button>
+                        <Button
+                          onClick={() => setCheckoutBooking(booking)}
+                          className="gap-2"
+                        >
+                          <Receipt className="h-4 w-4" />
+                          Checkout
                         </Button>
                       </div>
                     </div>
@@ -286,7 +282,25 @@ export default function HotelCheckInOut() {
                           </div>
                         </div>
                       </div>
-                      <Badge className="bg-blue-100 text-blue-800">In-House</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-100 text-blue-800">In-House</Badge>
+                        <Button
+                          variant="outline"
+                          onClick={() => setServicesBooking(booking)}
+                          className="gap-2"
+                        >
+                          <Coffee className="h-4 w-4" />
+                          Add Services
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setCheckoutBooking(booking)}
+                          className="gap-2"
+                        >
+                          <Receipt className="h-4 w-4" />
+                          Checkout
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -295,6 +309,23 @@ export default function HotelCheckInOut() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      {servicesBooking && (
+        <GuestServicesDialog
+          open={!!servicesBooking}
+          onOpenChange={(open) => !open && setServicesBooking(null)}
+          booking={servicesBooking}
+        />
+      )}
+
+      {checkoutBooking && (
+        <CheckoutDialog
+          open={!!checkoutBooking}
+          onOpenChange={(open) => !open && setCheckoutBooking(null)}
+          booking={checkoutBooking}
+        />
+      )}
     </div>
   );
 }
