@@ -4,11 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useHotelInvoices } from '@/hooks/useHotel';
+import { useHotelInvoices, useHotelInfo } from '@/hooks/useHotel';
 import { HotelInvoice } from '@/types/hotel';
 import { PaymentDialog } from '@/components/hotel/PaymentDialog';
+import { printHotelInvoice } from '@/utils/hotelInvoicePdf';
+import { fetchInvoiceWithItems } from '@/hooks/useHotelServices';
 import { Search, FileText, Loader2, Printer, DollarSign, CreditCard, Banknote, Building } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const paymentMethodIcons = {
   cash: Banknote,
@@ -26,8 +29,18 @@ const statusColors: Record<string, string> = {
 
 export default function HotelBilling() {
   const { data: invoices, isLoading } = useHotelInvoices();
+  const { data: hotelInfo } = useHotelInfo();
   const [search, setSearch] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<HotelInvoice | null>(null);
+
+  const handlePrintInvoice = async (invoice: HotelInvoice) => {
+    try {
+      const invoiceWithItems = await fetchInvoiceWithItems(invoice.id);
+      printHotelInvoice(invoiceWithItems as any, invoiceWithItems.booking as any || undefined, hotelInfo || undefined);
+    } catch (error) {
+      toast.error('Failed to load invoice details');
+    }
+  };
 
   const filteredInvoices = invoices?.filter(invoice => {
     const searchLower = search.toLowerCase();
@@ -176,7 +189,11 @@ export default function HotelBilling() {
                             <CreditCard className="h-4 w-4 mr-1" />
                             Pay
                           </Button>
-                          <Button variant="outline" size="icon">
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handlePrintInvoice(invoice)}
+                          >
                             <Printer className="h-4 w-4" />
                           </Button>
                         </div>

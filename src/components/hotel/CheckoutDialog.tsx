@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGenerateCheckoutInvoice, useProcessPayment } from '@/hooks/useHotelServices';
-import { useUpdateBookingStatus } from '@/hooks/useHotel';
+import { useUpdateBookingStatus, useHotelInfo } from '@/hooks/useHotel';
 import { HotelBooking, HotelPaymentMethod } from '@/types/hotel';
-import { Loader2, Receipt, CreditCard, Banknote, Building, DollarSign, Printer } from 'lucide-react';
+import { printHotelInvoice, downloadHotelInvoice } from '@/utils/hotelInvoicePdf';
+import { Loader2, Receipt, CreditCard, Banknote, Building, DollarSign, Printer, Download } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -34,8 +35,21 @@ export function CheckoutDialog({ open, onOpenChange, booking }: CheckoutDialogPr
   const generateInvoice = useGenerateCheckoutInvoice();
   const processPayment = useProcessPayment();
   const updateBookingStatus = useUpdateBookingStatus();
+  const { data: hotelInfo } = useHotelInfo();
 
   const nights = differenceInDays(new Date(booking.check_out_date), new Date(booking.check_in_date));
+
+  const handlePrint = () => {
+    if (invoice) {
+      printHotelInvoice(invoice, booking, hotelInfo || undefined);
+    }
+  };
+
+  const handleDownload = () => {
+    if (invoice) {
+      downloadHotelInvoice(invoice, booking, hotelInfo || undefined);
+    }
+  };
 
   useEffect(() => {
     if (open && booking.id) {
@@ -191,11 +205,15 @@ export function CheckoutDialog({ open, onOpenChange, booking }: CheckoutDialogPr
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="outline" disabled={!invoice}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print Invoice
+          <Button variant="outline" disabled={!invoice} onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Download
           </Button>
-          <Button 
+          <Button variant="outline" disabled={!invoice} onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+          <Button
             onClick={handleCheckout} 
             disabled={isProcessing || !invoice}
             className="gap-2"
