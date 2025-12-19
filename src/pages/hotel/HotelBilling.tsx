@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useHotelInvoices } from '@/hooks/useHotel';
-import { Search, FileText, Loader2, Printer, Eye, DollarSign, CreditCard, Banknote, Building } from 'lucide-react';
+import { HotelInvoice } from '@/types/hotel';
+import { PaymentDialog } from '@/components/hotel/PaymentDialog';
+import { Search, FileText, Loader2, Printer, DollarSign, CreditCard, Banknote, Building } from 'lucide-react';
 import { format } from 'date-fns';
 
 const paymentMethodIcons = {
@@ -15,7 +17,7 @@ const paymentMethodIcons = {
   bank_transfer: Building,
 };
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   paid: 'bg-green-100 text-green-800',
   partial: 'bg-blue-100 text-blue-800',
@@ -25,6 +27,7 @@ const statusColors = {
 export default function HotelBilling() {
   const { data: invoices, isLoading } = useHotelInvoices();
   const [search, setSearch] = useState('');
+  const [selectedInvoice, setSelectedInvoice] = useState<HotelInvoice | null>(null);
 
   const filteredInvoices = invoices?.filter(invoice => {
     const searchLower = search.toLowerCase();
@@ -50,13 +53,11 @@ export default function HotelBilling() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Billing & Payments</h1>
-        <p className="text-muted-foreground">Manage invoices and payment records</p>
+        <p className="text-muted-foreground">Manage invoices and process payments</p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -71,7 +72,6 @@ export default function HotelBilling() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -79,13 +79,12 @@ export default function HotelBilling() {
                 <CreditCard className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Paid Amount</p>
+                <p className="text-sm text-muted-foreground">Paid</p>
                 <p className="text-2xl font-bold">${paidAmount.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -93,7 +92,7 @@ export default function HotelBilling() {
                 <Banknote className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending Amount</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
                 <p className="text-2xl font-bold">${pendingAmount.toLocaleString()}</p>
               </div>
             </div>
@@ -101,7 +100,6 @@ export default function HotelBilling() {
         </Card>
       </div>
 
-      {/* Search */}
       <Card>
         <CardContent className="p-4">
           <div className="relative">
@@ -116,7 +114,6 @@ export default function HotelBilling() {
         </CardContent>
       </Card>
 
-      {/* Invoices Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -124,10 +121,6 @@ export default function HotelBilling() {
               <TableRow>
                 <TableHead>Invoice</TableHead>
                 <TableHead>Guest</TableHead>
-                <TableHead>Booking Ref</TableHead>
-                <TableHead>Subtotal</TableHead>
-                <TableHead>Tax</TableHead>
-                <TableHead>Discount</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead>Status</TableHead>
@@ -137,7 +130,7 @@ export default function HotelBilling() {
             <TableBody>
               {filteredInvoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">No invoices found</p>
                   </TableCell>
@@ -151,26 +144,14 @@ export default function HotelBilling() {
                   return (
                     <TableRow key={invoice.id}>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{invoice.invoice_number}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(invoice.created_at), 'MMM dd, yyyy')}
-                          </p>
-                        </div>
+                        <p className="font-medium">{invoice.invoice_number}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(invoice.created_at), 'MMM dd, yyyy')}
+                        </p>
                       </TableCell>
                       <TableCell>
-                        {invoice.guest ? (
-                          <span>{invoice.guest.first_name} {invoice.guest.last_name}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        {invoice.guest ? `${invoice.guest.first_name} ${invoice.guest.last_name}` : '-'}
                       </TableCell>
-                      <TableCell>
-                        {invoice.booking?.booking_reference || '-'}
-                      </TableCell>
-                      <TableCell>${Number(invoice.subtotal).toFixed(2)}</TableCell>
-                      <TableCell>${Number(invoice.tax_amount).toFixed(2)}</TableCell>
-                      <TableCell>${Number(invoice.discount_amount).toFixed(2)}</TableCell>
                       <TableCell className="font-bold">${Number(invoice.total_amount).toFixed(2)}</TableCell>
                       <TableCell>
                         {invoice.payment_method ? (
@@ -178,19 +159,22 @@ export default function HotelBilling() {
                             <PaymentIcon className="h-4 w-4" />
                             <span className="capitalize">{invoice.payment_method.replace('_', ' ')}</span>
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        ) : '-'}
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusColors[invoice.payment_status as keyof typeof statusColors] || 'bg-gray-100'}>
+                        <Badge className={statusColors[invoice.payment_status || 'pending']}>
                           {invoice.payment_status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="icon">
-                            <Eye className="h-4 w-4" />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedInvoice(invoice)}
+                          >
+                            <CreditCard className="h-4 w-4 mr-1" />
+                            Pay
                           </Button>
                           <Button variant="outline" size="icon">
                             <Printer className="h-4 w-4" />
@@ -205,6 +189,14 @@ export default function HotelBilling() {
           </Table>
         </CardContent>
       </Card>
+
+      {selectedInvoice && (
+        <PaymentDialog
+          open={!!selectedInvoice}
+          onOpenChange={(open) => !open && setSelectedInvoice(null)}
+          invoice={selectedInvoice}
+        />
+      )}
     </div>
   );
 }
