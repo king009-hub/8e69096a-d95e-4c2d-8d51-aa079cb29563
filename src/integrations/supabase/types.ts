@@ -594,6 +594,42 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_service_categories: {
+        Row: {
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          label: string
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          label: string
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          label?: string
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       hotel_service_menu: {
         Row: {
           category: string
@@ -601,9 +637,13 @@ export type Database = {
           description: string | null
           id: string
           is_available: boolean | null
+          min_stock_threshold: number | null
           name: string
           price: number
+          product_id: string | null
           sort_order: number | null
+          stock_quantity: number | null
+          track_stock: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -612,9 +652,13 @@ export type Database = {
           description?: string | null
           id?: string
           is_available?: boolean | null
+          min_stock_threshold?: number | null
           name: string
           price?: number
+          product_id?: string | null
           sort_order?: number | null
+          stock_quantity?: number | null
+          track_stock?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -623,12 +667,31 @@ export type Database = {
           description?: string | null
           id?: string
           is_available?: boolean | null
+          min_stock_threshold?: number | null
           name?: string
           price?: number
+          product_id?: string | null
           sort_order?: number | null
+          stock_quantity?: number | null
+          track_stock?: boolean | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hotel_service_menu_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_service_menu_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_calculated_stock"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hotel_staff: {
         Row: {
@@ -715,6 +778,50 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_stock_movements: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          movement_type: string
+          notes: string | null
+          quantity: number
+          reason: string
+          reference_id: string | null
+          service_item_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          movement_type: string
+          notes?: string | null
+          quantity: number
+          reason: string
+          reference_id?: string | null
+          service_item_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          movement_type?: string
+          notes?: string | null
+          quantity?: number
+          reason?: string
+          reference_id?: string | null
+          service_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_stock_movements_service_item_id_fkey"
+            columns: ["service_item_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_service_menu"
             referencedColumns: ["id"]
           },
         ]

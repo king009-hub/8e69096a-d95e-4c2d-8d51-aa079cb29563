@@ -2,66 +2,60 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export interface ServiceMenuItem {
+export interface ServiceCategory {
   id: string;
   name: string;
-  description: string | null;
-  category: string;
-  price: number;
-  is_available: boolean;
+  label: string;
+  icon: string;
   sort_order: number;
-  track_stock: boolean;
-  stock_quantity: number;
-  min_stock_threshold: number;
-  product_id: string | null;
+  is_system: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export type ServiceMenuInsert = Omit<ServiceMenuItem, 'id' | 'created_at' | 'updated_at'>;
-export type ServiceMenuUpdate = Partial<ServiceMenuInsert>;
+export type ServiceCategoryInsert = Pick<ServiceCategory, 'name' | 'label' | 'icon' | 'sort_order'>;
+export type ServiceCategoryUpdate = Partial<ServiceCategoryInsert> & { is_active?: boolean };
 
-export function useServiceMenu() {
+export function useServiceCategories() {
   return useQuery({
-    queryKey: ['service-menu'],
+    queryKey: ['service-categories'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('hotel_service_menu')
+        .from('hotel_service_categories')
         .select('*')
-        .order('category')
         .order('sort_order');
       
       if (error) throw error;
-      return data as ServiceMenuItem[];
+      return data as ServiceCategory[];
     },
   });
 }
 
-export function useAvailableServices() {
+export function useActiveServiceCategories() {
   return useQuery({
-    queryKey: ['service-menu', 'available'],
+    queryKey: ['service-categories', 'active'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('hotel_service_menu')
+        .from('hotel_service_categories')
         .select('*')
-        .eq('is_available', true)
-        .order('category')
+        .eq('is_active', true)
         .order('sort_order');
       
       if (error) throw error;
-      return data as ServiceMenuItem[];
+      return data as ServiceCategory[];
     },
   });
 }
 
-export function useAddServiceMenuItem() {
+export function useAddServiceCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (item: ServiceMenuInsert) => {
+    mutationFn: async (category: ServiceCategoryInsert) => {
       const { data, error } = await supabase
-        .from('hotel_service_menu')
-        .insert([item])
+        .from('hotel_service_categories')
+        .insert([{ ...category, is_system: false }])
         .select()
         .single();
 
@@ -69,20 +63,20 @@ export function useAddServiceMenuItem() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-menu'] });
-      toast.success('Service item added');
+      queryClient.invalidateQueries({ queryKey: ['service-categories'] });
+      toast.success('Category added');
     },
     onError: (error: Error) => toast.error(error.message),
   });
 }
 
-export function useUpdateServiceMenuItem() {
+export function useUpdateServiceCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: ServiceMenuUpdate }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: ServiceCategoryUpdate }) => {
       const { data, error } = await supabase
-        .from('hotel_service_menu')
+        .from('hotel_service_categories')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
@@ -92,47 +86,48 @@ export function useUpdateServiceMenuItem() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-menu'] });
-      toast.success('Service item updated');
+      queryClient.invalidateQueries({ queryKey: ['service-categories'] });
+      toast.success('Category updated');
     },
     onError: (error: Error) => toast.error(error.message),
   });
 }
 
-export function useDeleteServiceMenuItem() {
+export function useDeleteServiceCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('hotel_service_menu')
+        .from('hotel_service_categories')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('is_system', false); // Prevent deleting system categories
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-menu'] });
-      toast.success('Service item deleted');
+      queryClient.invalidateQueries({ queryKey: ['service-categories'] });
+      toast.success('Category deleted');
     },
     onError: (error: Error) => toast.error(error.message),
   });
 }
 
-export function useToggleServiceAvailability() {
+export function useToggleCategoryActive() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, is_available }: { id: string; is_available: boolean }) => {
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase
-        .from('hotel_service_menu')
-        .update({ is_available, updated_at: new Date().toISOString() })
+        .from('hotel_service_categories')
+        .update({ is_active, updated_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-menu'] });
+      queryClient.invalidateQueries({ queryKey: ['service-categories'] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
