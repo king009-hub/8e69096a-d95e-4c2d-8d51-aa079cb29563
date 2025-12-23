@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useInvoiceItems, useAddInvoiceItem, useDeleteInvoiceItem } from '@/hooks/useHotelServices';
+import { useAvailableServices } from '@/hooks/useServiceMenu';
 import { HotelBooking } from '@/types/hotel';
 import { Loader2, Plus, Trash2, Coffee, UtensilsCrossed, Wine, Sparkles, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,39 +27,6 @@ const serviceCategories = [
   { value: 'other', label: 'Other Services', icon: ShoppingBag },
 ];
 
-const presetServices = {
-  food: [
-    { description: 'Breakfast', price: 15 },
-    { description: 'Lunch', price: 25 },
-    { description: 'Dinner', price: 35 },
-    { description: 'Room Service - Snacks', price: 12 },
-  ],
-  beverages: [
-    { description: 'Coffee', price: 5 },
-    { description: 'Tea', price: 4 },
-    { description: 'Soft Drinks', price: 3 },
-    { description: 'Fresh Juice', price: 6 },
-  ],
-  minibar: [
-    { description: 'Wine', price: 25 },
-    { description: 'Beer', price: 8 },
-    { description: 'Spirits', price: 15 },
-    { description: 'Snacks', price: 10 },
-  ],
-  laundry: [
-    { description: 'Laundry - Regular', price: 20 },
-    { description: 'Laundry - Express', price: 35 },
-    { description: 'Dry Cleaning', price: 30 },
-    { description: 'Ironing', price: 10 },
-  ],
-  other: [
-    { description: 'Spa Treatment', price: 80 },
-    { description: 'Gym Access', price: 15 },
-    { description: 'Airport Transfer', price: 50 },
-    { description: 'Tour Booking', price: 100 },
-  ],
-};
-
 export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServicesDialogProps) {
   const [category, setCategory] = useState<string>('food');
   const [description, setDescription] = useState('');
@@ -66,8 +34,31 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
   const [quantity, setQuantity] = useState<number>(1);
 
   const { data: items, isLoading } = useInvoiceItems(booking.id);
+  const { data: menuItems = [] } = useAvailableServices();
   const addItem = useAddInvoiceItem();
   const deleteItem = useDeleteInvoiceItem();
+
+  // Group menu items by category
+  const presetServices = useMemo(() => {
+    const grouped: Record<string, { description: string; price: number }[]> = {
+      food: [],
+      beverages: [],
+      minibar: [],
+      laundry: [],
+      other: [],
+    };
+    
+    menuItems.forEach(item => {
+      if (grouped[item.category]) {
+        grouped[item.category].push({
+          description: item.name,
+          price: item.price,
+        });
+      }
+    });
+    
+    return grouped;
+  }, [menuItems]);
 
   const handleAddService = async () => {
     if (!description || unitPrice <= 0) {
@@ -129,22 +120,28 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
               </Select>
             </div>
 
-            {/* Quick Add Presets */}
+            {/* Quick Add Presets from Database */}
             <div className="space-y-2">
               <Label>Quick Add</Label>
               <div className="grid grid-cols-2 gap-2">
-                {presetServices[category as keyof typeof presetServices]?.map((preset, idx) => (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    size="sm"
-                    className="justify-start h-auto py-2"
-                    onClick={() => handlePresetClick(preset)}
-                  >
-                    <span className="truncate">{preset.description}</span>
-                    <Badge variant="secondary" className="ml-auto">${preset.price}</Badge>
-                  </Button>
-                ))}
+                {presetServices[category]?.length > 0 ? (
+                  presetServices[category].map((preset, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      size="sm"
+                      className="justify-start h-auto py-2"
+                      onClick={() => handlePresetClick(preset)}
+                    >
+                      <span className="truncate">{preset.description}</span>
+                      <Badge variant="secondary" className="ml-auto">${preset.price}</Badge>
+                    </Button>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground col-span-2">
+                    No items in this category
+                  </p>
+                )}
               </div>
             </div>
 
