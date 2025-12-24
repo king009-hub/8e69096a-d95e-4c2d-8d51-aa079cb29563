@@ -58,6 +58,8 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
+  Link as LinkIcon,
+  Unlink,
 } from 'lucide-react';
 import { 
   useServiceMenu, 
@@ -76,6 +78,7 @@ import {
   ServiceCategory,
 } from '@/hooks/useServiceCategories';
 import { useAddHotelStockMovement, useHotelStockMovements } from '@/hooks/useHotelStock';
+import { useProducts } from '@/hooks/useProducts';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'utensils-crossed': UtensilsCrossed,
@@ -100,6 +103,7 @@ interface ServiceFormData {
   track_stock: boolean;
   stock_quantity: string;
   min_stock_threshold: string;
+  product_id: string;
 }
 
 const defaultFormData: ServiceFormData = {
@@ -112,6 +116,7 @@ const defaultFormData: ServiceFormData = {
   track_stock: false,
   stock_quantity: '0',
   min_stock_threshold: '5',
+  product_id: '',
 };
 
 interface CategoryFormData {
@@ -144,6 +149,7 @@ export default function HotelServiceMenu() {
   const { data: menuItems = [], isLoading } = useServiceMenu();
   const { data: categories = [], isLoading: categoriesLoading } = useServiceCategories();
   const { data: stockMovements = [] } = useHotelStockMovements();
+  const { products } = useProducts();
   const addItem = useAddServiceMenuItem();
   const updateItem = useUpdateServiceMenuItem();
   const deleteItem = useDeleteServiceMenuItem();
@@ -186,6 +192,7 @@ export default function HotelServiceMenu() {
       track_stock: item.track_stock,
       stock_quantity: item.stock_quantity.toString(),
       min_stock_threshold: item.min_stock_threshold.toString(),
+      product_id: item.product_id || '',
     });
     setEditingItem(item);
     setIsAddDialogOpen(true);
@@ -194,6 +201,9 @@ export default function HotelServiceMenu() {
   const handleSubmit = async () => {
     if (!formData.name || !formData.price) return;
 
+    // If linked to a product, get stock from product
+    const linkedProduct = formData.product_id ? products.find(p => p.id === formData.product_id) : null;
+
     const data = {
       name: formData.name,
       description: formData.description || null,
@@ -201,10 +211,10 @@ export default function HotelServiceMenu() {
       price: parseFloat(formData.price),
       sort_order: parseInt(formData.sort_order) || 0,
       is_available: formData.is_available,
-      track_stock: formData.track_stock,
-      stock_quantity: parseInt(formData.stock_quantity) || 0,
-      min_stock_threshold: parseInt(formData.min_stock_threshold) || 5,
-      product_id: null,
+      track_stock: formData.track_stock || !!linkedProduct,
+      stock_quantity: linkedProduct ? linkedProduct.stock_quantity : parseInt(formData.stock_quantity) || 0,
+      min_stock_threshold: linkedProduct ? (linkedProduct.min_stock_threshold || 5) : parseInt(formData.min_stock_threshold) || 5,
+      product_id: formData.product_id || null,
     };
 
     if (editingItem) {
@@ -602,17 +612,76 @@ export default function HotelServiceMenu() {
                 </div>
               </div>
 
+              {/* Link to Main Inventory */}
+              <div className="border-t pt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <LinkIcon className="h-4 w-4" />
+                    Link to Main Inventory (Optional)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Link this service item to a product in your main POS inventory for unified stock tracking.
+                  </p>
+                  <Select
+                    value={formData.product_id}
+                    onValueChange={(value) => {
+                      const product = products.find(p => p.id === value);
+                      setFormData({ 
+                        ...formData, 
+                        product_id: value === 'none' ? '' : value,
+                        track_stock: value !== 'none' ? true : formData.track_stock,
+                        stock_quantity: product ? product.stock_quantity.toString() : formData.stock_quantity,
+                        min_stock_threshold: product ? (product.min_stock_threshold || 5).toString() : formData.min_stock_threshold,
+                        price: product && !formData.price ? product.selling_price.toString() : formData.price,
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a product to link..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <div className="flex items-center gap-2">
+                          <Unlink className="h-4 w-4" />
+                          No link (standalone)
+                        </div>
+                      </SelectItem>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          <div className="flex items-center justify-between gap-4">
+                            <span>{product.name}</span>
+                            <Badge variant="outline" className="ml-2">
+                              Stock: {product.stock_quantity}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.product_id && (
+                    <p className="text-xs text-primary flex items-center gap-1">
+                      <LinkIcon className="h-3 w-3" />
+                      Stock will sync with main inventory
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {/* Stock Tracking Section */}
               <div className="border-t pt-4 space-y-4">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="track_stock"
-                    checked={formData.track_stock}
+                    checked={formData.track_stock || !!formData.product_id}
                     onCheckedChange={(checked) => setFormData({ ...formData, track_stock: checked })}
+                    disabled={!!formData.product_id}
                   />
                   <Label htmlFor="track_stock">Track Stock</Label>
+                  {formData.product_id && (
+                    <Badge variant="secondary" className="text-xs">Auto-enabled (linked)</Badge>
+                  )}
                 </div>
-                {formData.track_stock && (
+                {(formData.track_stock || formData.product_id) && !formData.product_id && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="stock_quantity">Current Stock</Label>
@@ -634,6 +703,13 @@ export default function HotelServiceMenu() {
                         onChange={(e) => setFormData({ ...formData, min_stock_threshold: e.target.value })}
                       />
                     </div>
+                  </div>
+                )}
+                {formData.product_id && (
+                  <div className="bg-muted p-3 rounded-lg text-sm">
+                    <p className="text-muted-foreground">
+                      Stock is managed through the linked product in main inventory.
+                    </p>
                   </div>
                 )}
               </div>
@@ -813,7 +889,17 @@ function ServiceTable({ items, onEdit, onDelete, onToggle, onStock }: ServiceTab
       <TableBody>
         {items.map((item) => (
           <TableRow key={item.id}>
-            <TableCell className="font-medium">{item.name}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{item.name}</span>
+                {item.product_id && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <LinkIcon className="h-3 w-3" />
+                    Linked
+                  </Badge>
+                )}
+              </div>
+            </TableCell>
             <TableCell className="text-muted-foreground max-w-xs truncate">
               {item.description || '-'}
             </TableCell>
@@ -825,9 +911,11 @@ function ServiceTable({ items, onEdit, onDelete, onToggle, onStock }: ServiceTab
                 <Badge 
                   variant={item.stock_quantity <= item.min_stock_threshold ? 'destructive' : 'secondary'}
                   className="cursor-pointer"
-                  onClick={() => onStock(item)}
+                  onClick={() => !item.product_id && onStock(item)}
+                  title={item.product_id ? 'Managed via linked product' : 'Click to adjust stock'}
                 >
                   {item.stock_quantity}
+                  {item.product_id && <LinkIcon className="h-3 w-3 ml-1" />}
                 </Badge>
               ) : (
                 <span className="text-muted-foreground">-</span>
@@ -841,8 +929,8 @@ function ServiceTable({ items, onEdit, onDelete, onToggle, onStock }: ServiceTab
             </TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-1">
-                {item.track_stock && (
-                  <Button variant="ghost" size="icon" onClick={() => onStock(item)}>
+                {item.track_stock && !item.product_id && (
+                  <Button variant="ghost" size="icon" onClick={() => onStock(item)} title="Adjust stock">
                     <Package className="h-4 w-4" />
                   </Button>
                 )}
