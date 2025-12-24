@@ -8,9 +8,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useInvoiceItems, useAddInvoiceItem, useDeleteInvoiceItem } from '@/hooks/useHotelServices';
-import { useAvailableServices } from '@/hooks/useServiceMenu';
+import { useAvailableServices, ServiceMenuItem } from '@/hooks/useServiceMenu';
+import { useDeductStockForService } from '@/hooks/useHotelStock';
 import { HotelBooking } from '@/types/hotel';
-import { Loader2, Plus, Trash2, Coffee, UtensilsCrossed, Wine, Sparkles, ShoppingBag } from 'lucide-react';
+import { Loader2, Plus, Trash2, Coffee, UtensilsCrossed, Wine, Sparkles, ShoppingBag, Package, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface GuestServicesDialogProps {
@@ -32,15 +33,17 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
   const [description, setDescription] = useState('');
   const [unitPrice, setUnitPrice] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
+  const [selectedServiceItem, setSelectedServiceItem] = useState<ServiceMenuItem | null>(null);
 
   const { data: items, isLoading } = useInvoiceItems(booking.id);
   const { data: menuItems = [] } = useAvailableServices();
   const addItem = useAddInvoiceItem();
   const deleteItem = useDeleteInvoiceItem();
+  const deductStock = useDeductStockForService();
 
-  // Group menu items by category
+  // Group menu items by category with full item data
   const presetServices = useMemo(() => {
-    const grouped: Record<string, { description: string; price: number }[]> = {
+    const grouped: Record<string, ServiceMenuItem[]> = {
       food: [],
       beverages: [],
       minibar: [],
@@ -50,10 +53,7 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
     
     menuItems.forEach(item => {
       if (grouped[item.category]) {
-        grouped[item.category].push({
-          description: item.name,
-          price: item.price,
-        });
+        grouped[item.category].push(item);
       }
     });
     
@@ -66,27 +66,59 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
       return;
     }
 
-    await addItem.mutateAsync({
-      booking_id: booking.id,
-      description,
-      item_type: category,
-      unit_price: unitPrice,
-      quantity,
-      total_price: unitPrice * quantity,
-    });
+    // Check stock availability if it's a tracked item
+    if (selectedServiceItem?.track_stock) {
+      if ((selectedServiceItem.stock_quantity || 0) < quantity) {
+        toast.error(`Insufficient stock. Only ${selectedServiceItem.stock_quantity} available.`);
+        return;
+      }
+    }
 
-    setDescription('');
-    setUnitPrice(0);
-    setQuantity(1);
+    try {
+      // Add the invoice item
+      await addItem.mutateAsync({
+        booking_id: booking.id,
+        description,
+        item_type: category,
+        unit_price: unitPrice,
+        quantity,
+        total_price: unitPrice * quantity,
+        service_item_id: selectedServiceItem?.id,
+      });
+
+      // Auto-deduct stock if this is a tracked service item
+      if (selectedServiceItem?.id && selectedServiceItem.track_stock) {
+        await deductStock.mutateAsync({
+          serviceItemId: selectedServiceItem.id,
+          quantity,
+          bookingId: booking.id,
+        });
+      }
+
+      setDescription('');
+      setUnitPrice(0);
+      setQuantity(1);
+      setSelectedServiceItem(null);
+    } catch (error) {
+      // Error already handled by mutation
+    }
   };
 
-  const handlePresetClick = (preset: { description: string; price: number }) => {
-    setDescription(preset.description);
-    setUnitPrice(preset.price);
+  const handlePresetClick = (item: ServiceMenuItem) => {
+    setSelectedServiceItem(item);
+    setDescription(item.name);
+    setUnitPrice(item.price);
+    setCategory(item.category);
   };
 
   const totalServices = items?.reduce((sum, item) => sum + Number(item.total_price), 0) || 0;
   const CategoryIcon = serviceCategories.find(c => c.value === category)?.icon || ShoppingBag;
+
+  // Check if selected item has low stock
+  const isLowStock = selectedServiceItem?.track_stock && 
+    (selectedServiceItem.stock_quantity || 0) <= (selectedServiceItem.min_stock_threshold || 5);
+  const isOutOfStock = selectedServiceItem?.track_stock && 
+    (selectedServiceItem.stock_quantity || 0) === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,7 +135,10 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Service Category</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={(val) => {
+                setCategory(val);
+                setSelectedServiceItem(null);
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -123,20 +158,39 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
             {/* Quick Add Presets from Database */}
             <div className="space-y-2">
               <Label>Quick Add</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
                 {presetServices[category]?.length > 0 ? (
-                  presetServices[category].map((preset, idx) => (
-                    <Button
-                      key={idx}
-                      variant="outline"
-                      size="sm"
-                      className="justify-start h-auto py-2"
-                      onClick={() => handlePresetClick(preset)}
-                    >
-                      <span className="truncate">{preset.description}</span>
-                      <Badge variant="secondary" className="ml-auto">${preset.price}</Badge>
-                    </Button>
-                  ))
+                  presetServices[category].map((item) => {
+                    const outOfStock = item.track_stock && (item.stock_quantity || 0) === 0;
+                    const lowStock = item.track_stock && 
+                      (item.stock_quantity || 0) <= (item.min_stock_threshold || 5) && 
+                      !outOfStock;
+                    
+                    return (
+                      <Button
+                        key={item.id}
+                        variant={selectedServiceItem?.id === item.id ? "default" : "outline"}
+                        size="sm"
+                        className="justify-start h-auto py-2 relative"
+                        onClick={() => handlePresetClick(item)}
+                        disabled={outOfStock}
+                      >
+                        <div className="flex flex-col items-start gap-0.5 flex-1 min-w-0">
+                          <span className="truncate text-left w-full">{item.name}</span>
+                          {item.track_stock && (
+                            <span className={`text-xs flex items-center gap-1 ${
+                              outOfStock ? 'text-destructive' : 
+                              lowStock ? 'text-amber-600' : 'text-muted-foreground'
+                            }`}>
+                              <Package className="h-3 w-3" />
+                              {item.stock_quantity} in stock
+                            </span>
+                          )}
+                        </div>
+                        <Badge variant="secondary" className="ml-1 shrink-0">${item.price}</Badge>
+                      </Button>
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-muted-foreground col-span-2">
                     No items in this category
@@ -149,7 +203,13 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
               <Label>Description</Label>
               <Input
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  // Clear selected item if manually editing description
+                  if (selectedServiceItem && e.target.value !== selectedServiceItem.name) {
+                    setSelectedServiceItem(null);
+                  }
+                }}
                 placeholder="Service description..."
               />
             </div>
@@ -170,18 +230,49 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
                 <Input
                   type="number"
                   min={1}
+                  max={selectedServiceItem?.track_stock ? selectedServiceItem.stock_quantity || 1 : undefined}
                   value={quantity}
                   onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                 />
               </div>
             </div>
 
+            {/* Stock Warning */}
+            {selectedServiceItem?.track_stock && (
+              <div className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
+                isOutOfStock ? 'bg-destructive/10 text-destructive' :
+                isLowStock ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' :
+                'bg-muted text-muted-foreground'
+              }`}>
+                {isOutOfStock ? (
+                  <>
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Out of stock</span>
+                  </>
+                ) : isLowStock ? (
+                  <>
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Low stock: {selectedServiceItem.stock_quantity} remaining</span>
+                  </>
+                ) : (
+                  <>
+                    <Package className="h-4 w-4" />
+                    <span>Stock: {selectedServiceItem.stock_quantity} available (auto-deduct enabled)</span>
+                  </>
+                )}
+              </div>
+            )}
+
             <Button 
               className="w-full gap-2" 
               onClick={handleAddService}
-              disabled={addItem.isPending}
+              disabled={addItem.isPending || deductStock.isPending || isOutOfStock}
             >
-              {addItem.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {(addItem.isPending || deductStock.isPending) ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               Add Service (${(unitPrice * quantity).toFixed(2)})
             </Button>
           </div>

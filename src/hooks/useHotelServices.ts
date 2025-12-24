@@ -54,6 +54,7 @@ export function useAddInvoiceItem() {
       unit_price: number;
       quantity: number;
       total_price: number;
+      service_item_id?: string; // Link to hotel_service_menu for stock tracking
     }) => {
       // First, get or create an invoice for this booking
       let { data: existingInvoice } = await supabase
