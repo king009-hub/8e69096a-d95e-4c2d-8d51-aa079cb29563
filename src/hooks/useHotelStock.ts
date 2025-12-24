@@ -119,10 +119,10 @@ export function useDeductStockForService() {
       quantity: number; 
       bookingId: string;
     }) => {
-      // Check if this service item tracks stock
+      // Check if this service item tracks stock and if it's linked to a product
       const { data: item } = await supabase
         .from('hotel_service_menu')
-        .select('id, name, track_stock, stock_quantity')
+        .select('id, name, track_stock, stock_quantity, product_id')
         .eq('id', serviceItemId)
         .single();
 
@@ -130,7 +130,7 @@ export function useDeductStockForService() {
         return null; // No stock tracking for this item
       }
 
-      // Create stock out movement
+      // Create stock out movement for hotel service menu
       const { error: movementError } = await supabase
         .from('hotel_stock_movements')
         .insert([{
@@ -143,7 +143,7 @@ export function useDeductStockForService() {
 
       if (movementError) throw movementError;
 
-      // Update stock quantity
+      // Update hotel service menu stock quantity
       const newStock = Math.max(0, (item.stock_quantity || 0) - quantity);
       const { error: updateError } = await supabase
         .from('hotel_service_menu')
@@ -152,12 +152,48 @@ export function useDeductStockForService() {
 
       if (updateError) throw updateError;
 
-      return { newStock, itemName: item.name };
+      // If linked to a main product, also deduct from main inventory
+      if (item.product_id) {
+        // Get current product stock
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', item.product_id)
+          .single();
+
+        if (product) {
+          const newProductStock = Math.max(0, (product.stock_quantity || 0) - quantity);
+          
+          // Update main product stock
+          await supabase
+            .from('products')
+            .update({ stock_quantity: newProductStock, updated_at: new Date().toISOString() })
+            .eq('id', item.product_id);
+
+          // Create stock movement record in main inventory
+          await supabase
+            .from('stock_movements')
+            .insert([{
+              product_id: item.product_id,
+              movement_type: 'out',
+              quantity,
+              reason: 'Hotel guest consumption',
+              reference_id: bookingId,
+              notes: `Service: ${item.name}`,
+            }]);
+        }
+      }
+
+      return { newStock, itemName: item.name, linkedToProduct: !!item.product_id };
     },
     onSuccess: (result) => {
       if (result) {
         queryClient.invalidateQueries({ queryKey: ['hotel-stock-movements'] });
         queryClient.invalidateQueries({ queryKey: ['service-menu'] });
+        if (result.linkedToProduct) {
+          queryClient.invalidateQueries({ queryKey: ['products'] });
+          queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+        }
       }
     },
     onError: (error: Error) => toast.error(error.message),
