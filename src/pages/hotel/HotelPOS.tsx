@@ -4,17 +4,18 @@ import { useAvailableServices } from "@/hooks/useServiceMenu";
 import { useActiveServiceCategories } from "@/hooks/useServiceCategories";
 import { useHotelBookings, useHotelInfo } from "@/hooks/useHotel";
 import { useHotelPOS, HotelPOSPayment } from "@/hooks/useHotelPOS";
+import { useOrderTemplates } from "@/hooks/useOrderTemplates";
 import { useSettingsContext } from "@/contexts/SettingsContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import {
   Search,
   Plus,
@@ -36,7 +37,9 @@ import {
   Coffee,
   Loader2,
   CheckCircle2,
-  AlertCircle,
+  Package,
+  Zap,
+  SplitSquareHorizontal,
 } from "lucide-react";
 
 const categoryIcons: Record<string, any> = {
@@ -48,12 +51,28 @@ const categoryIcons: Record<string, any> = {
   other: ShoppingBag,
 };
 
+const templateIcons: Record<string, any> = {
+  breakfast: Coffee,
+  lunch: Utensils,
+  dinner: Utensils,
+  minibar: Wine,
+  package: Package,
+  general: Zap,
+};
+
+type PaymentMethodType = 'cash' | 'card' | 'upi' | 'bank_transfer';
+
+interface SplitPayment {
+  method: PaymentMethodType;
+  amount: number;
+}
+
 export default function HotelPOS() {
   const { formatCurrency } = useSettingsContext();
   const { data: services = [], isLoading: servicesLoading } = useAvailableServices();
   const { data: categories = [] } = useActiveServiceCategories();
   const { data: bookings = [] } = useHotelBookings();
-  const { data: hotelInfo } = useHotelInfo();
+  const { data: templates = [] } = useOrderTemplates();
   
   const {
     cart,
@@ -78,10 +97,18 @@ export default function HotelPOS() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [showRoomSelector, setShowRoomSelector] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'upi' | 'bank_transfer'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('cash');
   const [paidAmount, setPaidAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Split payment state
+  const [splitPayments, setSplitPayments] = useState<SplitPayment[]>([]);
+  const [isSplitMode, setIsSplitMode] = useState(false);
+
+  const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+  const remainingAmount = total - totalPaid;
 
   // Filter active (checked-in) bookings for room selection
   const activeBookings = useMemo(() => 
@@ -104,13 +131,20 @@ export default function HotelPOS() {
       if (e.key === 'Escape') {
         if (showPaymentDialog) {
           setShowPaymentDialog(false);
+          resetPaymentState();
         } else if (showRoomSelector) {
           setShowRoomSelector(false);
+        } else if (showTemplates) {
+          setShowTemplates(false);
         }
       }
       if (e.key === 'F2') {
         e.preventDefault();
         searchInputRef.current?.focus();
+      }
+      if (e.key === 'F3') {
+        e.preventDefault();
+        setShowTemplates(true);
       }
       if (e.key === 'F8' && cart.length > 0) {
         e.preventDefault();
@@ -124,7 +158,13 @@ export default function HotelPOS() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, selectedBooking, showPaymentDialog, showRoomSelector]);
+  }, [cart, selectedBooking, showPaymentDialog, showRoomSelector, showTemplates]);
+
+  const resetPaymentState = () => {
+    setPaidAmount("");
+    setSplitPayments([]);
+    setIsSplitMode(false);
+  };
 
   const handleChargeToRoom = async () => {
     setIsProcessing(true);
@@ -132,20 +172,69 @@ export default function HotelPOS() {
     setIsProcessing(false);
   };
 
-  const handlePayment = async () => {
-    const amount = parseFloat(paidAmount) || total;
-    if (amount < total) {
+  const addSplitPayment = () => {
+    const amount = parseFloat(paidAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Enter a valid amount");
       return;
+    }
+    if (amount > remainingAmount + 0.01) {
+      toast.error("Amount exceeds remaining balance");
+      return;
+    }
+
+    setSplitPayments(prev => [...prev, { method: paymentMethod, amount }]);
+    setPaidAmount("");
+  };
+
+  const removeSplitPayment = (index: number) => {
+    setSplitPayments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePayment = async () => {
+    let paymentsToProcess: HotelPOSPayment[];
+
+    if (isSplitMode) {
+      if (remainingAmount > 0.01) {
+        toast.error(`Remaining: ${formatCurrency(remainingAmount)}`);
+        return;
+      }
+      paymentsToProcess = splitPayments;
+    } else {
+      const amount = parseFloat(paidAmount) || total;
+      if (amount < total - 0.01) {
+        toast.error("Insufficient payment");
+        return;
+      }
+      paymentsToProcess = [{ method: paymentMethod, amount }];
     }
     
     setIsProcessing(true);
-    const result = await processDirectPayment([{ method: paymentMethod, amount }]);
+    const result = await processDirectPayment(paymentsToProcess);
     setIsProcessing(false);
     
     if (result) {
       setShowPaymentDialog(false);
-      setPaidAmount("");
+      resetPaymentState();
     }
+  };
+
+  const applyTemplate = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (!template || !template.items) return;
+
+    let addedCount = 0;
+    for (const item of template.items) {
+      if (item.service_item) {
+        const success = addToCart(item.service_item, item.quantity);
+        if (success) addedCount++;
+      }
+    }
+
+    if (addedCount > 0) {
+      toast.success(`Added ${template.name} (${addedCount} items)`);
+    }
+    setShowTemplates(false);
   };
 
   const numpadClick = (value: string) => {
@@ -160,7 +249,14 @@ export default function HotelPOS() {
     }
   };
 
-  const change = parseFloat(paidAmount) - total;
+  const change = isSplitMode ? 0 : parseFloat(paidAmount) - total;
+
+  const paymentMethods = [
+    { id: 'cash', label: 'Cash', icon: Banknote },
+    { id: 'card', label: 'Card', icon: CreditCard },
+    { id: 'upi', label: 'UPI', icon: Smartphone },
+    { id: 'bank_transfer', label: 'Bank', icon: Building2 },
+  ];
 
   if (servicesLoading) {
     return (
@@ -185,28 +281,41 @@ export default function HotelPOS() {
             </Badge>
           </div>
           
-          {/* Selected Room Display */}
-          <Button
-            variant={selectedBooking ? "default" : "outline"}
-            className="gap-2"
-            onClick={() => setShowRoomSelector(true)}
-          >
-            <BedDouble className="h-4 w-4" />
-            {selectedBooking ? (
-              <span>
-                Room {selectedBooking.room?.room_number} - {selectedBooking.guest?.first_name} {selectedBooking.guest?.last_name}
-              </span>
-            ) : (
-              <span>Select Room (F3)</span>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Quick Templates Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTemplates(true)}
+              className="gap-1"
+            >
+              <Zap className="h-4 w-4" />
+              Quick Orders (F3)
+            </Button>
+            
+            {/* Selected Room Display */}
+            <Button
+              variant={selectedBooking ? "default" : "outline"}
+              className="gap-2"
+              onClick={() => setShowRoomSelector(true)}
+            >
+              <BedDouble className="h-4 w-4" />
+              {selectedBooking ? (
+                <span>
+                  Room {selectedBooking.room?.room_number} - {selectedBooking.guest?.first_name}
+                </span>
+              ) : (
+                <span>Select Room</span>
+              )}
+            </Button>
+          </div>
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>F2: Search</span>
             <span>•</span>
             <span>F8: Pay</span>
             <span>•</span>
-            <span>F9: Room Charge</span>
+            <span>F9: Room</span>
           </div>
         </div>
 
@@ -297,7 +406,7 @@ export default function HotelPOS() {
                           
                           {isOutOfStock && (
                             <Badge variant="destructive" className="absolute top-2 right-2">
-                              Out of Stock
+                              Out
                             </Badge>
                           )}
                         </div>
@@ -338,7 +447,7 @@ export default function HotelPOS() {
                   <div className="text-center py-12 text-muted-foreground">
                     <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>No items in order</p>
-                    <p className="text-xs mt-1">Click items to add them</p>
+                    <p className="text-xs mt-1">Click items or use Quick Orders</p>
                   </div>
                 ) : (
                   cart.map(item => (
@@ -445,6 +554,66 @@ export default function HotelPOS() {
         </div>
       </div>
 
+      {/* Quick Order Templates Dialog */}
+      <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Quick Order Templates
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh]">
+            {templates.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>No templates available</p>
+                <p className="text-xs mt-1">Create templates in Service Menu settings</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 p-2">
+                {templates.map(template => {
+                  const Icon = templateIcons[template.category] || Zap;
+                  const itemCount = template.items?.length || 0;
+                  const templateTotal = template.items?.reduce(
+                    (sum, item) => sum + (item.service_item?.price || 0) * item.quantity, 0
+                  ) || 0;
+                  
+                  return (
+                    <Card
+                      key={template.id}
+                      className="cursor-pointer transition-all hover:shadow-md hover:border-primary"
+                      onClick={() => applyTemplate(template.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Icon className="h-6 w-6 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-bold">{template.name}</div>
+                            {template.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {template.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="secondary">{itemCount} items</Badge>
+                              <Badge variant="outline">{formatCurrency(templateTotal)}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
       {/* Room Selector Dialog */}
       <Dialog open={showRoomSelector} onOpenChange={setShowRoomSelector}>
         <DialogContent className="max-w-2xl">
@@ -512,118 +681,164 @@ export default function HotelPOS() {
         </DialogContent>
       </Dialog>
 
-      {/* Payment Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+      {/* Payment Dialog with Split Support */}
+      <Dialog open={showPaymentDialog} onOpenChange={(open) => {
+        setShowPaymentDialog(open);
+        if (!open) resetPaymentState();
+      }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Process Payment</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Process Payment</span>
+              <Button
+                variant={isSplitMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setIsSplitMode(!isSplitMode);
+                  setSplitPayments([]);
+                  setPaidAmount("");
+                }}
+                className="gap-1"
+              >
+                <SplitSquareHorizontal className="h-4 w-4" />
+                Split Payment
+              </Button>
+            </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Amount Display */}
             <div className="text-center p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">Amount Due</p>
-              <p className="text-4xl font-bold text-primary">{formatCurrency(total)}</p>
+              <p className="text-sm text-muted-foreground mb-1">
+                {isSplitMode ? 'Remaining Amount' : 'Amount Due'}
+              </p>
+              <p className="text-4xl font-bold text-primary">
+                {formatCurrency(isSplitMode ? remainingAmount : total)}
+              </p>
             </div>
 
-            {/* Payment Method */}
-            <div className="space-y-3">
+            {/* Split Payments List */}
+            {isSplitMode && splitPayments.length > 0 && (
+              <div className="space-y-2">
+                <Label>Added Payments</Label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {splitPayments.map((payment, index) => (
+                    <div key={index} className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        {paymentMethods.find(m => m.id === payment.method)?.icon && (
+                          <span className="text-muted-foreground">
+                            {(() => {
+                              const Icon = paymentMethods.find(m => m.id === payment.method)?.icon;
+                              return Icon ? <Icon className="h-4 w-4" /> : null;
+                            })()}
+                          </span>
+                        )}
+                        <span className="capitalize">{payment.method.replace('_', ' ')}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{formatCurrency(payment.amount)}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => removeSplitPayment(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between text-sm font-medium pt-2 border-t">
+                  <span>Total Paid</span>
+                  <span className="text-green-600">{formatCurrency(totalPaid)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Method Selection */}
+            <div className="space-y-2">
               <Label>Payment Method</Label>
               <RadioGroup
                 value={paymentMethod}
-                onValueChange={(v) => setPaymentMethod(v as any)}
-                className="grid grid-cols-2 gap-3"
+                onValueChange={(v) => setPaymentMethod(v as PaymentMethodType)}
+                className="grid grid-cols-4 gap-2"
               >
-                <Label
-                  htmlFor="cash"
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${
-                    paymentMethod === 'cash' ? 'border-primary bg-primary/5' : 'hover:bg-muted'
-                  }`}
-                >
-                  <RadioGroupItem value="cash" id="cash" />
-                  <Banknote className="h-5 w-5" />
-                  <span>Cash</span>
-                </Label>
-                
-                <Label
-                  htmlFor="card"
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${
-                    paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'hover:bg-muted'
-                  }`}
-                >
-                  <RadioGroupItem value="card" id="card" />
-                  <CreditCard className="h-5 w-5" />
-                  <span>Card</span>
-                </Label>
-                
-                <Label
-                  htmlFor="upi"
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${
-                    paymentMethod === 'upi' ? 'border-primary bg-primary/5' : 'hover:bg-muted'
-                  }`}
-                >
-                  <RadioGroupItem value="upi" id="upi" />
-                  <Smartphone className="h-5 w-5" />
-                  <span>UPI</span>
-                </Label>
-                
-                <Label
-                  htmlFor="bank_transfer"
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${
-                    paymentMethod === 'bank_transfer' ? 'border-primary bg-primary/5' : 'hover:bg-muted'
-                  }`}
-                >
-                  <RadioGroupItem value="bank_transfer" id="bank_transfer" />
-                  <Building2 className="h-5 w-5" />
-                  <span>Bank Transfer</span>
-                </Label>
+                {paymentMethods.map(method => (
+                  <Label
+                    key={method.id}
+                    htmlFor={method.id}
+                    className={`flex flex-col items-center gap-1 p-3 border rounded-lg cursor-pointer transition-all ${
+                      paymentMethod === method.id ? 'border-primary bg-primary/5' : 'hover:bg-muted'
+                    }`}
+                  >
+                    <RadioGroupItem value={method.id} id={method.id} className="sr-only" />
+                    <method.icon className="h-5 w-5" />
+                    <span className="text-xs">{method.label}</span>
+                  </Label>
+                ))}
               </RadioGroup>
             </div>
 
             {/* Amount Input & Numpad */}
-            <div className="space-y-3">
-              <Label>Amount Received</Label>
-              <Input
-                value={paidAmount}
-                onChange={(e) => setPaidAmount(e.target.value)}
-                placeholder={total.toFixed(2)}
-                className="text-2xl text-center font-mono h-14"
-              />
-              
-              <div className="grid grid-cols-3 gap-2">
-                {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', 'C'].map(key => (
-                  <Button
-                    key={key}
-                    variant={key === 'C' ? 'destructive' : 'outline'}
-                    className="h-12 text-lg font-semibold"
-                    onClick={() => numpadClick(key)}
+            {(!isSplitMode || remainingAmount > 0) && (
+              <div className="space-y-3">
+                <Label>{isSplitMode ? 'Amount for this payment' : 'Amount Received'}</Label>
+                <Input
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  placeholder={isSplitMode ? remainingAmount.toFixed(2) : total.toFixed(2)}
+                  className="text-2xl text-center font-mono h-14"
+                />
+                
+                <div className="grid grid-cols-4 gap-2">
+                  {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', 'C'].map(key => (
+                    <Button
+                      key={key}
+                      variant={key === 'C' ? 'destructive' : 'outline'}
+                      className="h-10 text-lg font-semibold"
+                      onClick={() => numpadClick(key)}
+                    >
+                      {key}
+                    </Button>
+                  ))}
+                </div>
+                
+                {/* Quick Amount Buttons */}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => setPaidAmount((isSplitMode ? remainingAmount : total).toFixed(2))}
                   >
-                    {key}
+                    Exact
                   </Button>
-                ))}
+                  {isSplitMode && (
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={addSplitPayment}
+                      disabled={!paidAmount || parseFloat(paidAmount) <= 0}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  )}
+                  {!isSplitMode && (
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => setPaidAmount((Math.ceil(total / 100) * 100).toString())}
+                    >
+                      Round Up
+                    </Button>
+                  )}
+                </div>
               </div>
-              
-              {/* Quick Amount Buttons */}
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => setPaidAmount(total.toFixed(2))}
-                >
-                  Exact
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => setPaidAmount((Math.ceil(total / 100) * 100).toString())}
-                >
-                  Round Up
-                </Button>
-              </div>
-            </div>
+            )}
 
-            {/* Change Display */}
-            {parseFloat(paidAmount) >= total && (
+            {/* Change Display (non-split mode) */}
+            {!isSplitMode && parseFloat(paidAmount) >= total && (
               <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                 <span className="text-green-600 font-medium">Change</span>
                 <span className="text-2xl font-bold text-green-600">
@@ -635,7 +850,10 @@ export default function HotelPOS() {
             {/* Process Button */}
             <Button
               className="w-full h-14 text-lg"
-              disabled={parseFloat(paidAmount || '0') < total || isProcessing}
+              disabled={
+                isProcessing || 
+                (isSplitMode ? remainingAmount > 0.01 : parseFloat(paidAmount || '0') < total - 0.01)
+              }
               onClick={handlePayment}
             >
               {isProcessing ? (
