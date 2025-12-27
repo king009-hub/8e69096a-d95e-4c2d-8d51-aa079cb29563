@@ -42,6 +42,7 @@ const posNavigation = [
 
 const hotelNavigation = [
   { name: "Dashboard", href: "/hotel", icon: LayoutDashboard },
+  { name: "Point of Sale", href: "/hotel/pos", icon: ShoppingCart },
   { name: "Rooms", href: "/hotel/rooms", icon: BedDouble },
   { name: "Bookings", href: "/hotel/bookings", icon: CalendarDays },
   { name: "Check In/Out", href: "/hotel/check-in-out", icon: UserCheck },
