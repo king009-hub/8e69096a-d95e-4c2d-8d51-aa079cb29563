@@ -516,6 +516,81 @@ export type Database = {
           },
         ]
       }
+      hotel_order_template_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          quantity: number
+          service_item_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          service_item_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          service_item_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_order_template_items_service_item_id_fkey"
+            columns: ["service_item_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_service_menu"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_order_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_order_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_order_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       hotel_pricing_rules: {
         Row: {
           created_at: string | null
