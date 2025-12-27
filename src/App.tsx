@@ -37,6 +37,7 @@ import HotelStaff from "./pages/hotel/HotelStaff";
 import HotelReports from "./pages/hotel/HotelReports";
 import HotelSettings from "./pages/hotel/HotelSettings";
 import HotelServiceMenu from "./pages/hotel/HotelServiceMenu";
+import HotelPOS from "./pages/hotel/HotelPOS";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="/hotel/staff" element={<ProtectedRoute><HotelStaff /></ProtectedRoute>} />
                 <Route path="/hotel/reports" element={<ProtectedRoute><HotelReports /></ProtectedRoute>} />
                 <Route path="/hotel/service-menu" element={<ProtectedRoute><HotelServiceMenu /></ProtectedRoute>} />
+                <Route path="/hotel/pos" element={<ProtectedRoute><HotelPOS /></ProtectedRoute>} />
                 <Route path="/hotel/settings" element={<ProtectedRoute><HotelSettings /></ProtectedRoute>} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
