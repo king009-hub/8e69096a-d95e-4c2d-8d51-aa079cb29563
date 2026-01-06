@@ -3,9 +3,11 @@ import { Layout } from "@/components/layout/Layout";
 import { useAvailableServices } from "@/hooks/useServiceMenu";
 import { useActiveServiceCategories } from "@/hooks/useServiceCategories";
 import { useHotelBookings, useHotelInfo } from "@/hooks/useHotel";
-import { useHotelPOS, HotelPOSPayment } from "@/hooks/useHotelPOS";
+import { useHotelPOS, HotelPOSPayment, HotelCartItem } from "@/hooks/useHotelPOS";
 import { useOrderTemplates } from "@/hooks/useOrderTemplates";
 import { useSettingsContext } from "@/contexts/SettingsContext";
+import { HotelReceiptPrint } from "@/components/hotel/HotelReceiptPrint";
+import { HotelBooking } from "@/types/hotel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +74,7 @@ export default function HotelPOS() {
   const { data: services = [], isLoading: servicesLoading } = useAvailableServices();
   const { data: categories = [] } = useActiveServiceCategories();
   const { data: bookings = [] } = useHotelBookings();
+  const { data: hotelInfo } = useHotelInfo();
   const { data: templates = [] } = useOrderTemplates();
   
   const {
@@ -106,6 +109,24 @@ export default function HotelPOS() {
   // Split payment state
   const [splitPayments, setSplitPayments] = useState<SplitPayment[]>([]);
   const [isSplitMode, setIsSplitMode] = useState(false);
+
+  // Receipt printing state
+  const [receiptData, setReceiptData] = useState<{
+    invoiceNumber: string;
+    items: HotelCartItem[];
+    subtotal: number;
+    discount: number;
+    discountAmount: number;
+    taxRate: number;
+    taxAmount: number;
+    total: number;
+    paymentMethod: string;
+    splitPayments?: SplitPayment[];
+    paidAmount?: number;
+    changeAmount?: number;
+    booking?: HotelBooking | null;
+    isRoomCharge: boolean;
+  } | null>(null);
 
   const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
   const remainingAmount = total - totalPaid;
@@ -160,6 +181,16 @@ export default function HotelPOS() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cart, selectedBooking, showPaymentDialog, showRoomSelector, showTemplates]);
 
+  // Clear receipt data after printing (auto-cleanup)
+  useEffect(() => {
+    if (receiptData) {
+      const timer = setTimeout(() => {
+        setReceiptData(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [receiptData]);
+
   const resetPaymentState = () => {
     setPaidAmount("");
     setSplitPayments([]);
@@ -167,9 +198,38 @@ export default function HotelPOS() {
   };
 
   const handleChargeToRoom = async () => {
+    if (!selectedBooking) return;
+    
+    // Capture cart data before it gets cleared
+    const receiptItems = [...cart];
+    const receiptSubtotal = subtotal;
+    const receiptDiscount = discount;
+    const receiptDiscountAmount = discountAmount;
+    const receiptTaxRate = taxRate;
+    const receiptTaxAmount = taxAmount;
+    const receiptTotal = total;
+    const receiptBooking = selectedBooking;
+    
     setIsProcessing(true);
-    await chargeToRoom();
+    const result = await chargeToRoom();
     setIsProcessing(false);
+    
+    if (result) {
+      // Trigger receipt printing
+      setReceiptData({
+        invoiceNumber: `RC-${Date.now().toString(36).toUpperCase()}`,
+        items: receiptItems,
+        subtotal: receiptSubtotal,
+        discount: receiptDiscount,
+        discountAmount: receiptDiscountAmount,
+        taxRate: receiptTaxRate,
+        taxAmount: receiptTaxAmount,
+        total: receiptTotal,
+        paymentMethod: 'room_charge',
+        booking: receiptBooking,
+        isRoomCharge: true,
+      });
+    }
   };
 
   const addSplitPayment = () => {
@@ -193,6 +253,7 @@ export default function HotelPOS() {
 
   const handlePayment = async () => {
     let paymentsToProcess: HotelPOSPayment[];
+    let paidAmt = 0;
 
     if (isSplitMode) {
       if (remainingAmount > 0.01) {
@@ -200,6 +261,7 @@ export default function HotelPOS() {
         return;
       }
       paymentsToProcess = splitPayments;
+      paidAmt = splitPayments.reduce((sum, p) => sum + p.amount, 0);
     } else {
       const amount = parseFloat(paidAmount) || total;
       if (amount < total - 0.01) {
@@ -207,13 +269,46 @@ export default function HotelPOS() {
         return;
       }
       paymentsToProcess = [{ method: paymentMethod, amount }];
+      paidAmt = amount;
     }
+    
+    // Capture cart data before it gets cleared
+    const receiptItems = [...cart];
+    const receiptSubtotal = subtotal;
+    const receiptDiscount = discount;
+    const receiptDiscountAmount = discountAmount;
+    const receiptTaxRate = taxRate;
+    const receiptTaxAmount = taxAmount;
+    const receiptTotal = total;
+    const receiptBooking = selectedBooking;
+    const receiptSplitPayments = isSplitMode ? [...splitPayments] : undefined;
+    const changeAmt = !isSplitMode && paidAmt > receiptTotal ? paidAmt - receiptTotal : 0;
     
     setIsProcessing(true);
     const result = await processDirectPayment(paymentsToProcess);
     setIsProcessing(false);
     
     if (result) {
+      // Trigger receipt printing
+      setReceiptData({
+        invoiceNumber: typeof result === 'object' && result.invoice_number 
+          ? result.invoice_number 
+          : `INV-${Date.now().toString(36).toUpperCase()}`,
+        items: receiptItems,
+        subtotal: receiptSubtotal,
+        discount: receiptDiscount,
+        discountAmount: receiptDiscountAmount,
+        taxRate: receiptTaxRate,
+        taxAmount: receiptTaxAmount,
+        total: receiptTotal,
+        paymentMethod: paymentsToProcess[0].method,
+        splitPayments: receiptSplitPayments,
+        paidAmount: paidAmt,
+        changeAmount: changeAmt,
+        booking: receiptBooking,
+        isRoomCharge: false,
+      });
+      
       setShowPaymentDialog(false);
       resetPaymentState();
     }
@@ -871,6 +966,29 @@ export default function HotelPOS() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Receipt Print Component */}
+      {receiptData && (
+        <HotelReceiptPrint
+          invoiceNumber={receiptData.invoiceNumber}
+          items={receiptData.items}
+          subtotal={receiptData.subtotal}
+          discount={receiptData.discount}
+          discountAmount={receiptData.discountAmount}
+          taxRate={receiptData.taxRate}
+          taxAmount={receiptData.taxAmount}
+          total={receiptData.total}
+          paymentMethod={receiptData.paymentMethod}
+          splitPayments={receiptData.splitPayments}
+          paidAmount={receiptData.paidAmount}
+          changeAmount={receiptData.changeAmount}
+          hotelInfo={hotelInfo || null}
+          booking={receiptData.booking}
+          isRoomCharge={receiptData.isRoomCharge}
+          saleDate={new Date()}
+          key={receiptData.invoiceNumber}
+        />
+      )}
     </Layout>
   );
 }
