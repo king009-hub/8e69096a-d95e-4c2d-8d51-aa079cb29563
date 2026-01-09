@@ -29,6 +29,7 @@ import {
   Smartphone,
   Building2,
   Receipt,
+  Printer,
   X,
   User,
   Clock,
@@ -128,6 +129,9 @@ export default function HotelPOS() {
     isRoomCharge: boolean;
   } | null>(null);
 
+  // Last receipt data for reprinting
+  const [lastReceiptData, setLastReceiptData] = useState<typeof receiptData>(null);
+
   const totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
   const remainingAmount = total - totalPaid;
 
@@ -181,15 +185,25 @@ export default function HotelPOS() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cart, selectedBooking, showPaymentDialog, showRoomSelector, showTemplates]);
 
-  // Clear receipt data after printing (auto-cleanup)
+  // Clear receipt data after printing (auto-cleanup) and save to lastReceiptData
   useEffect(() => {
     if (receiptData) {
+      setLastReceiptData(receiptData);
       const timer = setTimeout(() => {
         setReceiptData(null);
       }, 2000);
       return () => clearTimeout(timer);
     }
   }, [receiptData]);
+
+  const handleReprintReceipt = () => {
+    if (lastReceiptData) {
+      setReceiptData(lastReceiptData);
+      toast.success("Reprinting last receipt...");
+    } else {
+      toast.error("No receipt to reprint");
+    }
+  };
 
   const resetPaymentState = () => {
     setPaidAmount("");
@@ -527,12 +541,25 @@ export default function HotelPOS() {
                 <Receipt className="h-4 w-4" />
                 Current Order
               </h2>
-              {cart.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearCart}>
-                  <X className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              )}
+              <div className="flex items-center gap-1">
+                {lastReceiptData && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleReprintReceipt}
+                    title="Reprint last receipt"
+                  >
+                    <Printer className="h-4 w-4 mr-1" />
+                    Reprint
+                  </Button>
+                )}
+                {cart.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearCart}>
+                    <X className="h-4 w-4 mr-1" />
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Cart Items */}
