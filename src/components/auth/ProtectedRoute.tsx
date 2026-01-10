@@ -1,13 +1,17 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert } from 'lucide-react';
+import { hasRouteAccess, UserRole } from '@/lib/permissions';
+import { Button } from '@/components/ui/button';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRoles?: UserRole[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRoles }) => {
+  const { user, loading, userRole } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -19,6 +23,28 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Check role-based access
+  const hasAccess = requiredRoles 
+    ? requiredRoles.includes(userRole as UserRole)
+    : hasRouteAccess(location.pathname, userRole as UserRole);
+
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4 p-8">
+          <ShieldAlert className="h-16 w-16 mx-auto text-destructive" />
+          <h1 className="text-2xl font-bold text-foreground">Access Denied</h1>
+          <p className="text-muted-foreground max-w-md">
+            You don't have permission to access this page. Please contact your administrator if you believe this is an error.
+          </p>
+          <Button onClick={() => window.history.back()} variant="outline">
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;

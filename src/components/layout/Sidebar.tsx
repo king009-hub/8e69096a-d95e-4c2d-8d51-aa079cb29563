@@ -25,6 +25,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode } from "@/contexts/AppModeContext";
 import { ModeSwitcher } from "@/components/common/ModeSwitcher";
+import { filterNavigationByRole, UserRole, getRoleDisplayName } from "@/lib/permissions";
+import { Badge } from "@/components/ui/badge";
 
 const posNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -63,9 +65,13 @@ export function Sidebar() {
   const { userRole } = useAuth();
   const { mode } = useAppMode();
   
-  const navigation = mode === 'hotel' ? hotelNavigation : posNavigation;
+  const baseNavigation = mode === 'hotel' ? hotelNavigation : posNavigation;
   const title = mode === 'hotel' ? 'Hotel Manager' : 'StockFlow';
   const subtitle = mode === 'hotel' ? 'Hotel Management' : 'Inventory Management';
+  
+  // Filter navigation based on user role
+  const navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, mode);
+  const filteredOwnerNav = filterNavigationByRole(ownerNavigation, userRole as UserRole, 'pos');
   
   return (
     <div className="w-56 md:w-64 bg-card border-r border-border h-screen shadow-lg flex flex-col">
@@ -81,14 +87,20 @@ export function Sidebar() {
             <p className="text-xs md:text-sm text-muted-foreground">{subtitle}</p>
           </div>
         </div>
+        {/* User role badge */}
+        {userRole && (
+          <Badge variant="outline" className="mt-2 text-xs">
+            {getRoleDisplayName(userRole as UserRole)}
+          </Badge>
+        )}
       </div>
       
       <nav className="flex-1 mt-2 md:mt-4 px-3 md:px-4 overflow-y-auto">
         {/* Owner Dashboard - Only for admins */}
-        {userRole === 'admin' && mode === 'pos' && (
+        {filteredOwnerNav.length > 0 && mode === 'pos' && (
           <div className="mb-4">
             <ul className="space-y-1 md:space-y-2">
-              {ownerNavigation.map((item) => (
+              {filteredOwnerNav.map((item) => (
                 <li key={item.name}>
                   <NavLink
                     to={item.href}
