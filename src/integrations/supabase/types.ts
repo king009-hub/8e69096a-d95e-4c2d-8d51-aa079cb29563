@@ -1227,6 +1227,36 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          created_at: string
+          description: string | null
+          hotel_routes: string[]
+          id: string
+          pos_routes: string[]
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          hotel_routes?: string[]
+          id?: string
+          pos_routes?: string[]
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          hotel_routes?: string[]
+          id?: string
+          pos_routes?: string[]
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sale_items: {
         Row: {
           batch_id: string | null

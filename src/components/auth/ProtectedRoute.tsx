@@ -1,8 +1,9 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, ShieldAlert } from 'lucide-react';
-import { hasRouteAccess, UserRole } from '@/lib/permissions';
+import { hasRouteAccessWithData, UserRole } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,8 +13,9 @@ interface ProtectedRouteProps {
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRoles }) => {
   const { user, loading, userRole } = useAuth();
   const location = useLocation();
+  const { data: rolePermissions, isLoading: permissionsLoading } = useRolePermissions();
 
-  if (loading) {
+  if (loading || permissionsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -25,10 +27,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
     return <Navigate to="/auth" replace />;
   }
 
-  // Check role-based access
+  // Check role-based access using database permissions
   const hasAccess = requiredRoles 
     ? requiredRoles.includes(userRole as UserRole)
-    : hasRouteAccess(location.pathname, userRole as UserRole);
+    : hasRouteAccessWithData(location.pathname, userRole as UserRole, rolePermissions || null);
 
   if (!hasAccess) {
     return (

@@ -9,6 +9,8 @@ import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { UserManagement } from "@/components/settings/UserManagement";
 import { BackupSettings } from "@/components/settings/BackupSettings";
+import { RolePermissionsEditor } from "@/components/settings/RolePermissionsEditor";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Settings as SettingsIcon,
   Package,
@@ -18,10 +20,12 @@ import {
   Bell,
   Users,
   Database,
+  Shield,
 } from "lucide-react";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("system");
+  const { userRole } = useAuth();
 
   return (
     <div className="space-y-6">
@@ -33,38 +37,44 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className={`grid w-full ${userRole === 'admin' ? 'grid-cols-9' : 'grid-cols-8'}`}>
           <TabsTrigger value="system" className="flex items-center gap-2">
             <SettingsIcon className="h-4 w-4" />
-            System
+            <span className="hidden sm:inline">System</span>
           </TabsTrigger>
           <TabsTrigger value="stock" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Stock
+            <span className="hidden sm:inline">Stock</span>
           </TabsTrigger>
           <TabsTrigger value="pos" className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
-            POS
+            <span className="hidden sm:inline">POS</span>
           </TabsTrigger>
           <TabsTrigger value="receipt" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
-            Receipt
+            <span className="hidden sm:inline">Receipt</span>
           </TabsTrigger>
           <TabsTrigger value="theme" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
-            Theme
+            <span className="hidden sm:inline">Theme</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
-            Alerts
+            <span className="hidden sm:inline">Alerts</span>
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Users
+            <span className="hidden sm:inline">Users</span>
           </TabsTrigger>
+          {userRole === 'admin' && (
+            <TabsTrigger value="permissions" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Permissions</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="backup" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
-            Backup
+            <span className="hidden sm:inline">Backup</span>
           </TabsTrigger>
         </TabsList>
 
@@ -165,6 +175,22 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {userRole === 'admin' && (
+          <TabsContent value="permissions" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Role Permissions</CardTitle>
+                <CardDescription>
+                  Customize which pages each role can access in POS and Hotel modes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RolePermissionsEditor />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="backup" className="space-y-4">
           <Card>
