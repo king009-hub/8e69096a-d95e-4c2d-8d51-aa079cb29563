@@ -25,8 +25,10 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode } from "@/contexts/AppModeContext";
 import { ModeSwitcher } from "@/components/common/ModeSwitcher";
-import { filterNavigationByRole, UserRole, getRoleDisplayName } from "@/lib/permissions";
+import { filterNavigationByRole, UserRole, getRoleDisplayName, setCachedPermissions } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { useEffect } from "react";
 
 const posNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -64,14 +66,22 @@ const ownerNavigation = [
 export function Sidebar() {
   const { userRole } = useAuth();
   const { mode } = useAppMode();
+  const { data: rolePermissions } = useRolePermissions();
+  
+  // Update the permissions cache when database permissions are loaded
+  useEffect(() => {
+    if (rolePermissions) {
+      setCachedPermissions(rolePermissions);
+    }
+  }, [rolePermissions]);
   
   const baseNavigation = mode === 'hotel' ? hotelNavigation : posNavigation;
   const title = mode === 'hotel' ? 'Hotel Manager' : 'StockFlow';
   const subtitle = mode === 'hotel' ? 'Hotel Management' : 'Inventory Management';
   
-  // Filter navigation based on user role
-  const navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, mode);
-  const filteredOwnerNav = filterNavigationByRole(ownerNavigation, userRole as UserRole, 'pos');
+  // Filter navigation based on user role and database permissions
+  const navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, mode, rolePermissions);
+  const filteredOwnerNav = filterNavigationByRole(ownerNavigation, userRole as UserRole, 'pos', rolePermissions);
   
   return (
     <div className="w-56 md:w-64 bg-card border-r border-border h-screen shadow-lg flex flex-col">
