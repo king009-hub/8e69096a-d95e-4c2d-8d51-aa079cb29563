@@ -1229,28 +1229,37 @@ export type Database = {
       }
       role_permissions: {
         Row: {
+          color: string | null
           created_at: string
           description: string | null
           hotel_routes: string[]
+          icon: string | null
           id: string
+          is_system: boolean | null
           pos_routes: string[]
           role: string
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           description?: string | null
           hotel_routes?: string[]
+          icon?: string | null
           id?: string
+          is_system?: boolean | null
           pos_routes?: string[]
           role: string
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           description?: string | null
           hotel_routes?: string[]
+          icon?: string | null
           id?: string
+          is_system?: boolean | null
           pos_routes?: string[]
           role?: string
           updated_at?: string
@@ -1645,6 +1654,18 @@ export type Database = {
         Args: { product_uuid: string }
         Returns: number
       }
+      create_custom_role: {
+        Args: {
+          hotel_routes_arr?: string[]
+          pos_routes_arr?: string[]
+          role_color?: string
+          role_description?: string
+          role_icon?: string
+          role_name: string
+        }
+        Returns: string
+      }
+      delete_custom_role: { Args: { role_name: string }; Returns: boolean }
       generate_booking_reference: { Args: never; Returns: string }
       generate_hotel_invoice_number: { Args: never; Returns: string }
       generate_loan_number: { Args: never; Returns: string }

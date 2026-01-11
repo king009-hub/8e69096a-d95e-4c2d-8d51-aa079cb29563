@@ -8,6 +8,9 @@ export interface RolePermission {
   pos_routes: string[];
   hotel_routes: string[];
   description: string | null;
+  is_system: boolean | null;
+  color: string | null;
+  icon: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -93,6 +96,8 @@ export function useUpdateRolePermissions() {
           pos_routes: permission.pos_routes,
           hotel_routes: permission.hotel_routes,
           description: permission.description,
+          color: permission.color,
+          icon: permission.icon,
           updated_at: new Date().toISOString(),
         })
         .eq('role', permission.role)
@@ -113,6 +118,78 @@ export function useUpdateRolePermissions() {
       toast({
         title: "Error",
         description: "Failed to update permissions: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useCreateRole() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params: {
+      name: string;
+      description?: string;
+      color?: string;
+      icon?: string;
+      pos_routes?: string[];
+      hotel_routes?: string[];
+    }) => {
+      const { data, error } = await supabase.rpc('create_custom_role', {
+        role_name: params.name,
+        role_description: params.description || null,
+        role_color: params.color || 'default',
+        role_icon: params.icon || 'Shield',
+        pos_routes_arr: params.pos_routes || [],
+        hotel_routes_arr: params.hotel_routes || [],
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['role-permissions'] });
+      toast({
+        title: "Role Created",
+        description: "Custom role has been created successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create role: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useDeleteRole() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (roleName: string) => {
+      const { data, error } = await supabase.rpc('delete_custom_role', {
+        role_name: roleName,
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['role-permissions'] });
+      toast({
+        title: "Role Deleted",
+        description: "Custom role has been deleted successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete role: " + error.message,
         variant: "destructive",
       });
     },

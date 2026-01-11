@@ -5,23 +5,76 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, Shield, Save, RotateCcw, ShoppingCart, Building } from "lucide-react";
-import { useRolePermissions, useUpdateRolePermissions, availablePosRoutes, availableHotelRoutes, RolePermission } from "@/hooks/useRolePermissions";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Loader2, Shield, Save, RotateCcw, ShoppingCart, Building, Plus, Trash2, Users, Briefcase, UserCheck, UserCog } from "lucide-react";
+import { useRolePermissions, useUpdateRolePermissions, useCreateRole, useDeleteRole, availablePosRoutes, availableHotelRoutes, RolePermission } from "@/hooks/useRolePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 
-const roleConfig = {
-  admin: { label: 'Administrator', color: 'destructive' as const, icon: Shield },
-  manager: { label: 'Manager', color: 'secondary' as const, icon: Shield },
-  cashier: { label: 'Cashier', color: 'default' as const, icon: ShoppingCart },
-  user: { label: 'User', color: 'outline' as const, icon: Building },
-};
+const iconOptions = [
+  { value: 'Shield', label: 'Shield', icon: Shield },
+  { value: 'Users', label: 'Users', icon: Users },
+  { value: 'Briefcase', label: 'Briefcase', icon: Briefcase },
+  { value: 'UserCheck', label: 'User Check', icon: UserCheck },
+  { value: 'UserCog', label: 'User Cog', icon: UserCog },
+  { value: 'ShoppingCart', label: 'Shopping Cart', icon: ShoppingCart },
+  { value: 'Building', label: 'Building', icon: Building },
+];
+
+const colorOptions = [
+  { value: 'default', label: 'Default', className: 'bg-muted' },
+  { value: 'destructive', label: 'Red', className: 'bg-destructive' },
+  { value: 'secondary', label: 'Blue', className: 'bg-blue-500' },
+  { value: 'success', label: 'Green', className: 'bg-green-500' },
+  { value: 'warning', label: 'Orange', className: 'bg-orange-500' },
+  { value: 'purple', label: 'Purple', className: 'bg-purple-500' },
+];
+
+function getIconComponent(iconName: string | null) {
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    Shield,
+    Users,
+    Briefcase,
+    UserCheck,
+    UserCog,
+    ShoppingCart,
+    Building,
+  };
+  return iconMap[iconName || 'Shield'] || Shield;
+}
+
+function getColorClass(color: string | null) {
+  const colorMap: Record<string, string> = {
+    destructive: 'text-red-500',
+    secondary: 'text-blue-500',
+    success: 'text-green-500',
+    warning: 'text-orange-500',
+    purple: 'text-purple-500',
+    default: 'text-muted-foreground',
+  };
+  return colorMap[color || 'default'] || 'text-muted-foreground';
+}
+
+function getBadgeVariant(color: string | null): "default" | "secondary" | "destructive" | "outline" {
+  if (color === 'destructive') return 'destructive';
+  if (color === 'secondary') return 'secondary';
+  return 'outline';
+}
 
 export function RolePermissionsEditor() {
   const { userRole } = useAuth();
   const { data: permissions, isLoading } = useRolePermissions();
   const updatePermissions = useUpdateRolePermissions();
+  const createRole = useCreateRole();
+  const deleteRole = useDeleteRole();
   const [editedPermissions, setEditedPermissions] = useState<Record<string, RolePermission>>({});
   const [activeMode, setActiveMode] = useState<'pos' | 'hotel'>('pos');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newRole, setNewRole] = useState({ name: '', description: '', color: 'default', icon: 'Shield' });
 
   // Only admins can edit permissions
   if (userRole !== 'admin') {
@@ -77,6 +130,8 @@ export function RolePermissionsEditor() {
       pos_routes: permission.pos_routes,
       hotel_routes: permission.hotel_routes,
       description: permission.description,
+      color: permission.color,
+      icon: permission.icon,
     });
 
     // Clear edited state for this role
@@ -99,7 +154,29 @@ export function RolePermissionsEditor() {
     return !!editedPermissions[role];
   };
 
+  const handleCreateRole = async () => {
+    if (!newRole.name.trim()) return;
+    
+    await createRole.mutateAsync({
+      name: newRole.name.toLowerCase().trim(),
+      description: newRole.description || undefined,
+      color: newRole.color,
+      icon: newRole.icon,
+      pos_routes: [],
+      hotel_routes: [],
+    });
+    
+    setShowCreateDialog(false);
+    setNewRole({ name: '', description: '', color: 'default', icon: 'Shield' });
+  };
+
+  const handleDeleteRole = async (roleName: string) => {
+    await deleteRole.mutateAsync(roleName);
+  };
+
   const routes = activeMode === 'pos' ? availablePosRoutes : availableHotelRoutes;
+  const systemRoles = permissions?.filter(p => p.is_system) || [];
+  const customRoles = permissions?.filter(p => !p.is_system) || [];
 
   return (
     <div className="space-y-6">
@@ -110,6 +187,104 @@ export function RolePermissionsEditor() {
             Customize which pages each role can access
           </p>
         </div>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Custom Role
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Custom Role</DialogTitle>
+              <DialogDescription>
+                Create a new role with customizable permissions. You can configure route access after creation.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="role-name">Role Name</Label>
+                <Input
+                  id="role-name"
+                  placeholder="e.g., supervisor, receptionist"
+                  value={newRole.name}
+                  onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Role names are case-insensitive and must be unique.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role-description">Description (optional)</Label>
+                <Textarea
+                  id="role-description"
+                  placeholder="Describe the purpose of this role..."
+                  value={newRole.description}
+                  onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Icon</Label>
+                  <Select
+                    value={newRole.icon}
+                    onValueChange={(value) => setNewRole(prev => ({ ...prev, icon: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {iconOptions.map((opt) => {
+                        const IconComp = opt.icon;
+                        return (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <div className="flex items-center gap-2">
+                              <IconComp className="h-4 w-4" />
+                              {opt.label}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Color</Label>
+                  <Select
+                    value={newRole.color}
+                    onValueChange={(value) => setNewRole(prev => ({ ...prev, color: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {colorOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex items-center gap-2">
+                            <div className={`h-3 w-3 rounded-full ${opt.className}`} />
+                            {opt.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateRole} 
+                disabled={!newRole.name.trim() || createRole.isPending}
+              >
+                {createRole.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Create Role
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as 'pos' | 'hotel')}>
@@ -124,100 +299,265 @@ export function RolePermissionsEditor() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeMode} className="mt-4">
-          <Accordion type="multiple" className="space-y-4">
-            {Object.entries(roleConfig).map(([role, config]) => {
-              const permission = getPermission(role);
-              const currentRoutes = permission?.[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || [];
-              const Icon = config.icon;
+        <TabsContent value={activeMode} className="mt-4 space-y-6">
+          {/* System Roles */}
+          <div>
+            <h4 className="text-sm font-medium mb-3 text-muted-foreground flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              System Roles
+            </h4>
+            <Accordion type="multiple" className="space-y-2">
+              {systemRoles.map((perm) => {
+                const currentRoutes = perm[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || [];
+                const Icon = getIconComponent(perm.icon);
+                const colorClass = getColorClass(perm.color);
+                const permission = getPermission(perm.role);
+                const editedRoutes = permission?.[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || currentRoutes;
 
-              return (
-                <AccordionItem key={role} value={role} className="border rounded-lg px-4">
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center gap-3">
-                      <Icon className={`h-5 w-5 ${role === 'admin' ? 'text-red-500' : role === 'manager' ? 'text-blue-500' : role === 'cashier' ? 'text-green-500' : 'text-gray-500'}`} />
-                      <span className="font-medium">{config.label}</span>
-                      <Badge variant={config.color}>{role}</Badge>
-                      {hasChanges(role) && (
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-                          Unsaved
-                        </Badge>
-                      )}
-                      <span className="text-sm text-muted-foreground ml-2">
-                        ({currentRoutes.length} routes)
-                      </span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="py-4 space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {routes.map((route) => (
-                          <div
-                            key={route.path}
-                            className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${
-                              currentRoutes.includes(route.path)
-                                ? 'bg-primary/5 border-primary/30'
-                                : 'bg-muted/30 border-transparent'
-                            }`}
-                          >
-                            <Checkbox
-                              id={`${role}-${route.path}`}
-                              checked={currentRoutes.includes(route.path)}
-                              onCheckedChange={() => handleRouteToggle(role, route.path, activeMode)}
-                              disabled={role === 'admin'} // Admin always has all permissions
-                            />
-                            <div className="space-y-1">
-                              <label
-                                htmlFor={`${role}-${route.path}`}
-                                className="text-sm font-medium cursor-pointer"
+                return (
+                  <AccordionItem key={perm.role} value={perm.role} className="border rounded-lg px-4">
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3">
+                        <Icon className={`h-5 w-5 ${colorClass}`} />
+                        <span className="font-medium capitalize">{perm.role}</span>
+                        <Badge variant={getBadgeVariant(perm.color)}>{perm.role}</Badge>
+                        <Badge variant="secondary" className="text-xs">System</Badge>
+                        {hasChanges(perm.role) && (
+                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                            Unsaved
+                          </Badge>
+                        )}
+                        <span className="text-sm text-muted-foreground ml-2">
+                          ({editedRoutes.length} routes)
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="py-4 space-y-4">
+                        {perm.description && (
+                          <p className="text-sm text-muted-foreground mb-4">{perm.description}</p>
+                        )}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {routes.map((route) => (
+                            <div
+                              key={route.path}
+                              className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${
+                                editedRoutes.includes(route.path)
+                                  ? 'bg-primary/5 border-primary/30'
+                                  : 'bg-muted/30 border-transparent'
+                              }`}
+                            >
+                              <Checkbox
+                                id={`${perm.role}-${route.path}`}
+                                checked={editedRoutes.includes(route.path)}
+                                onCheckedChange={() => handleRouteToggle(perm.role, route.path, activeMode)}
+                                disabled={perm.role === 'admin'}
+                              />
+                              <div className="space-y-1">
+                                <label
+                                  htmlFor={`${perm.role}-${route.path}`}
+                                  className="text-sm font-medium cursor-pointer"
+                                >
+                                  {route.label}
+                                </label>
+                                <p className="text-xs text-muted-foreground">
+                                  {route.description}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {perm.role !== 'admin' && (
+                          <div className="flex justify-end gap-2 pt-4 border-t">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReset(perm.role)}
+                              disabled={!hasChanges(perm.role)}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Reset
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleSave(perm.role)}
+                              disabled={!hasChanges(perm.role) || updatePermissions.isPending}
+                            >
+                              {updatePermissions.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Save className="h-4 w-4 mr-2" />
+                              )}
+                              Save Changes
+                            </Button>
+                          </div>
+                        )}
+
+                        {perm.role === 'admin' && (
+                          <p className="text-sm text-muted-foreground italic">
+                            Admin role always has access to all routes and cannot be modified.
+                          </p>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          </div>
+
+          {/* Custom Roles */}
+          <div>
+            <h4 className="text-sm font-medium mb-3 text-muted-foreground flex items-center gap-2">
+              <UserCog className="h-4 w-4" />
+              Custom Roles
+              {customRoles.length > 0 && (
+                <Badge variant="outline" className="ml-2">{customRoles.length}</Badge>
+              )}
+            </h4>
+            {customRoles.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-8 text-center">
+                  <UserCog className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No custom roles created yet.</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => setShowCreateDialog(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Custom Role
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Accordion type="multiple" className="space-y-2">
+                {customRoles.map((perm) => {
+                  const currentRoutes = perm[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || [];
+                  const Icon = getIconComponent(perm.icon);
+                  const colorClass = getColorClass(perm.color);
+                  const permission = getPermission(perm.role);
+                  const editedRoutes = permission?.[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || currentRoutes;
+
+                  return (
+                    <AccordionItem key={perm.role} value={perm.role} className="border rounded-lg px-4">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <Icon className={`h-5 w-5 ${colorClass}`} />
+                          <span className="font-medium capitalize">{perm.role}</span>
+                          <Badge variant={getBadgeVariant(perm.color)}>{perm.role}</Badge>
+                          <Badge variant="outline" className="text-xs bg-primary/5">Custom</Badge>
+                          {hasChanges(perm.role) && (
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                              Unsaved
+                            </Badge>
+                          )}
+                          <span className="text-sm text-muted-foreground ml-2">
+                            ({editedRoutes.length} routes)
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="py-4 space-y-4">
+                          {perm.description && (
+                            <p className="text-sm text-muted-foreground mb-4">{perm.description}</p>
+                          )}
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {routes.map((route) => (
+                              <div
+                                key={route.path}
+                                className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${
+                                  editedRoutes.includes(route.path)
+                                    ? 'bg-primary/5 border-primary/30'
+                                    : 'bg-muted/30 border-transparent'
+                                }`}
                               >
-                                {route.label}
-                              </label>
-                              <p className="text-xs text-muted-foreground">
-                                {route.description}
-                              </p>
+                                <Checkbox
+                                  id={`${perm.role}-${route.path}`}
+                                  checked={editedRoutes.includes(route.path)}
+                                  onCheckedChange={() => handleRouteToggle(perm.role, route.path, activeMode)}
+                                />
+                                <div className="space-y-1">
+                                  <label
+                                    htmlFor={`${perm.role}-${route.path}`}
+                                    className="text-sm font-medium cursor-pointer"
+                                  >
+                                    {route.label}
+                                  </label>
+                                  <p className="text-xs text-muted-foreground">
+                                    {route.description}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex justify-between gap-2 pt-4 border-t">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Role
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Custom Role</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete the "{perm.role}" role? This action cannot be undone.
+                                    Make sure no users are assigned to this role before deleting.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteRole(perm.role)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    {deleteRole.isPending ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                    )}
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReset(perm.role)}
+                                disabled={!hasChanges(perm.role)}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Reset
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleSave(perm.role)}
+                                disabled={!hasChanges(perm.role) || updatePermissions.isPending}
+                              >
+                                {updatePermissions.isPending ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Save className="h-4 w-4 mr-2" />
+                                )}
+                                Save Changes
+                              </Button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-
-                      {role !== 'admin' && (
-                        <div className="flex justify-end gap-2 pt-4 border-t">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleReset(role)}
-                            disabled={!hasChanges(role)}
-                          >
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                            Reset
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSave(role)}
-                            disabled={!hasChanges(role) || updatePermissions.isPending}
-                          >
-                            {updatePermissions.isPending ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Save className="h-4 w-4 mr-2" />
-                            )}
-                            Save Changes
-                          </Button>
                         </div>
-                      )}
-
-                      {role === 'admin' && (
-                        <p className="text-sm text-muted-foreground italic">
-                          Admin role always has access to all routes and cannot be modified.
-                        </p>
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
