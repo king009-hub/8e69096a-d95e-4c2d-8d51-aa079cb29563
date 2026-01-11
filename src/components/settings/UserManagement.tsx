@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { useUserRoles, useUpdateUserRole } from "@/hooks/useSettings";
-import { Plus, Edit, UserCheck, UserX, Loader2, Search, Mail, Shield, History } from "lucide-react";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { Plus, Edit, UserCheck, UserX, Loader2, Search, Mail, Shield, History, Users, Briefcase, UserCog, ShoppingCart, Building } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -29,12 +30,39 @@ const userRoleSchema = z.object({
   reason: z.string().optional(),
 });
 
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Shield,
+  Users,
+  Briefcase,
+  UserCheck,
+  UserCog,
+  ShoppingCart,
+  Building,
+};
+
+function getIconComponent(iconName: string | null) {
+  return iconMap[iconName || 'Shield'] || Shield;
+}
+
+function getRoleColorClass(color: string | null) {
+  const colorMap: Record<string, string> = {
+    destructive: 'text-red-500',
+    secondary: 'text-blue-500',
+    success: 'text-green-500',
+    warning: 'text-orange-500',
+    purple: 'text-purple-500',
+    default: 'text-muted-foreground',
+  };
+  return colorMap[color || 'default'] || 'text-muted-foreground';
+}
+
 export function UserManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchingUser, setSearchingUser] = useState(false);
   const [foundUser, setFoundUser] = useState<{ user_id: string; email: string; created_at: string } | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ user: any; role: string; reason?: string } | null>(null);
   const { data: userRoles, isLoading } = useUserRoles();
+  const { data: rolePermissions, isLoading: rolesLoading } = useRolePermissions();
   const updateUserRole = useUpdateUserRole();
   const { toast } = useToast();
 
@@ -114,7 +142,7 @@ export function UserManagement() {
       await updateUserRole.mutateAsync({
         user_id: confirmAction.user.user_id,
         role: confirmAction.role,
-        permissions: getRolePermissions(confirmAction.role),
+        permissions: getRolePermissionsForUser(confirmAction.role),
       });
       
       toast({
@@ -135,7 +163,12 @@ export function UserManagement() {
     }
   };
 
-  const getRolePermissions = (role: string): string[] => {
+  const getRolePermissionsForUser = (role: string): string[] => {
+    const roleData = rolePermissions?.find(r => r.role === role);
+    if (roleData) {
+      return [...roleData.pos_routes, ...roleData.hotel_routes];
+    }
+    // Fallback for system roles
     switch (role) {
       case "admin":
         return ["all"];
@@ -148,7 +181,13 @@ export function UserManagement() {
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: string): "default" | "secondary" | "destructive" | "outline" => {
+    const roleData = rolePermissions?.find(r => r.role === role);
+    if (roleData?.color) {
+      if (roleData.color === 'destructive') return 'destructive';
+      if (roleData.color === 'secondary') return 'secondary';
+    }
+    // Fallback for system roles
     switch (role) {
       case "admin":
         return "destructive";
@@ -159,6 +198,10 @@ export function UserManagement() {
       default:
         return "outline";
     }
+  };
+
+  const getRoleData = (role: string) => {
+    return rolePermissions?.find(r => r.role === role);
   };
 
   if (isLoading) {
@@ -256,30 +299,27 @@ export function UserManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="admin">
-                            <div className="flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-red-500" />
-                              Administrator
+                          {rolesLoading ? (
+                            <div className="p-2 text-center">
+                              <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                             </div>
-                          </SelectItem>
-                          <SelectItem value="manager">
-                            <div className="flex items-center gap-2">
-                              <UserCheck className="h-4 w-4 text-blue-500" />
-                              Manager
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="cashier">
-                            <div className="flex items-center gap-2">
-                              <UserCheck className="h-4 w-4 text-green-500" />
-                              Cashier
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="user">
-                            <div className="flex items-center gap-2">
-                              <UserCheck className="h-4 w-4 text-gray-500" />
-                              User
-                            </div>
-                          </SelectItem>
+                          ) : (
+                            rolePermissions?.map((role) => {
+                              const Icon = getIconComponent(role.icon);
+                              const colorClass = getRoleColorClass(role.color);
+                              return (
+                                <SelectItem key={role.role} value={role.role}>
+                                  <div className="flex items-center gap-2">
+                                    <Icon className={`h-4 w-4 ${colorClass}`} />
+                                    <span className="capitalize">{role.role}</span>
+                                    {!role.is_system && (
+                                      <Badge variant="outline" className="text-xs ml-1">Custom</Badge>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              );
+                            })
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -1,15 +1,18 @@
 // Role-based access control configuration
-export type UserRole = 'admin' | 'manager' | 'cashier' | 'user';
+export type UserRole = string; // Allow any string for custom roles
 
 export interface RoutePermission {
   path: string;
-  allowedRoles: UserRole[];
+  allowedRoles: string[];
 }
 
 export interface RolePermissionData {
   role: string;
   pos_routes: string[];
   hotel_routes: string[];
+  is_system?: boolean;
+  color?: string;
+  icon?: string;
 }
 
 // Cache for database permissions
@@ -166,12 +169,30 @@ export function filterNavigationByRole<T extends { href: string }>(
 /**
  * Get role display name
  */
-export function getRoleDisplayName(role: UserRole): string {
-  const names: Record<UserRole, string> = {
+export function getRoleDisplayName(role: UserRole, permissions?: RolePermissionData[] | null): string {
+  // Check if we have cached permissions with descriptions
+  const perms = permissions || cachedPermissions;
+  if (perms) {
+    const roleData = perms.find(p => p.role === role);
+    if (roleData) {
+      // Capitalize first letter of role name
+      return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+  }
+  
+  // Fallback for system roles
+  const names: Record<string, string> = {
     admin: 'Administrator',
     manager: 'Manager',
     cashier: 'Cashier',
     user: 'User',
   };
-  return names[role] || role;
+  return names[role] || role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+/**
+ * Check if a role is a system role
+ */
+export function isSystemRole(role: string): boolean {
+  return ['admin', 'manager', 'cashier', 'user'].includes(role);
 }
