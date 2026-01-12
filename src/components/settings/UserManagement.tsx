@@ -142,7 +142,7 @@ export function UserManagement() {
       await updateUserRole.mutateAsync({
         user_id: confirmAction.user.user_id,
         role: confirmAction.role,
-        permissions: getRolePermissionsForUser(confirmAction.role),
+        reason: confirmAction.reason || "Role assigned via admin interface",
       });
       
       toast({
