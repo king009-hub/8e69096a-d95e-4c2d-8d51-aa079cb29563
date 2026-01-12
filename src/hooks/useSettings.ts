@@ -164,13 +164,13 @@ export function useUpdateUserRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ user_id, role, permissions }: { user_id: string; role: string; permissions?: any[] }) => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .upsert(
-          { user_id, role, permissions: permissions || [] },
-          { onConflict: "user_id" }
-        );
+    mutationFn: async ({ user_id, role, reason }: { user_id: string; role: string; reason?: string }) => {
+      // Use the secure RPC function that validates against role_permissions table
+      const { data, error } = await supabase.rpc("safe_update_user_role", {
+        target_user_id: user_id,
+        new_role: role,
+        reason: reason || "Role updated via admin interface",
+      });
 
       if (error) throw error;
       return data;
@@ -182,11 +182,11 @@ export function useUpdateUserRole() {
         description: "User role has been updated successfully.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error updating user role:", error);
       toast({
         title: "Error",
-        description: "Failed to update user role. Please try again.",
+        description: error.message || "Failed to update user role. Please try again.",
         variant: "destructive",
       });
     },

@@ -1686,21 +1686,16 @@ export type Database = {
         Returns: undefined
       }
       reset_admin_password: { Args: never; Returns: string }
-      safe_update_user_role:
-        | {
-            Args: { new_role: string; target_user_id: string }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              ip_address?: string
-              new_role: string
-              reason?: string
-              target_user_id: string
-              user_agent?: string
-            }
-            Returns: boolean
-          }
+      safe_update_user_role: {
+        Args: {
+          ip_address?: string
+          new_role: string
+          reason?: string
+          target_user_id: string
+          user_agent?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       booking_status:

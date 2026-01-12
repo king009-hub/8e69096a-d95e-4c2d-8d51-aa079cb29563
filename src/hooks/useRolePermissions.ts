@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { clearPermissionsCache } from "@/lib/permissions";
 
 export interface RolePermission {
   id: string;
@@ -108,6 +109,8 @@ export function useUpdateRolePermissions() {
       return data;
     },
     onSuccess: () => {
+      // Clear permissions cache so changes take effect immediately
+      clearPermissionsCache();
       queryClient.invalidateQueries({ queryKey: ['role-permissions'] });
       toast({
         title: "Permissions Updated",
@@ -150,6 +153,8 @@ export function useCreateRole() {
       return data;
     },
     onSuccess: () => {
+      // Clear permissions cache so new role is available
+      clearPermissionsCache();
       queryClient.invalidateQueries({ queryKey: ['role-permissions'] });
       toast({
         title: "Role Created",
@@ -180,6 +185,8 @@ export function useDeleteRole() {
       return data;
     },
     onSuccess: () => {
+      // Clear permissions cache so deleted role is removed
+      clearPermissionsCache();
       queryClient.invalidateQueries({ queryKey: ['role-permissions'] });
       toast({
         title: "Role Deleted",
