@@ -11,6 +11,8 @@ import { UserManagement } from "@/components/settings/UserManagement";
 import { BackupSettings } from "@/components/settings/BackupSettings";
 import { RolePermissionsEditor } from "@/components/settings/RolePermissionsEditor";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { isAdminRole } from "@/lib/permissions";
 import {
   Settings as SettingsIcon,
   Package,
@@ -26,6 +28,9 @@ import {
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("system");
   const { userRole } = useAuth();
+  const { data: permissions } = useRolePermissions();
+  
+  const isAdmin = isAdminRole(userRole, permissions);
 
   return (
     <div className="space-y-6">
@@ -37,7 +42,7 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`grid w-full ${userRole === 'admin' ? 'grid-cols-9' : 'grid-cols-8'}`}>
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-9' : 'grid-cols-8'}`}>
           <TabsTrigger value="system" className="flex items-center gap-2">
             <SettingsIcon className="h-4 w-4" />
             <span className="hidden sm:inline">System</span>
@@ -66,7 +71,7 @@ export default function Settings() {
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Users</span>
           </TabsTrigger>
-          {userRole === 'admin' && (
+          {isAdmin && (
             <TabsTrigger value="permissions" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               <span className="hidden sm:inline">Permissions</span>

@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Loader2, Shield, Save, RotateCcw, ShoppingCart, Building, Plus, Trash2, Users, Briefcase, UserCheck, UserCog } from "lucide-react";
 import { useRolePermissions, useUpdateRolePermissions, useCreateRole, useDeleteRole, availablePosRoutes, availableHotelRoutes, RolePermission } from "@/hooks/useRolePermissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { isAdminRole } from "@/lib/permissions";
 
 const iconOptions = [
   { value: 'Shield', label: 'Shield', icon: Shield },
@@ -75,9 +76,11 @@ export function RolePermissionsEditor() {
   const [activeMode, setActiveMode] = useState<'pos' | 'hotel'>('pos');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newRole, setNewRole] = useState({ name: '', description: '', color: 'default', icon: 'Shield' });
+  
+  const isAdmin = isAdminRole(userRole, permissions);
 
-  // Only admins can edit permissions
-  if (userRole !== 'admin') {
+  // Only admins can edit permissions (database-driven check)
+  if (!isAdmin) {
     return (
       <Card>
         <CardContent className="py-8">
@@ -351,7 +354,7 @@ export function RolePermissionsEditor() {
                                 id={`${perm.role}-${route.path}`}
                                 checked={editedRoutes.includes(route.path)}
                                 onCheckedChange={() => handleRouteToggle(perm.role, route.path, activeMode)}
-                                disabled={perm.role === 'admin'}
+                                disabled={perm.role === 'admin' && perm.is_system === true}
                               />
                               <div className="space-y-1">
                                 <label
@@ -368,7 +371,7 @@ export function RolePermissionsEditor() {
                           ))}
                         </div>
 
-                        {perm.role !== 'admin' && (
+                        {!(perm.role === 'admin' && perm.is_system === true) && (
                           <div className="flex justify-end gap-2 pt-4 border-t">
                             <Button
                               variant="outline"
@@ -394,7 +397,7 @@ export function RolePermissionsEditor() {
                           </div>
                         )}
 
-                        {perm.role === 'admin' && (
+                        {perm.role === 'admin' && perm.is_system === true && (
                           <p className="text-sm text-muted-foreground italic">
                             Admin role always has access to all routes and cannot be modified.
                           </p>

@@ -43,6 +43,7 @@ export const availableHotelRoutes = [
   { path: '/hotel/pos', label: 'Hotel POS', description: 'Room service orders' },
   { path: '/hotel/rooms', label: 'Rooms', description: 'Room management' },
   { path: '/hotel/bookings', label: 'Bookings', description: 'Reservation management' },
+  { path: '/hotel/new-booking', label: 'New Booking', description: 'Create new reservation' },
   { path: '/hotel/check-in-out', label: 'Check In/Out', description: 'Guest check-in/out' },
   { path: '/hotel/guests', label: 'Guests', description: 'Guest management' },
   { path: '/hotel/housekeeping', label: 'Housekeeping', description: 'Cleaning tasks' },

@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { isAdminRole } from "@/lib/permissions";
 import { 
   Shield, 
   Users, 
@@ -46,6 +48,7 @@ export default function OwnerDashboard() {
   const { formatCurrency, companyProfile } = useSettingsContext();
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
+  const { data: permissions } = useRolePermissions();
   const [stats, setStats] = useState<SystemStats>({
     totalUsers: 0,
     totalProducts: 0,
@@ -59,19 +62,21 @@ export default function OwnerDashboard() {
     monthRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
+  
+  const isAdmin = isAdminRole(userRole, permissions);
 
   useEffect(() => {
-    // Redirect if not admin
-    if (userRole && userRole !== 'admin') {
+    // Redirect if not admin (database-driven check)
+    if (userRole && permissions && !isAdminRole(userRole, permissions)) {
       navigate('/');
     }
-  }, [userRole, navigate]);
+  }, [userRole, permissions, navigate]);
 
   useEffect(() => {
-    if (userRole === 'admin') {
+    if (isAdmin) {
       fetchOwnerStats();
     }
-  }, [userRole]);
+  }, [isAdmin]);
 
   const fetchOwnerStats = async () => {
     try {

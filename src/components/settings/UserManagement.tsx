@@ -166,19 +166,14 @@ export function UserManagement() {
   const getRolePermissionsForUser = (role: string): string[] => {
     const roleData = rolePermissions?.find(r => r.role === role);
     if (roleData) {
+      // Admin with is_system flag has all permissions
+      if (roleData.role === 'admin' && roleData.is_system) {
+        return ["all"];
+      }
       return [...roleData.pos_routes, ...roleData.hotel_routes];
     }
-    // Fallback for system roles
-    switch (role) {
-      case "admin":
-        return ["all"];
-      case "manager":
-        return ["products", "sales", "reports", "stock"];
-      case "cashier":
-        return ["pos", "customers"];
-      default:
-        return ["pos"];
-    }
+    // No fallback - if role not in DB, no permissions
+    return [];
   };
 
   const getRoleColor = (role: string): "default" | "secondary" | "destructive" | "outline" => {
@@ -186,18 +181,11 @@ export function UserManagement() {
     if (roleData?.color) {
       if (roleData.color === 'destructive') return 'destructive';
       if (roleData.color === 'secondary') return 'secondary';
+      if (roleData.color === 'success') return 'default';
+      if (roleData.color === 'warning') return 'default';
     }
-    // Fallback for system roles
-    switch (role) {
-      case "admin":
-        return "destructive";
-      case "manager":
-        return "secondary";
-      case "cashier":
-        return "default";
-      default:
-        return "outline";
-    }
+    // Default to outline for unknown roles
+    return 'outline';
   };
 
   const getRoleData = (role: string) => {
