@@ -1536,7 +1536,6 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          permissions: Json | null
           role: string
           updated_at: string
           user_id: string
@@ -1544,7 +1543,6 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          permissions?: Json | null
           role?: string
           updated_at?: string
           user_id: string
@@ -1552,12 +1550,19 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          permissions?: Json | null
           role?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_fkey"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "role_permissions"
+            referencedColumns: ["role"]
+          },
+        ]
       }
       vehicles: {
         Row: {

@@ -417,12 +417,6 @@ export function UserManagement() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="text-sm text-muted-foreground">
-                    <strong>Permissions:</strong> {userRole.permissions && Array.isArray(userRole.permissions) 
-                      ? userRole.permissions.join(", ") 
-                      : "None"
-                    }
-                  </div>
                   <div className="text-xs text-muted-foreground">
                     Created: {new Date(userRole.created_at).toLocaleDateString()}
                   </div>
