@@ -3,6 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LogOut, Package } from "lucide-react";
+import { useRealtimePermissions } from "@/hooks/useRealtimePermissions";
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,6 +11,9 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { signOut } = useAuth();
+  
+  // Subscribe to real-time permission updates
+  useRealtimePermissions();
 
   return (
     <div className="flex h-screen bg-background">
