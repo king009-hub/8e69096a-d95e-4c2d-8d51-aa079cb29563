@@ -73,8 +73,8 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
-  currency: 'USD',
-  timezone: 'UTC',
+  currency: 'RWF',
+  timezone: 'Africa/Kigali',
   date_format: 'DD/MM/YYYY',
   language: 'en',
 };
@@ -255,6 +255,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const formatCurrency = (amount: number) => {
     const symbol = getCurrencySymbol();
+    // RWF doesn't use decimal places
+    if (systemSettings.currency === 'RWF') {
+      return `${symbol} ${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    }
     return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 

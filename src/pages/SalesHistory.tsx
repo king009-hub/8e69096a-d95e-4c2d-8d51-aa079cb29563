@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SaleDetailsDialog } from "@/components/sales/SaleDetailsDialog";
 import { exportToExcel, exportToCSV } from "@/lib/export";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 
 export default function SalesHistory() {
   const { sales, loading, refreshSales } = useSales();
@@ -34,6 +35,7 @@ export default function SalesHistory() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedSales, setSelectedSales] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const { formatCurrency } = useSettingsContext();
 
   useEffect(() => {
     const filtered = sales.filter((sale) =>
@@ -43,13 +45,6 @@ export default function SalesHistory() {
     );
     setFilteredSales(filtered);
   }, [sales, searchTerm]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
 
   const getPaymentMethodColor = (method: string) => {
     switch (method.toLowerCase()) {

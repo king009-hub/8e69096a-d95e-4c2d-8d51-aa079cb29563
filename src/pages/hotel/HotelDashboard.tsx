@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { RoomAvailabilityCalendar } from '@/components/hotel/RoomAvailabilityCalendar';
 import { Layout } from '@/components/layout/Layout';
+import { useSettingsContext } from '@/contexts/SettingsContext';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -27,6 +28,7 @@ export default function HotelDashboard() {
   const { data: dashboard, isLoading } = useHotelDashboard();
   const { data: bookings = [] } = useHotelBookings();
   const { data: rooms = [] } = useHotelRooms();
+  const { formatCurrency } = useSettingsContext();
 
   if (isLoading) {
     return (
@@ -124,7 +126,7 @@ export default function HotelDashboard() {
                 <DollarSign className="h-8 w-8 opacity-80" />
                 <div>
                   <p className="text-sm opacity-80">Revenue</p>
-                  <p className="text-2xl font-bold">${(dashboard?.totalRevenue || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(dashboard?.totalRevenue || 0)}</p>
                 </div>
               </div>
             </CardContent>
@@ -167,7 +169,7 @@ export default function HotelDashboard() {
                     />
                     <YAxis fontSize={12} />
                     <Tooltip 
-                      formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
+                      formatter={(value: number) => [formatCurrency(value), 'Revenue']}
                       labelFormatter={(label) => format(new Date(label), 'MMM dd, yyyy')}
                     />
                     <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useSettingsContext } from '@/contexts/SettingsContext';
 
 export default function HotelCheckInOut() {
   const { data: bookings, isLoading } = useHotelBookings();
@@ -20,6 +21,7 @@ export default function HotelCheckInOut() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [servicesBooking, setServicesBooking] = useState<HotelBooking | null>(null);
   const [checkoutBooking, setCheckoutBooking] = useState<HotelBooking | null>(null);
+  const { formatCurrency } = useSettingsContext();
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -154,7 +156,7 @@ export default function HotelCheckInOut() {
                             </div>
                             <div className="flex items-center gap-1">
                               <DollarSign className="h-4 w-4" />
-                              ${booking.total_amount}
+                              {formatCurrency(Number(booking.total_amount))}
                             </div>
                           </div>
                         </div>
@@ -214,7 +216,7 @@ export default function HotelCheckInOut() {
                             <span>Check-in: {format(new Date(booking.check_in_date), 'MMM dd')}</span>
                             <div className="flex items-center gap-1">
                               <DollarSign className="h-4 w-4" />
-                              Balance: ${(Number(booking.total_amount) - Number(booking.paid_amount)).toFixed(2)}
+                              Balance: {formatCurrency(Number(booking.total_amount) - Number(booking.paid_amount))}
                             </div>
                           </div>
                         </div>

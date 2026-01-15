@@ -13,6 +13,7 @@ import { useHotelStaff, useCreateStaff, useUpdateStaff } from "@/hooks/useHotel"
 import { Users, Plus, Search, Phone, Mail, Calendar, Clock, Edit, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 
 const STAFF_ROLES = ["manager", "receptionist", "housekeeping", "security", "maintenance"] as const;
 const SHIFTS = ["morning", "afternoon", "night"] as const;
@@ -21,6 +22,7 @@ export default function HotelStaff() {
   const { data: staff = [], isLoading } = useHotelStaff();
   const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
+  const { formatCurrency } = useSettingsContext();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -160,7 +162,7 @@ export default function HotelStaff() {
             <TableCell>
               {s.hire_date ? format(new Date(s.hire_date), "MMM dd, yyyy") : "-"}
             </TableCell>
-            <TableCell>${s.salary?.toLocaleString() || 0}</TableCell>
+            <TableCell>{formatCurrency(s.salary || 0)}</TableCell>
             <TableCell>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => openEditDialog(s)}>

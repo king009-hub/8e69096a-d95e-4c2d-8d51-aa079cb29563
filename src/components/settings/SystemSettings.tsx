@@ -44,8 +44,8 @@ export function SystemSettings() {
   const systemForm = useForm<z.infer<typeof systemFormSchema>>({
     resolver: zodResolver(systemFormSchema),
     defaultValues: {
-      currency: "USD",
-      timezone: "UTC",
+      currency: "RWF",
+      timezone: "Africa/Kigali",
       date_format: "DD/MM/YYYY",
       language: "en",
     },
@@ -71,8 +71,8 @@ export function SystemSettings() {
       }, {} as Record<string, any>);
 
       systemForm.reset({
-        currency: settingsMap.currency || "USD",
-        timezone: settingsMap.timezone || "UTC",
+        currency: settingsMap.currency || "RWF",
+        timezone: settingsMap.timezone || "Africa/Kigali",
         date_format: settingsMap.date_format || "DD/MM/YYYY",
         language: settingsMap.language || "en",
       });
@@ -240,6 +240,7 @@ export function SystemSettings() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="RWF">RWF - Rwandan Franc</SelectItem>
                       <SelectItem value="USD">USD - US Dollar</SelectItem>
                       <SelectItem value="EUR">EUR - Euro</SelectItem>
                       <SelectItem value="GBP">GBP - British Pound</SelectItem>
@@ -265,6 +266,7 @@ export function SystemSettings() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="Africa/Kigali">Kigali (CAT)</SelectItem>
                       <SelectItem value="UTC">UTC</SelectItem>
                       <SelectItem value="America/New_York">Eastern Time</SelectItem>
                       <SelectItem value="America/Chicago">Central Time</SelectItem>

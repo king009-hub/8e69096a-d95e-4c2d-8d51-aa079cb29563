@@ -8,10 +8,12 @@ import { ScanLine, Search, Package, Plus } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
 import { Product } from "@/types/inventory";
 import { useToast } from "@/hooks/use-toast";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 
 export default function Scanner() {
   const { products } = useProducts();
   const { toast } = useToast();
+  const { formatCurrency } = useSettingsContext();
   const [scannedCode, setScannedCode] = useState("");
   const [foundProduct, setFoundProduct] = useState<Product | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -51,13 +53,6 @@ export default function Scanner() {
       title: "Feature coming soon",
       description: "Add new product functionality will be implemented",
     });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
   };
 
   return (

@@ -12,6 +12,7 @@ import { fetchInvoiceWithItems } from '@/hooks/useHotelServices';
 import { Search, FileText, Loader2, Printer, DollarSign, CreditCard, Banknote, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useSettingsContext } from '@/contexts/SettingsContext';
 
 const paymentMethodIcons = {
   cash: Banknote,
@@ -32,6 +33,7 @@ export default function HotelBilling() {
   const { data: hotelInfo } = useHotelInfo();
   const [search, setSearch] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<HotelInvoice | null>(null);
+  const { formatCurrency } = useSettingsContext();
 
   const handlePrintInvoice = async (invoice: HotelInvoice) => {
     try {
@@ -80,7 +82,7 @@ export default function HotelBilling() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
               </div>
             </div>
           </CardContent>
@@ -93,7 +95,7 @@ export default function HotelBilling() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Paid</p>
-                <p className="text-2xl font-bold">${paidAmount.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatCurrency(paidAmount)}</p>
               </div>
             </div>
           </CardContent>
@@ -106,7 +108,7 @@ export default function HotelBilling() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">${pendingAmount.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatCurrency(pendingAmount)}</p>
               </div>
             </div>
           </CardContent>
@@ -165,7 +167,7 @@ export default function HotelBilling() {
                       <TableCell>
                         {invoice.guest ? `${invoice.guest.first_name} ${invoice.guest.last_name}` : '-'}
                       </TableCell>
-                      <TableCell className="font-bold">${Number(invoice.total_amount).toFixed(2)}</TableCell>
+                      <TableCell className="font-bold">{formatCurrency(Number(invoice.total_amount))}</TableCell>
                       <TableCell>
                         {invoice.payment_method ? (
                           <div className="flex items-center gap-1">
