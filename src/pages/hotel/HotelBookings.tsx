@@ -10,6 +10,7 @@ import { BookingStatus } from '@/types/hotel';
 import { Plus, Search, Eye, Edit, Loader2, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useSettingsContext } from '@/contexts/SettingsContext';
 
 const statusColors: Record<BookingStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -23,6 +24,7 @@ export default function HotelBookings() {
   const navigate = useNavigate();
   const { data: bookings, isLoading } = useHotelBookings();
   const updateStatus = useUpdateBookingStatus();
+  const { formatCurrency } = useSettingsContext();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -146,8 +148,8 @@ export default function HotelBookings() {
                     <TableCell>{format(new Date(booking.check_out_date), 'MMM dd, yyyy')}</TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">${booking.total_amount}</p>
-                        <p className="text-sm text-muted-foreground">Paid: ${booking.paid_amount}</p>
+                        <p className="font-medium">{formatCurrency(Number(booking.total_amount))}</p>
+                        <p className="text-sm text-muted-foreground">Paid: {formatCurrency(Number(booking.paid_amount))}</p>
                       </div>
                     </TableCell>
                     <TableCell>
