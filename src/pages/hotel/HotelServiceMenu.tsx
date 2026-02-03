@@ -79,6 +79,7 @@ import {
 } from '@/hooks/useServiceCategories';
 import { useAddHotelStockMovement, useHotelStockMovements } from '@/hooks/useHotelStock';
 import { useProducts } from '@/hooks/useProducts';
+import { useSettingsContext } from '@/contexts/SettingsContext';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'utensils-crossed': UtensilsCrossed,
@@ -150,6 +151,7 @@ export default function HotelServiceMenu() {
   const { data: categories = [], isLoading: categoriesLoading } = useServiceCategories();
   const { data: stockMovements = [] } = useHotelStockMovements();
   const { products } = useProducts();
+  const { formatCurrency } = useSettingsContext();
   const addItem = useAddServiceMenuItem();
   const updateItem = useUpdateServiceMenuItem();
   const deleteItem = useDeleteServiceMenuItem();
@@ -159,6 +161,12 @@ export default function HotelServiceMenu() {
   const deleteCategory = useDeleteServiceCategory();
   const toggleCategoryActive = useToggleCategoryActive();
   const addStockMovement = useAddHotelStockMovement();
+
+  // Helper to get real-time product stock for linked items
+  const getProductStock = (productId: string): number => {
+    const product = products.find(p => p.id === productId);
+    return product?.stock_quantity ?? 0;
+  };
 
   const activeCategories = useMemo(() => 
     categories.filter(c => c.is_active).sort((a, b) => a.sort_order - b.sort_order),
@@ -387,6 +395,8 @@ export default function HotelServiceMenu() {
                           onDelete={(id) => deleteItem.mutateAsync(id)}
                           onToggle={(id, val) => toggleAvailability.mutateAsync({ id, is_available: !val })}
                           onStock={handleOpenStockDialog}
+                          formatCurrency={formatCurrency}
+                          getProductStock={getProductStock}
                         />
                       </CardContent>
                     </Card>
@@ -816,13 +826,13 @@ export default function HotelServiceMenu() {
                   <SelectContent>
                     <SelectItem value="in">
                       <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <TrendingUp className="h-4 w-4 text-primary" />
                         Stock In
                       </div>
                     </SelectItem>
                     <SelectItem value="out">
                       <div className="flex items-center gap-2">
-                        <TrendingDown className="h-4 w-4 text-red-500" />
+                        <TrendingDown className="h-4 w-4 text-destructive" />
                         Stock Out
                       </div>
                     </SelectItem>
@@ -871,9 +881,11 @@ interface ServiceTableProps {
   onDelete: (id: string) => void;
   onToggle: (id: string, currentValue: boolean) => void;
   onStock: (item: ServiceMenuItem) => void;
+  formatCurrency: (amount: number) => string;
+  getProductStock: (productId: string) => number;
 }
 
-function ServiceTable({ items, onEdit, onDelete, onToggle, onStock }: ServiceTableProps) {
+function ServiceTable({ items, onEdit, onDelete, onToggle, onStock, formatCurrency, getProductStock }: ServiceTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -887,81 +899,89 @@ function ServiceTable({ items, onEdit, onDelete, onToggle, onStock }: ServiceTab
         </TableRow>
       </TableHeader>
       <TableBody>
-        {items.map((item) => (
-          <TableRow key={item.id}>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{item.name}</span>
-                {item.product_id && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
-                    <LinkIcon className="h-3 w-3" />
-                    Linked
+        {items.map((item) => {
+          // For linked items, show current product stock; otherwise show service menu stock
+          const displayStock = item.product_id 
+            ? getProductStock(item.product_id) 
+            : item.stock_quantity;
+          const isLowStock = item.track_stock && displayStock <= item.min_stock_threshold;
+          
+          return (
+            <TableRow key={item.id}>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{item.name}</span>
+                  {item.product_id && (
+                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                      <LinkIcon className="h-3 w-3" />
+                      Linked
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-muted-foreground max-w-xs truncate">
+                {item.description || '-'}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {formatCurrency(item.price)}
+              </TableCell>
+              <TableCell className="text-center">
+                {item.track_stock ? (
+                  <Badge 
+                    variant={isLowStock ? 'destructive' : 'secondary'}
+                    className="cursor-pointer"
+                    onClick={() => !item.product_id && onStock(item)}
+                    title={item.product_id ? 'Managed via linked product' : 'Click to adjust stock'}
+                  >
+                    {displayStock}
+                    {item.product_id && <LinkIcon className="h-3 w-3 ml-1" />}
                   </Badge>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
                 )}
-              </div>
-            </TableCell>
-            <TableCell className="text-muted-foreground max-w-xs truncate">
-              {item.description || '-'}
-            </TableCell>
-            <TableCell className="text-right font-mono">
-              ${item.price.toFixed(2)}
-            </TableCell>
-            <TableCell className="text-center">
-              {item.track_stock ? (
-                <Badge 
-                  variant={item.stock_quantity <= item.min_stock_threshold ? 'destructive' : 'secondary'}
-                  className="cursor-pointer"
-                  onClick={() => !item.product_id && onStock(item)}
-                  title={item.product_id ? 'Managed via linked product' : 'Click to adjust stock'}
-                >
-                  {item.stock_quantity}
-                  {item.product_id && <LinkIcon className="h-3 w-3 ml-1" />}
-                </Badge>
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              )}
-            </TableCell>
-            <TableCell className="text-center">
-              <Switch
-                checked={item.is_available}
-                onCheckedChange={() => onToggle(item.id, item.is_available)}
-              />
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex items-center justify-end gap-1">
-                {item.track_stock && !item.product_id && (
-                  <Button variant="ghost" size="icon" onClick={() => onStock(item)} title="Adjust stock">
-                    <Package className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4 text-destructive" />
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch
+                  checked={item.is_available}
+                  onCheckedChange={() => onToggle(item.id, item.is_available)}
+                />
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1">
+                  {item.track_stock && !item.product_id && (
+                    <Button variant="ghost" size="icon" onClick={() => onStock(item)} title="Adjust stock">
+                      <Package className="h-4 w-4" />
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Item</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete "{item.name}"?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => onDelete(item.id)}>
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Item</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete "{item.name}"?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onDelete(item.id)}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
