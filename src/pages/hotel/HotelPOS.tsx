@@ -78,6 +78,9 @@ export default function HotelPOS() {
   const { data: hotelInfo } = useHotelInfo();
   const { data: templates = [] } = useOrderTemplates();
   
+  // Use hotel tax rate from settings (default 18%)
+  const hotelTaxRate = hotelInfo?.tax_rate ?? 18;
+  
   const {
     cart,
     selectedBooking,
@@ -95,7 +98,7 @@ export default function HotelPOS() {
     setDiscount,
     chargeToRoom,
     processDirectPayment,
-  } = useHotelPOS();
+  } = useHotelPOS(hotelTaxRate);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");

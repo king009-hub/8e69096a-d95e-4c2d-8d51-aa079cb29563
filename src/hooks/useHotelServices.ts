@@ -339,8 +339,15 @@ async function recalculateInvoiceTotals(invoiceId: string) {
     .select('total_price')
     .eq('invoice_id', invoiceId);
 
+  // Get tax rate from hotel_info
+  const { data: hotelInfo } = await supabase
+    .from('hotel_info')
+    .select('tax_rate')
+    .limit(1)
+    .maybeSingle();
+
   const subtotal = (items || []).reduce((sum, item) => sum + Number(item.total_price), 0);
-  const taxRate = 0.18; // 18% tax
+  const taxRate = (hotelInfo?.tax_rate || 18) / 100; // Default 18% if not set
   const taxAmount = subtotal * taxRate;
   const totalAmount = subtotal + taxAmount;
 
