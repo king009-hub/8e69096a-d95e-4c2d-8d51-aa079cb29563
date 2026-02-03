@@ -10,10 +10,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useInvoiceItems, useAddInvoiceItem, useDeleteInvoiceItem } from '@/hooks/useHotelServices';
 import { useAvailableServices, ServiceMenuItem } from '@/hooks/useServiceMenu';
 import { useDeductStockForService } from '@/hooks/useHotelStock';
+import { useSettingsContext } from '@/contexts/SettingsContext';
 import { HotelBooking } from '@/types/hotel';
 import { Loader2, Plus, Trash2, Coffee, UtensilsCrossed, Wine, Sparkles, ShoppingBag, Package, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-
 interface GuestServicesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +29,7 @@ const serviceCategories = [
 ];
 
 export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServicesDialogProps) {
+  const { formatCurrency } = useSettingsContext();
   const [category, setCategory] = useState<string>('food');
   const [description, setDescription] = useState('');
   const [unitPrice, setUnitPrice] = useState<number>(0);
@@ -40,7 +41,6 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
   const addItem = useAddInvoiceItem();
   const deleteItem = useDeleteInvoiceItem();
   const deductStock = useDeductStockForService();
-
   // Group menu items by category with full item data
   const presetServices = useMemo(() => {
     const grouped: Record<string, ServiceMenuItem[]> = {
@@ -75,7 +75,7 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
     }
 
     try {
-      // Add the invoice item
+      // Add the invoice item first
       await addItem.mutateAsync({
         booking_id: booking.id,
         description,
@@ -86,7 +86,8 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
         service_item_id: selectedServiceItem?.id,
       });
 
-      // Auto-deduct stock if this is a tracked service item
+      // Deduct stock ONLY if this is a tracked service item
+      // Note: Stock deduction is handled here, NOT in addItem hook
       if (selectedServiceItem?.id && selectedServiceItem.track_stock) {
         await deductStock.mutateAsync({
           serviceItemId: selectedServiceItem.id,
@@ -187,7 +188,7 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
                             </span>
                           )}
                         </div>
-                        <Badge variant="secondary" className="ml-1 shrink-0">${item.price}</Badge>
+                        <Badge variant="secondary" className="ml-1 shrink-0">{formatCurrency(item.price)}</Badge>
                       </Button>
                     );
                   })
@@ -271,9 +272,9 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
               {(addItem.isPending || deductStock.isPending) ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Plus className="h-4 w-4" />
-              )}
-              Add Service (${(unitPrice * quantity).toFixed(2)})
+              <Plus className="h-4 w-4" />
+            )}
+            Add Service ({formatCurrency(unitPrice * quantity)})
             </Button>
           </div>
 
@@ -297,11 +298,11 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
                         <div>
                           <p className="font-medium">{item.description}</p>
                           <p className="text-sm text-muted-foreground">
-                            {item.quantity}x ${Number(item.unit_price).toFixed(2)}
+                            {item.quantity}x {formatCurrency(Number(item.unit_price))}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary">${Number(item.total_price).toFixed(2)}</Badge>
+                          <Badge variant="secondary">{formatCurrency(Number(item.total_price))}</Badge>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -324,7 +325,7 @@ export function GuestServicesDialog({ open, onOpenChange, booking }: GuestServic
         <DialogFooter className="border-t pt-4">
           <div className="flex items-center justify-between w-full">
             <div className="text-lg font-bold">
-              Total Services: <span className="text-primary">${totalServices.toFixed(2)}</span>
+              Total Services: <span className="text-primary">{formatCurrency(totalServices)}</span>
             </div>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close

@@ -3,10 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProcessPayment } from '@/hooks/useHotelServices';
+import { useSettingsContext } from '@/contexts/SettingsContext';
 import { HotelInvoice, HotelPaymentMethod } from '@/types/hotel';
 import { Loader2, CreditCard, Banknote, Building, DollarSign, CheckCircle } from 'lucide-react';
 
@@ -24,6 +24,7 @@ const paymentMethods = [
 ];
 
 export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProps) {
+  const { formatCurrency } = useSettingsContext();
   const [paymentMethod, setPaymentMethod] = useState<HotelPaymentMethod>(invoice.payment_method || 'cash');
   const [amountPaid, setAmountPaid] = useState(Number(invoice.total_amount));
 
@@ -67,22 +68,22 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
             <Separator />
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal:</span>
-              <span>${Number(invoice.subtotal).toFixed(2)}</span>
+              <span>{formatCurrency(Number(invoice.subtotal))}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tax:</span>
-              <span>${Number(invoice.tax_amount).toFixed(2)}</span>
+              <span>{formatCurrency(Number(invoice.tax_amount))}</span>
             </div>
             {Number(invoice.discount_amount) > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>Discount:</span>
-                <span>-${Number(invoice.discount_amount).toFixed(2)}</span>
+                <span>-{formatCurrency(Number(invoice.discount_amount))}</span>
               </div>
             )}
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span>Total:</span>
-              <span className="text-primary">${Number(invoice.total_amount).toFixed(2)}</span>
+              <span className="text-primary">{formatCurrency(Number(invoice.total_amount))}</span>
             </div>
           </div>
 
@@ -125,7 +126,7 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
                 />
                 {amountPaid < Number(invoice.total_amount) && (
                   <p className="text-sm text-amber-600">
-                    Partial payment: ${(Number(invoice.total_amount) - amountPaid).toFixed(2)} remaining
+                    Partial payment: {formatCurrency(Number(invoice.total_amount) - amountPaid)} remaining
                   </p>
                 )}
               </div>
@@ -148,7 +149,7 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
               ) : (
                 <SelectedPaymentIcon className="h-4 w-4" />
               )}
-              Process ${amountPaid.toFixed(2)}
+              Process {formatCurrency(amountPaid)}
             </Button>
           )}
         </DialogFooter>

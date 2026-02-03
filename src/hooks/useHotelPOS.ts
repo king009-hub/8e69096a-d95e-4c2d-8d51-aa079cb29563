@@ -17,11 +17,12 @@ export interface HotelPOSPayment {
   amount: number;
 }
 
-export function useHotelPOS() {
+export function useHotelPOS(hotelTaxRate?: number) {
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<HotelCartItem[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<HotelBooking | null>(null);
   const [discount, setDiscount] = useState(0);
+  const taxRate = hotelTaxRate ?? 18; // Use provided rate or default to 18%
 
   const addToCart = useCallback((service: ServiceMenuItem, quantity: number = 1) => {
     // Check stock if tracking enabled
@@ -81,7 +82,6 @@ export function useHotelPOS() {
 
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
   const discountAmount = (subtotal * discount) / 100;
-  const taxRate = 18; // GST
   const taxAmount = (subtotal - discountAmount) * (taxRate / 100);
   const total = subtotal - discountAmount + taxAmount;
 
@@ -185,14 +185,14 @@ export function useHotelPOS() {
         }
       }
 
-      // Recalculate invoice totals
+      // Recalculate invoice totals using the correct tax rate
       const { data: allItems } = await supabase
         .from('hotel_invoice_items')
         .select('total_price')
         .eq('invoice_id', invoiceId);
 
       const newSubtotal = (allItems || []).reduce((sum, i) => sum + Number(i.total_price), 0);
-      const newTax = newSubtotal * 0.18;
+      const newTax = newSubtotal * (taxRate / 100);
 
       await supabase
         .from('hotel_invoices')
@@ -216,7 +216,7 @@ export function useHotelPOS() {
       console.error(error);
       return false;
     }
-  }, [cart, selectedBooking, discountAmount, queryClient, clearCart]);
+  }, [cart, selectedBooking, discountAmount, taxRate, queryClient, clearCart]);
 
   // Direct payment - instant sale without room charge
   const processDirectPayment = useCallback(async (payments: HotelPOSPayment[]) => {
