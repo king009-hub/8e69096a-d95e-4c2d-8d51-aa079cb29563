@@ -181,7 +181,7 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {userRole === 'admin' && (
+        {isAdmin && (
           <TabsContent value="permissions" className="space-y-4">
             <Card>
               <CardHeader>
