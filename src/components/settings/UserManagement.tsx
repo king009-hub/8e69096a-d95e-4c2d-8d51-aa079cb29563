@@ -4,17 +4,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { useUserRoles, useUpdateUserRole } from "@/hooks/useSettings";
+import { useUserRoles, useUpdateUserRole, UserRoleWithProfile } from "@/hooks/useSettings";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
-import { Plus, Edit, UserCheck, UserX, Loader2, Search, Mail, Shield, History, Users, Briefcase, UserCog, ShoppingCart, Building } from "lucide-react";
+import { Plus, Loader2, Search, Mail, Shield, Users, Edit, UserX } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { getIconComponent, getRoleColorClass, getBadgeVariant } from "@/lib/roleHelpers";
 import {
   Form,
   FormControl,
@@ -30,37 +32,14 @@ const userRoleSchema = z.object({
   reason: z.string().optional(),
 });
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Shield,
-  Users,
-  Briefcase,
-  UserCheck,
-  UserCog,
-  ShoppingCart,
-  Building,
-};
-
-function getIconComponent(iconName: string | null) {
-  return iconMap[iconName || 'Shield'] || Shield;
-}
-
-function getRoleColorClass(color: string | null) {
-  const colorMap: Record<string, string> = {
-    destructive: 'text-red-500',
-    secondary: 'text-blue-500',
-    success: 'text-green-500',
-    warning: 'text-orange-500',
-    purple: 'text-purple-500',
-    default: 'text-muted-foreground',
-  };
-  return colorMap[color || 'default'] || 'text-muted-foreground';
-}
-
 export function UserManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchingUser, setSearchingUser] = useState(false);
   const [foundUser, setFoundUser] = useState<{ user_id: string; email: string; created_at: string } | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ user: any; role: string; reason?: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRoleWithProfile | null>(null);
+  const [editRole, setEditRole] = useState("");
+  const { user } = useAuth();
   const { data: userRoles, isLoading } = useUserRoles();
   const { data: rolePermissions, isLoading: rolesLoading } = useRolePermissions();
   const updateUserRole = useUpdateUserRole();
@@ -83,35 +62,20 @@ export function UserManagement() {
       const { data, error } = await supabase.rpc('get_user_by_email', { user_email: email.trim() });
       
       if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: error.message, variant: "destructive" });
         setFoundUser(null);
         return;
       }
       
       if (data && data.length > 0) {
         setFoundUser(data[0]);
-        toast({
-          title: "User Found",
-          description: `Found user: ${data[0].email}`,
-        });
+        toast({ title: "User Found", description: `Found user: ${data[0].email}` });
       } else {
         setFoundUser(null);
-        toast({
-          title: "User Not Found", 
-          description: "No user found with this email address",
-          variant: "destructive",
-        });
+        toast({ title: "User Not Found", description: "No user found with this email address", variant: "destructive" });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to search for user",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Error", description: "Failed to search for user", variant: "destructive" });
       setFoundUser(null);
     } finally {
       setSearchingUser(false);
@@ -120,19 +84,10 @@ export function UserManagement() {
 
   const onSubmit = async (values: z.infer<typeof userRoleSchema>) => {
     if (!foundUser) {
-      toast({
-        title: "Error",
-        description: "Please search and select a user first",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please search and select a user first", variant: "destructive" });
       return;
     }
-
-    setConfirmAction({
-      user: foundUser,
-      role: values.role,
-      reason: values.reason
-    });
+    setConfirmAction({ user: foundUser, role: values.role, reason: values.reason });
   };
 
   const confirmRoleAssignment = async () => {
@@ -145,52 +100,41 @@ export function UserManagement() {
         reason: confirmAction.reason || "Role assigned via admin interface",
       });
       
-      toast({
-        title: "Success",
-        description: `Role assigned successfully to ${confirmAction.user.email}`,
-      });
-      
+      toast({ title: "Success", description: `Role assigned successfully to ${confirmAction.user.email}` });
       setIsAddDialogOpen(false);
       setFoundUser(null);
       setConfirmAction(null);
       form.reset();
-    } catch (error) {
-      toast({
-        title: "Error", 
-        description: "Failed to assign role",
-        variant: "destructive",
+    } catch {
+      toast({ title: "Error", description: "Failed to assign role", variant: "destructive" });
+    }
+  };
+
+  const handleInlineRoleChange = async () => {
+    if (!editingUser || !editRole) return;
+
+    try {
+      await updateUserRole.mutateAsync({
+        user_id: editingUser.user_id,
+        role: editRole,
+        reason: "Role updated via inline edit",
       });
+      toast({ title: "Success", description: `Role updated for ${editingUser.email || editingUser.user_id}` });
+      setEditingUser(null);
+      setEditRole("");
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to update role", variant: "destructive" });
     }
   };
 
-  const getRolePermissionsForUser = (role: string): string[] => {
-    const roleData = rolePermissions?.find(r => r.role === role);
-    if (roleData) {
-      // Admin with is_system flag has all permissions
-      if (roleData.role === 'admin' && roleData.is_system) {
-        return ["all"];
-      }
-      return [...roleData.pos_routes, ...roleData.hotel_routes];
+  const getUserDisplayName = (userRole: UserRoleWithProfile) => {
+    if (userRole.first_name || userRole.last_name) {
+      return `${userRole.first_name || ''} ${userRole.last_name || ''}`.trim();
     }
-    // No fallback - if role not in DB, no permissions
-    return [];
+    return userRole.email || userRole.user_id.substring(0, 8) + '...';
   };
 
-  const getRoleColor = (role: string): "default" | "secondary" | "destructive" | "outline" => {
-    const roleData = rolePermissions?.find(r => r.role === role);
-    if (roleData?.color) {
-      if (roleData.color === 'destructive') return 'destructive';
-      if (roleData.color === 'secondary') return 'secondary';
-      if (roleData.color === 'success') return 'default';
-      if (roleData.color === 'warning') return 'default';
-    }
-    // Default to outline for unknown roles
-    return 'outline';
-  };
-
-  const getRoleData = (role: string) => {
-    return rolePermissions?.find(r => r.role === role);
-  };
+  const isSelf = (userId: string) => user?.id === userId;
 
   if (isLoading) {
     return (
@@ -206,12 +150,12 @@ export function UserManagement() {
         <div>
           <h3 className="text-lg font-medium">User Roles & Permissions</h3>
           <p className="text-sm text-muted-foreground">
-            Manage user access levels and permissions
+            Manage user access levels and permissions ({userRoles?.length || 0} users)
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="hover:bg-blue-600">
+            <Button>
               <Plus className="h-4 w-4 mr-2" />
               Add User Role
             </Button>
@@ -220,7 +164,7 @@ export function UserManagement() {
             <DialogHeader>
               <DialogTitle>Add User Role</DialogTitle>
               <DialogDescription>
-                Search for a user by email and assign them a role with appropriate permissions.
+                Search for a user by email and assign them a role.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -236,10 +180,7 @@ export function UserManagement() {
                           <Input 
                             placeholder="Enter user email address" 
                             {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              setFoundUser(null);
-                            }}
+                            onChange={(e) => { field.onChange(e); setFoundUser(null); }}
                           />
                         </FormControl>
                         <Button
@@ -247,26 +188,18 @@ export function UserManagement() {
                           variant="outline"
                           onClick={() => searchUserByEmail(field.value)}
                           disabled={searchingUser || !field.value}
-                          className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300"
                         >
-                          {searchingUser ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Search className="h-4 w-4" />
-                          )}
+                          {searchingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         </Button>
                       </div>
                       <FormMessage />
                       {foundUser && (
-                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                          <div className="flex items-center gap-2 text-sm text-green-800">
-                            <UserCheck className="h-4 w-4" />
+                        <div className="mt-2 p-2 bg-primary/5 border border-primary/20 rounded">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="h-4 w-4 text-primary" />
                             <span>Found: {foundUser.email}</span>
                           </div>
-                          <div className="text-xs text-green-600 mt-1">
-                            User ID: {foundUser.user_id}
-                          </div>
-                          <div className="text-xs text-green-600">
+                          <div className="text-xs text-muted-foreground mt-1">
                             Created: {new Date(foundUser.created_at).toLocaleDateString()}
                           </div>
                         </div>
@@ -282,15 +215,11 @@ export function UserManagement() {
                       <FormLabel>Role</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {rolesLoading ? (
-                            <div className="p-2 text-center">
-                              <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                            </div>
+                            <div className="p-2 text-center"><Loader2 className="h-4 w-4 animate-spin mx-auto" /></div>
                           ) : (
                             rolePermissions?.map((role) => {
                               const Icon = getIconComponent(role.icon);
@@ -300,9 +229,7 @@ export function UserManagement() {
                                   <div className="flex items-center gap-2">
                                     <Icon className={`h-4 w-4 ${colorClass}`} />
                                     <span className="capitalize">{role.role}</span>
-                                    {!role.is_system && (
-                                      <Badge variant="outline" className="text-xs ml-1">Custom</Badge>
-                                    )}
+                                    {!role.is_system && <Badge variant="outline" className="text-xs ml-1">Custom</Badge>}
                                   </div>
                                 </SelectItem>
                               );
@@ -328,11 +255,7 @@ export function UserManagement() {
                   )}
                 />
                 <DialogFooter>
-                  <Button 
-                    type="submit" 
-                    disabled={updateUserRole.isPending || !foundUser}
-                    className="hover:bg-blue-600"
-                  >
+                  <Button type="submit" disabled={updateUserRole.isPending || !foundUser}>
                     {updateUserRole.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Assign Role
                   </Button>
@@ -347,141 +270,209 @@ export function UserManagement() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Role Assignment</AlertDialogTitle>
-              <AlertDialogDescription>
-                {confirmAction && (
-                  <div className="space-y-2">
-                    <p>You are about to assign the role <strong>{confirmAction.role}</strong> to:</p>
-                    <div className="bg-gray-50 p-3 rounded border">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-blue-500" />
-                        <span className="font-medium">{confirmAction.user.email}</span>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2">
+                  {confirmAction && (
+                    <>
+                      <p>You are about to assign the role <strong className="capitalize">{confirmAction.role}</strong> to:</p>
+                      <div className="bg-muted p-3 rounded border">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-primary" />
+                          <span className="font-medium">{confirmAction.user.email}</span>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        User ID: {confirmAction.user.user_id}
-                      </div>
+                      {confirmAction.reason && (
+                        <div>
+                          <p className="text-sm font-medium">Reason:</p>
+                          <p className="text-sm text-muted-foreground">{confirmAction.reason}</p>
+                        </div>
+                      )}
+                      <p className="text-sm text-muted-foreground mt-2">
+                        ⚠️ This action will be logged in the audit trail.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmRoleAssignment}>
+                Confirm Assignment
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Inline Edit Confirmation */}
+        <AlertDialog open={!!editingUser} onOpenChange={() => { setEditingUser(null); setEditRole(""); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Change User Role</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>Change role for <strong>{editingUser?.email || editingUser?.user_id}</strong></p>
+                  <div className="bg-muted p-3 rounded border space-y-1">
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Current role: </span>
+                      <Badge variant="outline" className="capitalize">{editingUser?.role}</Badge>
                     </div>
-                    {confirmAction.reason && (
-                      <div>
-                        <p className="text-sm font-medium">Reason:</p>
-                        <p className="text-sm text-gray-600">{confirmAction.reason}</p>
-                      </div>
-                    )}
-                    <p className="text-yellow-600 text-sm mt-2">
-                      ⚠️ This action will be logged in the audit trail.
-                    </p>
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Name: </span>
+                      <span>{editingUser ? getUserDisplayName(editingUser) : ''}</span>
+                    </div>
                   </div>
-                )}
+                  <div className="space-y-2">
+                    <Label>New Role</Label>
+                    <Select value={editRole} onValueChange={setEditRole}>
+                      <SelectTrigger><SelectValue placeholder="Select new role" /></SelectTrigger>
+                      <SelectContent>
+                        {rolePermissions?.map((role) => {
+                          const Icon = getIconComponent(role.icon);
+                          const colorClass = getRoleColorClass(role.color);
+                          return (
+                            <SelectItem key={role.role} value={role.role}>
+                              <div className="flex items-center gap-2">
+                                <Icon className={`h-4 w-4 ${colorClass}`} />
+                                <span className="capitalize">{role.role}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-sm text-muted-foreground">⚠️ This change will be logged in the audit trail.</p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction 
-                onClick={confirmRoleAssignment}
-                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleInlineRoleChange}
+                disabled={!editRole || editRole === editingUser?.role || updateUserRole.isPending}
               >
-                Confirm Assignment
+                {updateUserRole.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Update Role
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
 
-      <div className="grid gap-4">
+      {/* User List */}
+      <div className="grid gap-3">
         {userRoles && userRoles.length > 0 ? (
-          userRoles.map((userRole) => (
-            <Card key={userRole.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <UserCheck className="h-5 w-5 text-muted-foreground" />
-                    <CardTitle className="text-sm font-medium">
-                      User: {userRole.user_id.substring(0, 8)}...
-                    </CardTitle>
+          userRoles.map((userRole) => {
+            const roleData = rolePermissions?.find(r => r.role === userRole.role);
+            const Icon = getIconComponent(roleData?.icon || null);
+            const colorClass = getRoleColorClass(roleData?.color || null);
+            const displayName = getUserDisplayName(userRole);
+            const self = isSelf(userRole.user_id);
+
+            return (
+              <Card key={userRole.id} className={self ? 'border-primary/30' : ''}>
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full bg-muted`}>
+                        <Icon className={`h-5 w-5 ${colorClass}`} />
+                      </div>
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          {displayName}
+                          {self && <Badge variant="outline" className="text-xs">You</Badge>}
+                        </div>
+                        {userRole.email && (
+                          <div className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {userRole.email}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Joined {new Date(userRole.created_at).toLocaleDateString()} · Updated {new Date(userRole.updated_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getBadgeVariant(roleData?.color || null)} className="capitalize">
+                        {userRole.role}
+                      </Badge>
+                      {!self && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => { setEditingUser(userRole); setEditRole(userRole.role); }}
+                          title="Change role"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <Badge variant={getRoleColor(userRole.role)}>
-                    {userRole.role}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground">
-                    Created: {new Date(userRole.created_at).toLocaleDateString()}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Last Updated: {new Date(userRole.updated_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         ) : (
           <Card>
             <CardContent className="py-8">
               <div className="text-center">
                 <UserX className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium">No user roles configured</h3>
-                <p className="text-sm text-muted-foreground">
-                  Add user roles to manage access permissions
-                </p>
+                <p className="text-sm text-muted-foreground">Add user roles to manage access permissions</p>
               </div>
             </CardContent>
           </Card>
         )}
       </div>
 
+      {/* Dynamic Role Descriptions from DB */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Role Descriptions & Permissions
+            <Shield className="h-5 w-5" />
+            Available Roles
           </CardTitle>
           <CardDescription>
-            Understanding different user roles and their access levels
+            Roles configured in the system and their route access
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-3 rounded-lg border">
-              <div className="flex items-center gap-3">
-                <Shield className="h-8 w-8 text-red-500" />
-                <div>
-                  <div className="font-medium">Administrator</div>
-                  <div className="text-sm text-muted-foreground">Complete system access, user management, sensitive settings</div>
+          <div className="space-y-3">
+            {rolePermissions?.map((role) => {
+              const Icon = getIconComponent(role.icon);
+              const colorClass = getRoleColorClass(role.color);
+              const totalRoutes = (role.pos_routes?.length || 0) + (role.hotel_routes?.length || 0);
+              const assignedCount = userRoles?.filter(u => u.role === role.role).length || 0;
+
+              return (
+                <div key={role.role} className="flex justify-between items-center p-3 rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <Icon className={`h-7 w-7 ${colorClass}`} />
+                    <div>
+                      <div className="font-medium capitalize flex items-center gap-2">
+                        {role.role}
+                        {role.is_system && <Badge variant="secondary" className="text-xs">System</Badge>}
+                        {!role.is_system && <Badge variant="outline" className="text-xs">Custom</Badge>}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {role.description || (role.role === 'admin' ? 'Full system access' : `${totalRoutes} routes assigned`)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      <Users className="h-3 w-3 mr-1" />
+                      {assignedCount} {assignedCount === 1 ? 'user' : 'users'}
+                    </Badge>
+                    <Badge variant={getBadgeVariant(role.color)} className="capitalize">
+                      {role.role}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-              <Badge variant="destructive">Admin</Badge>
-            </div>
-            <div className="flex justify-between items-center p-3 rounded-lg border">
-              <div className="flex items-center gap-3">
-                <UserCheck className="h-8 w-8 text-blue-500" />
-                <div>
-                  <div className="font-medium">Manager</div>
-                  <div className="text-sm text-muted-foreground">Products, sales, reports, stock management</div>
-                </div>
-              </div>
-              <Badge variant="secondary">Manager</Badge>
-            </div>
-            <div className="flex justify-between items-center p-3 rounded-lg border">
-              <div className="flex items-center gap-3">
-                <UserCheck className="h-8 w-8 text-green-500" />
-                <div>
-                  <div className="font-medium">Cashier</div>
-                  <div className="text-sm text-muted-foreground">Point of sale operations and customer management</div>
-                </div>
-              </div>
-              <Badge variant="default">Cashier</Badge>
-            </div>
-            <div className="flex justify-between items-center p-3 rounded-lg border">
-              <div className="flex items-center gap-3">
-                <UserCheck className="h-8 w-8 text-gray-500" />
-                <div>
-                  <div className="font-medium">User</div>
-                  <div className="text-sm text-muted-foreground">Basic point of sale access only</div>
-                </div>
-              </div>
-              <Badge variant="outline">User</Badge>
-            </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

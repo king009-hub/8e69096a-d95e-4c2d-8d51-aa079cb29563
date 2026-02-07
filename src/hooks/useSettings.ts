@@ -145,17 +145,47 @@ export function useUpdateCompanyProfile() {
   });
 }
 
+export interface UserRoleWithProfile {
+  id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+}
+
 export function useUserRoles() {
   return useQuery({
     queryKey: ["user_roles"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("*")
-        .order("created_at");
+      // Fetch user_roles and profiles separately since there's no FK relationship
+      const [rolesResult, profilesResult] = await Promise.all([
+        supabase.from("user_roles").select("*").order("created_at"),
+        supabase.from("profiles").select("user_id, email, first_name, last_name"),
+      ]);
       
-      if (error) throw error;
-      return data;
+      if (rolesResult.error) throw rolesResult.error;
+      if (profilesResult.error) throw profilesResult.error;
+      
+      const profilesMap = new Map(
+        (profilesResult.data || []).map(p => [p.user_id, p])
+      );
+      
+      return (rolesResult.data || []).map((item) => {
+        const profile = profilesMap.get(item.user_id);
+        return {
+          id: item.id,
+          user_id: item.user_id,
+          role: item.role,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          email: profile?.email || null,
+          first_name: profile?.first_name || null,
+          last_name: profile?.last_name || null,
+        };
+      }) as UserRoleWithProfile[];
     },
   });
 }

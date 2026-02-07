@@ -11,10 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Loader2, Shield, Save, RotateCcw, ShoppingCart, Building, Plus, Trash2, Users, Briefcase, UserCheck, UserCog } from "lucide-react";
+import { Loader2, Shield, Save, RotateCcw, ShoppingCart, Building, Plus, Trash2, UserCog, Users, Briefcase, UserCheck } from "lucide-react";
 import { useRolePermissions, useUpdateRolePermissions, useCreateRole, useDeleteRole, availablePosRoutes, availableHotelRoutes, RolePermission } from "@/hooks/useRolePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdminRole } from "@/lib/permissions";
+import { getIconComponent, getRoleColorClass, getBadgeVariant } from "@/lib/roleHelpers";
 
 const iconOptions = [
   { value: 'Shield', label: 'Shield', icon: Shield },
@@ -34,37 +35,6 @@ const colorOptions = [
   { value: 'warning', label: 'Orange', className: 'bg-orange-500' },
   { value: 'purple', label: 'Purple', className: 'bg-purple-500' },
 ];
-
-function getIconComponent(iconName: string | null) {
-  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    Shield,
-    Users,
-    Briefcase,
-    UserCheck,
-    UserCog,
-    ShoppingCart,
-    Building,
-  };
-  return iconMap[iconName || 'Shield'] || Shield;
-}
-
-function getColorClass(color: string | null) {
-  const colorMap: Record<string, string> = {
-    destructive: 'text-red-500',
-    secondary: 'text-blue-500',
-    success: 'text-green-500',
-    warning: 'text-orange-500',
-    purple: 'text-purple-500',
-    default: 'text-muted-foreground',
-  };
-  return colorMap[color || 'default'] || 'text-muted-foreground';
-}
-
-function getBadgeVariant(color: string | null): "default" | "secondary" | "destructive" | "outline" {
-  if (color === 'destructive') return 'destructive';
-  if (color === 'secondary') return 'secondary';
-  return 'outline';
-}
 
 export function RolePermissionsEditor() {
   const { userRole } = useAuth();
@@ -313,7 +283,7 @@ export function RolePermissionsEditor() {
               {systemRoles.map((perm) => {
                 const currentRoutes = perm[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || [];
                 const Icon = getIconComponent(perm.icon);
-                const colorClass = getColorClass(perm.color);
+                const colorClass = getRoleColorClass(perm.color);
                 const permission = getPermission(perm.role);
                 const editedRoutes = permission?.[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || currentRoutes;
 
@@ -439,7 +409,7 @@ export function RolePermissionsEditor() {
                 {customRoles.map((perm) => {
                   const currentRoutes = perm[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || [];
                   const Icon = getIconComponent(perm.icon);
-                  const colorClass = getColorClass(perm.color);
+                  const colorClass = getRoleColorClass(perm.color);
                   const permission = getPermission(perm.role);
                   const editedRoutes = permission?.[activeMode === 'pos' ? 'pos_routes' : 'hotel_routes'] || currentRoutes;
 
