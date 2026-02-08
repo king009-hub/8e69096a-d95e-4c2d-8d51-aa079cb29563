@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Sale, SaleItem } from "@/types/inventory";
 import { useSettingsContext } from "@/contexts/SettingsContext";
-import { Receipt, User, Phone, Calendar, CreditCard, FileText } from "lucide-react";
+import { printSaleReceipt, downloadSaleReceipt } from "@/utils/saleReceiptPdf";
+import { Receipt, User, Phone, Calendar, CreditCard, FileText, Printer, Download } from "lucide-react";
 
 interface SaleDetailsDialogProps {
   sale: Sale | null;
@@ -15,7 +17,7 @@ interface SaleDetailsDialogProps {
 }
 
 export function SaleDetailsDialog({ sale, open, onOpenChange }: SaleDetailsDialogProps) {
-  const { formatCurrency, formatDate } = useSettingsContext();
+  const { formatCurrency, formatDate, companyProfile, getCurrencySymbol, posSettings } = useSettingsContext();
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +46,14 @@ export function SaleDetailsDialog({ sale, open, onOpenChange }: SaleDetailsDialo
   };
 
   if (!sale) return null;
+
+  const receiptOptions = {
+    sale,
+    items: saleItems,
+    companyInfo: companyProfile,
+    currencySymbol: getCurrencySymbol(),
+    taxName: posSettings.tax_name || 'Tax',
+  };
 
   const getPaymentMethodColor = (method: string) => {
     switch (method.toLowerCase()) {
@@ -178,7 +188,7 @@ export function SaleDetailsDialog({ sale, open, onOpenChange }: SaleDetailsDialo
             {sale.discount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Discount</span>
-                <span className="font-medium text-red-600">
+                <span className="font-medium text-destructive">
                   -{formatCurrency(sale.discount)}
                 </span>
               </div>
@@ -186,7 +196,7 @@ export function SaleDetailsDialog({ sale, open, onOpenChange }: SaleDetailsDialo
             
             {sale.tax_amount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tax</span>
+                <span className="text-muted-foreground">{posSettings.tax_name || 'Tax'}</span>
                 <span className="font-medium">{formatCurrency(sale.tax_amount)}</span>
               </div>
             )}
@@ -199,6 +209,25 @@ export function SaleDetailsDialog({ sale, open, onOpenChange }: SaleDetailsDialo
             </div>
           </div>
         </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button
+            variant="outline"
+            onClick={() => printSaleReceipt(receiptOptions)}
+            disabled={loading || saleItems.length === 0}
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => downloadSaleReceipt(receiptOptions)}
+            disabled={loading || saleItems.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
