@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppMode } from "@/contexts/AppModeContext";
+import { useStaffSession } from "@/contexts/StaffSessionContext";
 import { ModeSwitcher } from "@/components/common/ModeSwitcher";
 import { filterNavigationByRole, UserRole, getRoleDisplayName, setCachedPermissions } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,7 @@ const ownerNavigation = [
 export function Sidebar() {
   const { userRole } = useAuth();
   const { mode } = useAppMode();
+  const { activeStaff } = useStaffSession();
   const { data: rolePermissions } = useRolePermissions();
   
   // Update the permissions cache when database permissions are loaded
@@ -80,7 +82,15 @@ export function Sidebar() {
   const subtitle = mode === 'hotel' ? 'Hotel Management' : 'Inventory Management';
   
   // Filter navigation based on user role and database permissions
-  const navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, mode, rolePermissions);
+  let navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, mode, rolePermissions);
+  
+  // In hotel mode, further filter by active staff's allowed routes
+  if (mode === 'hotel' && activeStaff && activeStaff.allowed_hotel_routes.length > 0) {
+    navigation = navigation.filter(item => 
+      activeStaff.allowed_hotel_routes.includes(item.href)
+    );
+  }
+  
   const filteredOwnerNav = filterNavigationByRole(ownerNavigation, userRole as UserRole, 'pos', rolePermissions);
   
   return (

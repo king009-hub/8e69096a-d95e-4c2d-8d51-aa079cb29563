@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHotelStaff, useCreateStaff, useUpdateStaff } from "@/hooks/useHotel";
-import { Users, Plus, Search, Phone, Mail, Calendar, Clock, Edit, UserCheck, UserX } from "lucide-react";
+import { Users, Plus, Search, Phone, Mail, Calendar, Clock, Edit, UserCheck, UserX, Lock, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useSettingsContext } from "@/contexts/SettingsContext";
+import { StaffPinSetup } from "@/components/hotel/StaffPinSetup";
 
-const STAFF_ROLES = ["manager", "receptionist", "housekeeping", "security", "maintenance"] as const;
+const STAFF_ROLES = ["manager", "receptionist", "housekeeping", "security", "maintenance", "waiter"] as const;
 const SHIFTS = ["morning", "afternoon", "night"] as const;
 
 export default function HotelStaff() {
@@ -28,6 +29,7 @@ export default function HotelStaff() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
+  const [pinSetupStaff, setPinSetupStaff] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     first_name: "",
@@ -43,7 +45,7 @@ export default function HotelStaff() {
     const matchesSearch = 
       s.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      (s.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === "all" || s.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -114,6 +116,7 @@ export default function HotelStaff() {
       housekeeping: "bg-green-500/10 text-green-500",
       security: "bg-red-500/10 text-red-500",
       maintenance: "bg-orange-500/10 text-orange-500",
+      waiter: "bg-amber-500/10 text-amber-500",
     };
     return colors[role] || "bg-muted text-muted-foreground";
   };
@@ -126,6 +129,7 @@ export default function HotelStaff() {
           <TableHead>Contact</TableHead>
           <TableHead>Role</TableHead>
           <TableHead>Shift</TableHead>
+          <TableHead>PIN</TableHead>
           <TableHead>Hire Date</TableHead>
           <TableHead>Salary</TableHead>
           <TableHead>Actions</TableHead>
@@ -160,18 +164,34 @@ export default function HotelStaff() {
             </TableCell>
             <TableCell className="capitalize">{s.shift}</TableCell>
             <TableCell>
+              {s.pin ? (
+                <Badge variant="outline" className="text-green-600 border-green-300">
+                  <KeyRound className="h-3 w-3 mr-1" />
+                  Set
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-muted-foreground">
+                  Not set
+                </Badge>
+              )}
+            </TableCell>
+            <TableCell>
               {s.hire_date ? format(new Date(s.hire_date), "MMM dd, yyyy") : "-"}
             </TableCell>
             <TableCell>{formatCurrency(s.salary || 0)}</TableCell>
             <TableCell>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => openEditDialog(s)}>
+              <div className="flex gap-1">
+                <Button size="sm" variant="outline" onClick={() => openEditDialog(s)} title="Edit">
                   <Edit className="h-3 w-3" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setPinSetupStaff(s)} title="PIN & Access">
+                  <Lock className="h-3 w-3" />
                 </Button>
                 <Button 
                   size="sm" 
                   variant={s.is_active ? "destructive" : "default"}
                   onClick={() => toggleStaffStatus(s)}
+                  title={s.is_active ? 'Deactivate' : 'Activate'}
                 >
                   {s.is_active ? <UserX className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
                 </Button>
@@ -189,7 +209,7 @@ export default function HotelStaff() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Staff Management</h1>
-            <p className="text-muted-foreground">Manage hotel staff and schedules</p>
+            <p className="text-muted-foreground">Manage hotel staff, PINs, and page access</p>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
             setIsAddDialogOpen(open);
@@ -299,55 +319,68 @@ export default function HotelStaff() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Users className="h-6 w-6 text-primary" />
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Users className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{staff.length}</p>
-                  <p className="text-sm text-muted-foreground">Total Staff</p>
+                  <p className="text-xl font-bold">{staff.length}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-500/10 rounded-lg">
-                  <UserCheck className="h-6 w-6 text-green-500" />
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <UserCheck className="h-5 w-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{staff.filter(s => s.is_active).length}</p>
-                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-xl font-bold">{staff.filter(s => s.is_active).length}</p>
+                  <p className="text-xs text-muted-foreground">Active</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <Clock className="h-6 w-6 text-blue-500" />
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <Clock className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{staff.filter(s => s.shift === 'morning').length}</p>
-                  <p className="text-sm text-muted-foreground">Morning Shift</p>
+                  <p className="text-xl font-bold">{staff.filter(s => s.shift === 'morning').length}</p>
+                  <p className="text-xs text-muted-foreground">Morning</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-500/10 rounded-lg">
-                  <Calendar className="h-6 w-6 text-purple-500" />
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/10 rounded-lg">
+                  <KeyRound className="h-5 w-5 text-amber-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{staff.filter(s => s.role === 'manager').length}</p>
-                  <p className="text-sm text-muted-foreground">Managers</p>
+                  <p className="text-xl font-bold">{staff.filter(s => s.pin).length}</p>
+                  <p className="text-xs text-muted-foreground">With PIN</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <Calendar className="h-5 w-5 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{staff.filter(s => s.role === 'manager').length}</p>
+                  <p className="text-xs text-muted-foreground">Managers</p>
                 </div>
               </div>
             </CardContent>
@@ -412,6 +445,18 @@ export default function HotelStaff() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* PIN Setup Dialog */}
+      {pinSetupStaff && (
+        <StaffPinSetup
+          open={!!pinSetupStaff}
+          onOpenChange={(open) => !open && setPinSetupStaff(null)}
+          staffId={pinSetupStaff.id}
+          staffName={`${pinSetupStaff.first_name} ${pinSetupStaff.last_name}`}
+          currentPin={pinSetupStaff.pin}
+          currentRoutes={pinSetupStaff.allowed_hotel_routes || []}
+        />
+      )}
     </Layout>
   );
 }
