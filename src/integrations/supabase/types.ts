@@ -770,6 +770,7 @@ export type Database = {
       }
       hotel_staff: {
         Row: {
+          allowed_hotel_routes: string[] | null
           created_at: string | null
           email: string | null
           first_name: string
@@ -778,6 +779,7 @@ export type Database = {
           is_active: boolean | null
           last_name: string
           phone: string | null
+          pin: string | null
           role: Database["public"]["Enums"]["staff_role"]
           salary: number | null
           shift: string | null
@@ -785,6 +787,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          allowed_hotel_routes?: string[] | null
           created_at?: string | null
           email?: string | null
           first_name: string
@@ -793,6 +796,7 @@ export type Database = {
           is_active?: boolean | null
           last_name: string
           phone?: string | null
+          pin?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           salary?: number | null
           shift?: string | null
@@ -800,6 +804,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          allowed_hotel_routes?: string[] | null
           created_at?: string | null
           email?: string | null
           first_name?: string
@@ -808,6 +813,7 @@ export type Database = {
           is_active?: boolean | null
           last_name?: string
           phone?: string | null
+          pin?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           salary?: number | null
           shift?: string | null
@@ -1701,6 +1707,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_staff_pin: { Args: { staff_pin: string }; Returns: Json }
     }
     Enums: {
       booking_status:
@@ -1724,6 +1731,7 @@ export type Database = {
         | "housekeeping"
         | "security"
         | "maintenance"
+        | "waiter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1874,6 +1882,7 @@ export const Constants = {
         "housekeeping",
         "security",
         "maintenance",
+        "waiter",
       ],
     },
   },

@@ -2,7 +2,7 @@ export type RoomType = 'single' | 'double' | 'suite' | 'deluxe' | 'presidential'
 export type RoomStatus = 'available' | 'occupied' | 'reserved' | 'maintenance' | 'cleaning';
 export type BookingStatus = 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled';
 export type HotelPaymentMethod = 'cash' | 'card' | 'upi' | 'bank_transfer';
-export type StaffRole = 'manager' | 'receptionist' | 'housekeeping' | 'security' | 'maintenance';
+export type StaffRole = 'manager' | 'receptionist' | 'housekeeping' | 'security' | 'maintenance' | 'waiter';
 export type HousekeepingStatus = 'pending' | 'in_progress' | 'completed' | 'verified';
 
 export interface HotelInfo {
@@ -82,6 +82,8 @@ export interface HotelStaff {
   salary: number;
   hire_date: string;
   is_active: boolean;
+  pin: string | null;
+  allowed_hotel_routes: string[];
   created_at: string;
   updated_at: string;
 }

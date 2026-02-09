@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AppModeProvider } from "./contexts/AppModeContext";
+import { StaffSessionProvider } from "./contexts/StaffSessionContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { Layout } from "./components/layout/Layout";
 import Index from "./pages/Index";
@@ -46,6 +47,7 @@ const App = () => (
     <AuthProvider>
       <SettingsProvider>
         <AppModeProvider>
+          <StaffSessionProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -88,6 +90,7 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
+          </StaffSessionProvider>
         </AppModeProvider>
       </SettingsProvider>
     </AuthProvider>
