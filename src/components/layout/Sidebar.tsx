@@ -20,6 +20,7 @@ import {
   Building,
   Hotel,
   UtensilsCrossed,
+  ChefHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +55,7 @@ const hotelNavigation = [
   { name: "Guests", href: "/hotel/guests", icon: Users },
   { name: "Billing", href: "/hotel/billing", icon: Receipt },
   { name: "Service Menu", href: "/hotel/service-menu", icon: UtensilsCrossed },
+  { name: "Kitchen Display", href: "/hotel/kitchen", icon: ChefHat },
   { name: "Housekeeping", href: "/hotel/housekeeping", icon: Sparkles },
   { name: "Staff", href: "/hotel/staff", icon: Building },
   { name: "Reports", href: "/hotel/reports", icon: BarChart3 },

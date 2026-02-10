@@ -516,6 +516,60 @@ export type Database = {
           },
         ]
       }
+      hotel_order_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          order_id: string
+          quantity: number
+          service_item_id: string | null
+          status: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          order_id: string
+          quantity?: number
+          service_item_id?: string | null
+          status?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          order_id?: string
+          quantity?: number
+          service_item_id?: string | null
+          status?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_order_items_service_item_id_fkey"
+            columns: ["service_item_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_service_menu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_order_template_items: {
         Row: {
           created_at: string | null
@@ -590,6 +644,92 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      hotel_orders: {
+        Row: {
+          booking_id: string | null
+          created_at: string | null
+          discount_amount: number
+          id: string
+          invoice_id: string | null
+          is_billed: boolean
+          notes: string | null
+          order_number: string
+          room_id: string | null
+          status: string
+          subtotal: number
+          table_number: string | null
+          tax_amount: number
+          total_amount: number
+          updated_at: string | null
+          waiter_id: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string | null
+          discount_amount?: number
+          id?: string
+          invoice_id?: string | null
+          is_billed?: boolean
+          notes?: string | null
+          order_number?: string
+          room_id?: string | null
+          status?: string
+          subtotal?: number
+          table_number?: string | null
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string | null
+          waiter_id?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string | null
+          discount_amount?: number
+          id?: string
+          invoice_id?: string | null
+          is_billed?: boolean
+          notes?: string | null
+          order_number?: string
+          room_id?: string | null
+          status?: string
+          subtotal?: number
+          table_number?: string | null
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string | null
+          waiter_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_orders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_orders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_orders_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_orders_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hotel_pricing_rules: {
         Row: {
@@ -1679,6 +1819,7 @@ export type Database = {
       delete_custom_role: { Args: { role_name: string }; Returns: boolean }
       generate_booking_reference: { Args: never; Returns: string }
       generate_hotel_invoice_number: { Args: never; Returns: string }
+      generate_hotel_order_number: { Args: never; Returns: string }
       generate_loan_number: { Args: never; Returns: string }
       generate_sale_number: { Args: never; Returns: string }
       get_current_user_role: { Args: never; Returns: string }
