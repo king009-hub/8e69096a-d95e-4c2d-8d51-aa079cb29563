@@ -95,6 +95,7 @@ interface PlaceOrderParams {
     quantity: number;
     unitPrice: number;
     notes?: string;
+    category?: string;
   }[];
 }
 
@@ -140,6 +141,7 @@ export function usePlaceOrder() {
         total_price: item.quantity * item.unitPrice,
         notes: item.notes || null,
         status: 'pending',
+        item_type: item.category || 'food',
       }));
 
       const { error: itemsError } = await supabase

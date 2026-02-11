@@ -9,6 +9,7 @@ import { usePlaceOrder, useWaiterOrders, useBillOrders, useUpdateOrderStatus, Ho
 import { useStaffSession } from "@/contexts/StaffSessionContext";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { HotelReceiptPrint } from "@/components/hotel/HotelReceiptPrint";
+import { KOTPrint, getStationForCategory } from "@/components/hotel/KOTPrint";
 import { HotelBooking } from "@/types/hotel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,19 @@ export default function HotelPOS() {
   const [showBillDialog, setShowBillDialog] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
 
+  // KOT print state
+  const [kotQueue, setKotQueue] = useState<Array<{
+    orderNumber: string;
+    station: 'kitchen' | 'bar';
+    tableNumber?: string | null;
+    roomNumber?: string | null;
+    waiterName?: string;
+    items: Array<{ name: string; quantity: number; notes?: string | null }>;
+    orderNotes?: string;
+    timestamp: Date;
+  }>>([]);
+  const [currentKOT, setCurrentKOT] = useState<typeof kotQueue[0] | null>(null);
+
   // Notification for ready orders
   const [notifiedReady, setNotifiedReady] = useState<Set<string>>(new Set());
 
@@ -184,6 +198,18 @@ export default function HotelPOS() {
     setPaidAmount(""); setSplitPayments([]); setIsSplitMode(false);
   };
 
+  // Process KOT queue
+  useEffect(() => {
+    if (kotQueue.length > 0 && !currentKOT) {
+      setCurrentKOT(kotQueue[0]);
+      setKotQueue(prev => prev.slice(1));
+    }
+  }, [kotQueue, currentKOT]);
+
+  const handleKOTPrintComplete = () => {
+    setCurrentKOT(null);
+  };
+
   // Place order (waiter workflow - order first, bill later)
   const handlePlaceOrder = async () => {
     if (cart.length === 0) { toast.error("Cart is empty"); return; }
@@ -191,7 +217,7 @@ export default function HotelPOS() {
 
     setIsProcessing(true);
     try {
-      await placeOrder.mutateAsync({
+      const order = await placeOrder.mutateAsync({
         bookingId: selectedBooking?.id || null,
         roomId: selectedBooking?.room_id || null,
         tableNumber: tableNumber || null,
@@ -205,8 +231,39 @@ export default function HotelPOS() {
           quantity: item.quantity,
           unitPrice: item.unit_price,
           notes: itemNotes[item.service.id] || undefined,
+          category: item.service.category,
         })),
       });
+
+      // Generate KOT tickets split by station
+      const waiterName = activeStaff ? `${activeStaff.first_name} ${activeStaff.last_name}` : undefined;
+      const roomNumber = selectedBooking?.room?.room_number || null;
+
+      const stationItems: Record<string, Array<{ name: string; quantity: number; notes?: string | null }>> = {};
+      for (const item of cart) {
+        const station = getStationForCategory(item.service.category);
+        const stationKey = station === 'other' ? 'kitchen' : station; // 'other' goes to kitchen
+        if (!stationItems[stationKey]) stationItems[stationKey] = [];
+        stationItems[stationKey].push({
+          name: item.service.name,
+          quantity: item.quantity,
+          notes: itemNotes[item.service.id] || null,
+        });
+      }
+
+      const kots = Object.entries(stationItems).map(([station, items]) => ({
+        orderNumber: order.order_number,
+        station: station as 'kitchen' | 'bar',
+        tableNumber: tableNumber || null,
+        roomNumber,
+        waiterName,
+        items,
+        orderNotes: orderNotes || undefined,
+        timestamp: new Date(),
+      }));
+
+      setKotQueue(kots);
+
       clearCart();
       setItemNotes({});
       setOrderNotes("");
@@ -980,6 +1037,9 @@ export default function HotelPOS() {
           key={receiptData.invoiceNumber}
         />
       )}
+
+      {/* KOT Print */}
+      <KOTPrint data={currentKOT} onPrintComplete={handleKOTPrintComplete} />
     </Layout>
   );
 }
