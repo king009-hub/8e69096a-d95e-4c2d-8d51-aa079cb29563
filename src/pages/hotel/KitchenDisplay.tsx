@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useActiveOrders, useUpdateOrderStatus, useUpdateOrderItemStatus, OrderStatus } from '@/hooks/useHotelOrders';
+import { KITCHEN_CATEGORIES, BAR_CATEGORIES, getStationForCategory } from '@/components/hotel/KOTPrint';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,10 @@ import {
   MessageSquare,
   RefreshCw,
   Bell,
+  Wine,
+  Utensils,
 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -33,6 +37,39 @@ export default function KitchenDisplay() {
   const updateOrderStatus = useUpdateOrderStatus();
   const updateItemStatus = useUpdateOrderItemStatus();
   const [readyNotified, setReadyNotified] = useState<Set<string>>(new Set());
+  const [activeStation, setActiveStation] = useState<'all' | 'kitchen' | 'bar'>('all');
+
+  // Filter orders by station - an order shows in a station if it has items for that station
+  const filteredOrders = useMemo(() => {
+    if (activeStation === 'all') return orders;
+    
+    return orders.filter(order => {
+      if (!order.items || order.items.length === 0) return true;
+      return order.items.some(item => {
+        // We need to determine item category from the service menu
+        // Since we don't have category on order_items, we use a heuristic:
+        // Items will be filtered based on station assignment
+        const station = getStationForCategory(getItemCategory(item, order));
+        return station === activeStation || station === 'other';
+      });
+    });
+  }, [orders, activeStation]);
+
+  // Helper: get category for an order item (fallback to 'food' for kitchen)
+  function getItemCategory(item: any, order: any): string {
+    // If the order has items with categories stored, use them
+    // Otherwise check the item_type or default
+    return item.item_type || 'food';
+  }
+
+  // Filter items within an order by station
+  function getStationItems(order: any) {
+    if (activeStation === 'all' || !order.items) return order.items || [];
+    return order.items.filter((item: any) => {
+      const station = getStationForCategory(item.item_type || 'food');
+      return station === activeStation || station === 'other';
+    });
+  }
 
   // Sound notification when new order arrives
   useEffect(() => {
@@ -71,21 +108,33 @@ export default function KitchenDisplay() {
     updateItemStatus.mutate({ itemId, status: 'ready' });
   };
 
-  // Group orders by status
-  const pendingOrders = orders.filter(o => o.status === 'pending');
-  const preparingOrders = orders.filter(o => o.status === 'preparing');
-  const readyOrders = orders.filter(o => o.status === 'ready');
+  // Group filtered orders by status
+  const pendingOrders = filteredOrders.filter(o => o.status === 'pending');
+  const preparingOrders = filteredOrders.filter(o => o.status === 'preparing');
+  const readyOrders = filteredOrders.filter(o => o.status === 'ready');
 
   return (
     <Layout>
       <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+         <div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <ChefHat className="h-6 w-6" />
             Kitchen Display
           </h1>
           <div className="flex items-center gap-3">
+            {/* Station Tabs */}
+            <Tabs value={activeStation} onValueChange={(v) => setActiveStation(v as any)}>
+              <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="kitchen" className="gap-1">
+                  <Utensils className="h-3 w-3" /> Kitchen
+                </TabsTrigger>
+                <TabsTrigger value="bar" className="gap-1">
+                  <Wine className="h-3 w-3" /> Bar
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
             <Badge variant="destructive" className="text-sm px-3 py-1">
               {pendingOrders.length} New
             </Badge>
@@ -105,7 +154,7 @@ export default function KitchenDisplay() {
         {/* Orders Grid */}
         <ScrollArea className="flex-1">
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {orders
+            {filteredOrders
               .filter(o => ['pending', 'preparing', 'ready'].includes(o.status))
               .sort((a, b) => {
                 const priority: Record<string, number> = { pending: 0, preparing: 1, ready: 2 };
@@ -158,7 +207,7 @@ export default function KitchenDisplay() {
                     <CardContent className="pt-3 px-4 pb-3">
                       {/* Order Items */}
                       <div className="space-y-2 mb-3">
-                        {order.items?.map(item => (
+                        {getStationItems(order).map((item: any) => (
                           <div key={item.id} className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
@@ -245,7 +294,7 @@ export default function KitchenDisplay() {
                 );
               })}
 
-            {orders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)).length === 0 && (
+            {filteredOrders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)).length === 0 && (
               <div className="col-span-full text-center py-20 text-muted-foreground">
                 <ChefHat className="h-16 w-16 mx-auto mb-4 opacity-20" />
                 <p className="text-lg font-medium">No active orders</p>
