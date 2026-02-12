@@ -272,6 +272,123 @@ export function useUpdateOrderItemStatus() {
   });
 }
 
+// Add extra items to an existing order
+export function useAddItemsToOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ orderId, orderNumber, taxRate, items }: {
+      orderId: string;
+      orderNumber: string;
+      taxRate: number;
+      items: {
+        serviceItemId: string | null;
+        name: string;
+        quantity: number;
+        unitPrice: number;
+        notes?: string;
+        category?: string;
+      }[];
+    }) => {
+      // Insert new items
+      const orderItems = items.map(item => ({
+        order_id: orderId,
+        service_item_id: item.serviceItemId,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.quantity * item.unitPrice,
+        notes: item.notes || null,
+        status: 'pending',
+        item_type: item.category || 'food',
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('hotel_order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // Deduct stock for tracked items
+      for (const item of items) {
+        if (item.serviceItemId) {
+          const { data: svc } = await supabase
+            .from('hotel_service_menu')
+            .select('track_stock, stock_quantity, product_id')
+            .eq('id', item.serviceItemId)
+            .single();
+
+          if (svc?.track_stock) {
+            await supabase
+              .from('hotel_service_menu')
+              .update({ stock_quantity: (svc.stock_quantity || 0) - item.quantity })
+              .eq('id', item.serviceItemId);
+
+            await supabase
+              .from('hotel_stock_movements')
+              .insert([{
+                service_item_id: item.serviceItemId,
+                quantity: item.quantity,
+                movement_type: 'out',
+                reason: `Order ${orderNumber} (extra)`,
+                reference_id: orderId,
+              }]);
+
+            if (svc.product_id) {
+              const { data: batch } = await supabase
+                .from('product_batches')
+                .select('id, quantity')
+                .eq('product_id', svc.product_id)
+                .gt('quantity', 0)
+                .order('expiry_date', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+              if (batch) {
+                await supabase
+                  .from('product_batches')
+                  .update({ quantity: batch.quantity - item.quantity })
+                  .eq('id', batch.id);
+              }
+            }
+          }
+        }
+      }
+
+      // Recalculate order totals from all items
+      const { data: allItems } = await supabase
+        .from('hotel_order_items')
+        .select('total_price')
+        .eq('order_id', orderId);
+
+      const newSubtotal = (allItems || []).reduce((sum, i) => sum + Number(i.total_price), 0);
+      const newTax = newSubtotal * (taxRate / 100);
+      const newTotal = newSubtotal + newTax;
+
+      await supabase
+        .from('hotel_orders')
+        .update({
+          subtotal: newSubtotal,
+          tax_amount: newTax,
+          total_amount: newTotal,
+          status: 'pending', // Reset to pending so kitchen sees new items
+        })
+        .eq('id', orderId);
+
+      return { orderId, orderNumber };
+    },
+    onSuccess: ({ orderNumber }) => {
+      queryClient.invalidateQueries({ queryKey: ['hotel-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['service-menu'] });
+      queryClient.invalidateQueries({ queryKey: ['hotel-stock-movements'] });
+      toast.success(`Extra items added to ${orderNumber}!`);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to add items: ${error.message}`);
+    },
+  });
+}
+
 // Bill multiple orders together (order first, bill later)
 export function useBillOrders() {
   const queryClient = useQueryClient();
