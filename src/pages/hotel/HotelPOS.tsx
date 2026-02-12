@@ -5,7 +5,7 @@ import { useActiveServiceCategories } from "@/hooks/useServiceCategories";
 import { useHotelBookings, useHotelInfo } from "@/hooks/useHotel";
 import { useHotelPOS, HotelPOSPayment, HotelCartItem } from "@/hooks/useHotelPOS";
 import { useOrderTemplates } from "@/hooks/useOrderTemplates";
-import { usePlaceOrder, useWaiterOrders, useBillOrders, useUpdateOrderStatus, HotelOrder } from "@/hooks/useHotelOrders";
+import { usePlaceOrder, useWaiterOrders, useBillOrders, useUpdateOrderStatus, useAddItemsToOrder, HotelOrder } from "@/hooks/useHotelOrders";
 import { useStaffSession } from "@/contexts/StaffSessionContext";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { HotelReceiptPrint } from "@/components/hotel/HotelReceiptPrint";
@@ -67,6 +67,7 @@ export default function HotelPOS() {
   const { data: hotelInfo } = useHotelInfo();
   const { data: templates = [] } = useOrderTemplates();
   const placeOrder = usePlaceOrder();
+  const addItemsToOrder = useAddItemsToOrder();
   const billOrders = useBillOrders();
   const updateOrderStatus = useUpdateOrderStatus();
 
@@ -104,6 +105,8 @@ export default function HotelPOS() {
   // Show bill dialog
   const [showBillDialog, setShowBillDialog] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  // Adding items to an existing order
+  const [addingToOrder, setAddingToOrder] = useState<HotelOrder | null>(null);
 
   // KOT print state
   const [kotQueue, setKotQueue] = useState<Array<{
@@ -274,6 +277,90 @@ export default function HotelPOS() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Add extra items to an existing order
+  const handleAddItemsToOrder = async () => {
+    if (!addingToOrder || cart.length === 0) return;
+    if (!waiterId) { toast.error("Staff not logged in"); return; }
+
+    setIsProcessing(true);
+    try {
+      const result = await addItemsToOrder.mutateAsync({
+        orderId: addingToOrder.id,
+        orderNumber: addingToOrder.order_number,
+        taxRate,
+        items: cart.map(item => ({
+          serviceItemId: item.service.id,
+          name: item.service.name,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          notes: itemNotes[item.service.id] || undefined,
+          category: item.service.category,
+        })),
+      });
+
+      // Generate KOT for new items only
+      const waiterName = activeStaff ? `${activeStaff.first_name} ${activeStaff.last_name}` : undefined;
+      const roomNumber = addingToOrder.room?.room_number || null;
+
+      const stationItems: Record<string, Array<{ name: string; quantity: number; notes?: string | null }>> = {};
+      for (const item of cart) {
+        const station = getStationForCategory(item.service.category);
+        const stationKey = station === 'other' ? 'kitchen' : station;
+        if (!stationItems[stationKey]) stationItems[stationKey] = [];
+        stationItems[stationKey].push({
+          name: item.service.name,
+          quantity: item.quantity,
+          notes: itemNotes[item.service.id] || null,
+        });
+      }
+
+      const kots = Object.entries(stationItems).map(([station, items]) => ({
+        orderNumber: `${addingToOrder.order_number} (EXTRA)`,
+        station: station as 'kitchen' | 'bar',
+        tableNumber: addingToOrder.table_number || null,
+        roomNumber,
+        waiterName,
+        items,
+        orderNotes: orderNotes || undefined,
+        timestamp: new Date(),
+      }));
+
+      setKotQueue(kots);
+
+      clearCart();
+      setItemNotes({});
+      setOrderNotes("");
+      setAddingToOrder(null);
+      setRightTab("orders");
+    } catch {
+      // error handled by mutation
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const startAddingToOrder = (order: HotelOrder) => {
+    clearCart();
+    setItemNotes({});
+    setOrderNotes("");
+    setAddingToOrder(order);
+    // Pre-fill table/room context
+    if (order.table_number) setTableNumber(order.table_number);
+    if (order.booking_id && order.room_id) {
+      const booking = activeBookings.find(b => b.id === order.booking_id);
+      if (booking) setSelectedBooking(booking);
+    }
+    setRightTab("cart");
+    toast.info(`Adding items to ${order.order_number}. Add items and click "Add to Order".`);
+  };
+
+  const cancelAddingToOrder = () => {
+    setAddingToOrder(null);
+    clearCart();
+    setItemNotes({});
+    setOrderNotes("");
   };
 
   const handleChargeToRoom = async () => {
@@ -548,9 +635,23 @@ export default function HotelPOS() {
               {/* Cart Tab */}
               <TabsContent value="cart" className="flex-1 flex flex-col m-0 overflow-hidden">
                 <div className="p-3 border-b border-border flex items-center justify-between">
-                  <h2 className="font-semibold text-sm">Current Order</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-semibold text-sm">
+                      {addingToOrder ? `Adding to ${addingToOrder.order_number}` : 'Current Order'}
+                    </h2>
+                    {addingToOrder && (
+                      <Badge variant="secondary" className="text-xs animate-pulse">
+                        <Plus className="h-3 w-3 mr-1" /> Extra Items
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1">
-                    {lastReceiptData && (
+                    {addingToOrder && (
+                      <Button variant="ghost" size="sm" onClick={cancelAddingToOrder}>
+                        <X className="h-4 w-4 mr-1" /> Cancel
+                      </Button>
+                    )}
+                    {lastReceiptData && !addingToOrder && (
                       <Button variant="ghost" size="sm" onClick={handleReprintReceipt} title="Reprint last receipt">
                         <Printer className="h-4 w-4 mr-1" /> Reprint
                       </Button>
@@ -650,18 +751,32 @@ export default function HotelPOS() {
                     </div>
                   </div>
 
-                  {/* Primary: Place Order for kitchen */}
-                  <Button
-                    className="w-full h-12 text-base"
-                    disabled={cart.length === 0 || isProcessing || !waiterId}
-                    onClick={handlePlaceOrder}
-                  >
-                    {isProcessing ? (
-                      <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Placing...</>
-                    ) : (
-                      <><Send className="h-4 w-4 mr-2" /> Place Order (F7)</>
-                    )}
-                  </Button>
+                  {/* Primary: Place Order or Add Items */}
+                  {addingToOrder ? (
+                    <Button
+                      className="w-full h-12 text-base"
+                      disabled={cart.length === 0 || isProcessing}
+                      onClick={handleAddItemsToOrder}
+                    >
+                      {isProcessing ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Adding...</>
+                      ) : (
+                        <><Plus className="h-4 w-4 mr-2" /> Add to {addingToOrder.order_number}</>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full h-12 text-base"
+                      disabled={cart.length === 0 || isProcessing || !waiterId}
+                      onClick={handlePlaceOrder}
+                    >
+                      {isProcessing ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Placing...</>
+                      ) : (
+                        <><Send className="h-4 w-4 mr-2" /> Place Order (F7)</>
+                      )}
+                    </Button>
+                  )}
 
                   {/* Secondary: Direct billing options */}
                   <div className="grid grid-cols-2 gap-2">
@@ -770,6 +885,16 @@ export default function HotelPOS() {
                                 <Button variant="outline" size="sm" className="w-full"
                                   onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: 'served' })}>
                                   <CheckCircle2 className="h-3 w-3 mr-1" /> Mark Served
+                                </Button>
+                              )}
+
+                              {/* Add extra items button - available for non-billed, non-cancelled orders */}
+                              {!['cancelled', 'billed'].includes(order.status) && (
+                                <Button variant="outline" size="sm" className="w-full gap-1"
+                                  onClick={() => startAddingToOrder(order)}
+                                  disabled={addingToOrder?.id === order.id}
+                                >
+                                  <Plus className="h-3 w-3" /> Add Extra Items
                                 </Button>
                               )}
                             </CardContent>
