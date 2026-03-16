@@ -40,6 +40,7 @@ import HotelSettings from "./pages/hotel/HotelSettings";
 import HotelServiceMenu from "./pages/hotel/HotelServiceMenu";
 import HotelPOS from "./pages/hotel/HotelPOS";
 import KitchenDisplay from "./pages/hotel/KitchenDisplay";
+import BarDisplay from "./pages/hotel/BarDisplay";
 
 const queryClient = new QueryClient();
 
