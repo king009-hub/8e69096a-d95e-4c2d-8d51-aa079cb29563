@@ -122,17 +122,33 @@ export default function HotelPOS() {
   }>>([]);
   const [currentKOT, setCurrentKOT] = useState<typeof kotQueue[0] | null>(null);
 
-  // Notification for ready orders
+  // Notification for ready orders - track previous status to detect transitions
   const [notifiedReady, setNotifiedReady] = useState<Set<string>>(new Set());
+  const prevOrdersRef = useRef<HotelOrder[]>([]);
 
   useEffect(() => {
     const readyOrders = myOrders.filter(o => o.status === 'ready' && !notifiedReady.has(o.id));
     if (readyOrders.length > 0) {
       readyOrders.forEach(o => {
-        toast.success(`🔔 Order ${o.order_number} is READY!`, {
-          description: o.room ? `Room ${o.room.room_number}` : o.table_number ? `Table ${o.table_number}` : 'Walk-in',
-          duration: 10000,
-        });
+        // Check if this order was not ready before (status transition detection)
+        const prevOrder = prevOrdersRef.current.find(po => po.id === o.id);
+        const wasNotReady = !prevOrder || prevOrder.status !== 'ready';
+        
+        if (wasNotReady) {
+          toast.success(`🔔 Order ${o.order_number} is READY!`, {
+            description: o.room ? `Room ${o.room.room_number}` : o.table_number ? `Table ${o.table_number}` : 'Walk-in',
+            duration: 15000,
+          });
+
+          // Browser notification
+          if (Notification.permission === 'granted') {
+            new Notification(`Order ${o.order_number} is READY!`, {
+              body: o.room ? `Room ${o.room.room_number}` : o.table_number ? `Table ${o.table_number}` : 'Walk-in order',
+              icon: '/favicon.ico',
+              tag: `order-ready-${o.id}`,
+            });
+          }
+        }
       });
       setNotifiedReady(prev => {
         const next = new Set(prev);
@@ -140,7 +156,15 @@ export default function HotelPOS() {
         return next;
       });
     }
+    prevOrdersRef.current = myOrders;
   }, [myOrders]);
+
+  // Request notification permission
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const [receiptData, setReceiptData] = useState<{
     invoiceNumber: string; items: HotelCartItem[]; subtotal: number;
