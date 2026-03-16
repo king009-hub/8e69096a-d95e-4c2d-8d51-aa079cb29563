@@ -832,7 +832,15 @@ export default function HotelPOS() {
               {/* My Orders Tab */}
               <TabsContent value="orders" className="flex-1 flex flex-col m-0 overflow-hidden">
                 <div className="p-3 border-b border-border flex items-center justify-between">
-                  <h2 className="font-semibold text-sm">My Active Orders</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-semibold text-sm">My Active Orders</h2>
+                    {activeStaff && (
+                      <Badge variant="outline" className="text-xs">
+                        <User className="h-3 w-3 mr-1" />
+                        {activeStaff.first_name}
+                      </Badge>
+                    )}
+                  </div>
                   <Button
                     variant="default" size="sm"
                     disabled={selectedOrderIds.length === 0}
