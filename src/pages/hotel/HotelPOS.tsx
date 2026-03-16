@@ -876,7 +876,14 @@ export default function HotelPOS() {
                                   )}
                                   <span className="font-bold text-sm">{order.order_number}</span>
                                 </div>
-                                <Badge variant={config.variant}>{config.label}</Badge>
+                                <div className="flex items-center gap-2">
+                                  {order.waiter && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {order.waiter.first_name}
+                                    </span>
+                                  )}
+                                  <Badge variant={config.variant}>{config.label}</Badge>
+                                </div>
                               </div>
 
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
