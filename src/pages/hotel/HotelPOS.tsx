@@ -73,6 +73,7 @@ export default function HotelPOS() {
 
   const waiterId = activeStaff?.staff_id;
   const { data: myOrders = [] } = useWaiterOrders(waiterId);
+  useHotelOrdersRealtime();
 
   const hotelTaxRate = hotelInfo?.tax_rate ?? 18;
 
