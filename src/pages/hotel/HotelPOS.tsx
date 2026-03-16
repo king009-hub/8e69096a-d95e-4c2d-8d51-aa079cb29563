@@ -367,6 +367,11 @@ export default function HotelPOS() {
   };
 
   const startAddingToOrder = (order: HotelOrder) => {
+    // Verify this order belongs to the current waiter
+    if (order.waiter_id !== waiterId) {
+      toast.error("You can only add items to your own orders");
+      return;
+    }
     clearCart();
     setItemNotes({});
     setOrderNotes("");
