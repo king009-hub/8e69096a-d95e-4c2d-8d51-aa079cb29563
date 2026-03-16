@@ -34,6 +34,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 
 export default function KitchenDisplay() {
   const { data: orders = [], isLoading, refetch } = useActiveOrders();
+  useHotelOrdersRealtime();
   const updateOrderStatus = useUpdateOrderStatus();
   const updateItemStatus = useUpdateOrderItemStatus();
   const [readyNotified, setReadyNotified] = useState<Set<string>>(new Set());
