@@ -148,9 +148,11 @@ export type Database = {
           children: number | null
           created_at: string | null
           created_by: string | null
+          deposit_amount: number | null
           guest_id: string | null
           id: string
           paid_amount: number | null
+          payment_status: string | null
           room_id: string | null
           special_requests: string | null
           status: Database["public"]["Enums"]["booking_status"]
@@ -165,9 +167,11 @@ export type Database = {
           children?: number | null
           created_at?: string | null
           created_by?: string | null
+          deposit_amount?: number | null
           guest_id?: string | null
           id?: string
           paid_amount?: number | null
+          payment_status?: string | null
           room_id?: string | null
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
@@ -182,9 +186,11 @@ export type Database = {
           children?: number | null
           created_at?: string | null
           created_by?: string | null
+          deposit_amount?: number | null
           guest_id?: string | null
           id?: string
           paid_amount?: number | null
+          payment_status?: string | null
           room_id?: string | null
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
@@ -664,6 +670,9 @@ export type Database = {
           table_number: string | null
           tax_amount: number
           total_amount: number
+          transfer_context: string | null
+          transferred_at: string | null
+          transferred_from_staff_id: string | null
           updated_at: string | null
           waiter_id: string | null
         }
@@ -682,6 +691,9 @@ export type Database = {
           table_number?: string | null
           tax_amount?: number
           total_amount?: number
+          transfer_context?: string | null
+          transferred_at?: string | null
+          transferred_from_staff_id?: string | null
           updated_at?: string | null
           waiter_id?: string | null
         }
@@ -700,6 +712,9 @@ export type Database = {
           table_number?: string | null
           tax_amount?: number
           total_amount?: number
+          transfer_context?: string | null
+          transferred_at?: string | null
+          transferred_from_staff_id?: string | null
           updated_at?: string | null
           waiter_id?: string | null
         }
@@ -723,6 +738,13 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "hotel_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_orders_transferred_from_staff_id_fkey"
+            columns: ["transferred_from_staff_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
             referencedColumns: ["id"]
           },
           {
@@ -999,6 +1021,74 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "hotel_staff_attendance_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_staff_shifts: {
+        Row: {
+          billed_sales: number | null
+          closed_at: string | null
+          closing_notes: string | null
+          closing_report: string | null
+          created_at: string
+          id: string
+          opened_at: string
+          opening_notes: string | null
+          pending_orders: Json | null
+          shift_label: string
+          staff_id: string
+          staff_role: Database["public"]["Enums"]["staff_role"]
+          status: string
+          summary: Json | null
+          total_items: number | null
+          total_orders: number | null
+          total_sales: number | null
+        }
+        Insert: {
+          billed_sales?: number | null
+          closed_at?: string | null
+          closing_notes?: string | null
+          closing_report?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          opening_notes?: string | null
+          pending_orders?: Json | null
+          shift_label: string
+          staff_id: string
+          staff_role: Database["public"]["Enums"]["staff_role"]
+          status?: string
+          summary?: Json | null
+          total_items?: number | null
+          total_orders?: number | null
+          total_sales?: number | null
+        }
+        Update: {
+          billed_sales?: number | null
+          closed_at?: string | null
+          closing_notes?: string | null
+          closing_report?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          opening_notes?: string | null
+          pending_orders?: Json | null
+          shift_label?: string
+          staff_id?: string
+          staff_role?: Database["public"]["Enums"]["staff_role"]
+          status?: string
+          summary?: Json | null
+          total_items?: number | null
+          total_orders?: number | null
+          total_sales?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_staff_shifts_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "hotel_staff"
@@ -1876,6 +1966,8 @@ export type Database = {
         | "security"
         | "maintenance"
         | "waiter"
+        | "barman"
+        | "chef"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2027,6 +2119,8 @@ export const Constants = {
         "security",
         "maintenance",
         "waiter",
+        "barman",
+        "chef",
       ],
     },
   },

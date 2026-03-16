@@ -5,7 +5,7 @@ import { useActiveServiceCategories } from "@/hooks/useServiceCategories";
 import { useHotelBookings, useHotelInfo } from "@/hooks/useHotel";
 import { useHotelPOS, HotelPOSPayment, HotelCartItem } from "@/hooks/useHotelPOS";
 import { useOrderTemplates } from "@/hooks/useOrderTemplates";
-import { usePlaceOrder, useWaiterOrders, useBillOrders, useUpdateOrderStatus, useAddItemsToOrder, HotelOrder } from "@/hooks/useHotelOrders";
+import { usePlaceOrder, useWaiterOrders, useBillOrders, useUpdateOrderStatus, useAddItemsToOrder, useHotelOrdersRealtime, HotelOrder } from "@/hooks/useHotelOrders";
 import { useStaffSession } from "@/contexts/StaffSessionContext";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { HotelReceiptPrint } from "@/components/hotel/HotelReceiptPrint";
@@ -73,6 +73,7 @@ export default function HotelPOS() {
 
   const waiterId = activeStaff?.staff_id;
   const { data: myOrders = [] } = useWaiterOrders(waiterId);
+  useHotelOrdersRealtime();
 
   const hotelTaxRate = hotelInfo?.tax_rate ?? 18;
 

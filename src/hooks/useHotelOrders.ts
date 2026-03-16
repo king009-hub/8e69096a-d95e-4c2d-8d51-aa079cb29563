@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 export interface HotelOrderItem {
   id: string;
@@ -69,8 +70,36 @@ export function useHotelOrders(filters?: { waiterId?: string; status?: string[] 
       if (error) throw error;
       return (data || []) as HotelOrder[];
     },
-    refetchInterval: 10000, // Auto-refresh every 10s for real-time order tracking
   });
+}
+
+// Real-time subscription hook that invalidates hotel-orders queries on any change
+export function useHotelOrdersRealtime() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const ordersChannel = supabase
+      .channel('hotel-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'hotel_orders' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['hotel-orders'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'hotel_order_items' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['hotel-orders'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+    };
+  }, [queryClient]);
 }
 
 export function useActiveOrders() {

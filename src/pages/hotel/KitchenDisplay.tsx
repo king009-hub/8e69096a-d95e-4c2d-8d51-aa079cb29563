@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { useActiveOrders, useUpdateOrderStatus, useUpdateOrderItemStatus, OrderStatus } from '@/hooks/useHotelOrders';
+import { useActiveOrders, useUpdateOrderStatus, useUpdateOrderItemStatus, useHotelOrdersRealtime, OrderStatus } from '@/hooks/useHotelOrders';
 import { KITCHEN_CATEGORIES, BAR_CATEGORIES, getStationForCategory } from '@/components/hotel/KOTPrint';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 
 export default function KitchenDisplay() {
   const { data: orders = [], isLoading, refetch } = useActiveOrders();
+  useHotelOrdersRealtime();
   const updateOrderStatus = useUpdateOrderStatus();
   const updateItemStatus = useUpdateOrderItemStatus();
   const [readyNotified, setReadyNotified] = useState<Set<string>>(new Set());
