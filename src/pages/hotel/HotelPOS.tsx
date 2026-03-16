@@ -122,17 +122,33 @@ export default function HotelPOS() {
   }>>([]);
   const [currentKOT, setCurrentKOT] = useState<typeof kotQueue[0] | null>(null);
 
-  // Notification for ready orders
+  // Notification for ready orders - track previous status to detect transitions
   const [notifiedReady, setNotifiedReady] = useState<Set<string>>(new Set());
+  const prevOrdersRef = useRef<HotelOrder[]>([]);
 
   useEffect(() => {
     const readyOrders = myOrders.filter(o => o.status === 'ready' && !notifiedReady.has(o.id));
     if (readyOrders.length > 0) {
       readyOrders.forEach(o => {
-        toast.success(`🔔 Order ${o.order_number} is READY!`, {
-          description: o.room ? `Room ${o.room.room_number}` : o.table_number ? `Table ${o.table_number}` : 'Walk-in',
-          duration: 10000,
-        });
+        // Check if this order was not ready before (status transition detection)
+        const prevOrder = prevOrdersRef.current.find(po => po.id === o.id);
+        const wasNotReady = !prevOrder || prevOrder.status !== 'ready';
+        
+        if (wasNotReady) {
+          toast.success(`🔔 Order ${o.order_number} is READY!`, {
+            description: o.room ? `Room ${o.room.room_number}` : o.table_number ? `Table ${o.table_number}` : 'Walk-in',
+            duration: 15000,
+          });
+
+          // Browser notification
+          if (Notification.permission === 'granted') {
+            new Notification(`Order ${o.order_number} is READY!`, {
+              body: o.room ? `Room ${o.room.room_number}` : o.table_number ? `Table ${o.table_number}` : 'Walk-in order',
+              icon: '/favicon.ico',
+              tag: `order-ready-${o.id}`,
+            });
+          }
+        }
       });
       setNotifiedReady(prev => {
         const next = new Set(prev);
@@ -140,7 +156,15 @@ export default function HotelPOS() {
         return next;
       });
     }
+    prevOrdersRef.current = myOrders;
   }, [myOrders]);
+
+  // Request notification permission
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const [receiptData, setReceiptData] = useState<{
     invoiceNumber: string; items: HotelCartItem[]; subtotal: number;
@@ -284,6 +308,11 @@ export default function HotelPOS() {
   const handleAddItemsToOrder = async () => {
     if (!addingToOrder || cart.length === 0) return;
     if (!waiterId) { toast.error("Staff not logged in"); return; }
+    // Verify ownership
+    if (addingToOrder.waiter_id !== waiterId) {
+      toast.error("You can only add items to your own orders");
+      return;
+    }
 
     setIsProcessing(true);
     try {
@@ -343,6 +372,11 @@ export default function HotelPOS() {
   };
 
   const startAddingToOrder = (order: HotelOrder) => {
+    // Verify this order belongs to the current waiter
+    if (order.waiter_id !== waiterId) {
+      toast.error("You can only add items to your own orders");
+      return;
+    }
     clearCart();
     setItemNotes({});
     setOrderNotes("");
@@ -798,7 +832,15 @@ export default function HotelPOS() {
               {/* My Orders Tab */}
               <TabsContent value="orders" className="flex-1 flex flex-col m-0 overflow-hidden">
                 <div className="p-3 border-b border-border flex items-center justify-between">
-                  <h2 className="font-semibold text-sm">My Active Orders</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-semibold text-sm">My Active Orders</h2>
+                    {activeStaff && (
+                      <Badge variant="outline" className="text-xs">
+                        <User className="h-3 w-3 mr-1" />
+                        {activeStaff.first_name}
+                      </Badge>
+                    )}
+                  </div>
                   <Button
                     variant="default" size="sm"
                     disabled={selectedOrderIds.length === 0}
@@ -834,7 +876,14 @@ export default function HotelPOS() {
                                   )}
                                   <span className="font-bold text-sm">{order.order_number}</span>
                                 </div>
-                                <Badge variant={config.variant}>{config.label}</Badge>
+                                <div className="flex items-center gap-2">
+                                  {order.waiter && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {order.waiter.first_name}
+                                    </span>
+                                  )}
+                                  <Badge variant={config.variant}>{config.label}</Badge>
+                                </div>
                               </div>
 
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
