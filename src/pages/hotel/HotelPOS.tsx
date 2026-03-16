@@ -308,6 +308,11 @@ export default function HotelPOS() {
   const handleAddItemsToOrder = async () => {
     if (!addingToOrder || cart.length === 0) return;
     if (!waiterId) { toast.error("Staff not logged in"); return; }
+    // Verify ownership
+    if (addingToOrder.waiter_id !== waiterId) {
+      toast.error("You can only add items to your own orders");
+      return;
+    }
 
     setIsProcessing(true);
     try {
