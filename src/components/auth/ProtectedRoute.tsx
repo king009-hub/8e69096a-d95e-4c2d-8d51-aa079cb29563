@@ -34,7 +34,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
 
   if (!hasAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="h-full flex items-center justify-center bg-background">
         <div className="text-center space-y-4 p-8">
           <ShieldAlert className="h-16 w-16 mx-auto text-destructive" />
           <h1 className="text-2xl font-bold text-foreground">Access Denied</h1>
