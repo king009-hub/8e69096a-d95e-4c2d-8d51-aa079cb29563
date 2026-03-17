@@ -11,7 +11,7 @@ import {
   CalendarCheck, CalendarX, Loader2, User, BedDouble, DollarSign, 
   Coffee, Receipt, ShoppingBag 
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO, isToday, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 
@@ -23,18 +23,24 @@ export default function HotelCheckInOut() {
   const [checkoutBooking, setCheckoutBooking] = useState<HotelBooking | null>(null);
   const { formatCurrency } = useSettingsContext();
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = startOfDay(new Date());
+  const todayStr = format(today, 'yyyy-MM-dd');
 
-  const arrivals = bookings?.filter(b => 
-    b.check_in_date === today && 
-    (b.status === 'confirmed' || b.status === 'pending')
-  ) || [];
+  // Arrivals: bookings with check-in today or past (not yet checked in)
+  const arrivals = bookings?.filter(b => {
+    const checkInDate = parseISO(b.check_in_date);
+    return (b.status === 'confirmed' || b.status === 'pending') && 
+           (isToday(checkInDate) || isBefore(checkInDate, today));
+  }) || [];
 
-  const departures = bookings?.filter(b => 
-    b.check_out_date === today && 
-    b.status === 'checked_in'
-  ) || [];
+  // Departures: checked-in guests with checkout today or past
+  const departures = bookings?.filter(b => {
+    const checkOutDate = parseISO(b.check_out_date);
+    return b.status === 'checked_in' && 
+           (isToday(checkOutDate) || isBefore(checkOutDate, today));
+  }) || [];
 
+  // All currently checked-in guests
   const currentGuests = bookings?.filter(b => b.status === 'checked_in') || [];
 
   const handleCheckIn = async (bookingId: string) => {
@@ -64,7 +70,7 @@ export default function HotelCheckInOut() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Check-in / Check-out</h1>
-        <p className="text-muted-foreground">Manage today's arrivals, departures, and guest services</p>
+        <p className="text-muted-foreground">Manage arrivals, departures, and guest services</p>
       </div>
 
       {/* Stats */}
@@ -74,7 +80,7 @@ export default function HotelCheckInOut() {
             <div className="flex items-center gap-3">
               <CalendarCheck className="h-8 w-8 opacity-80" />
               <div>
-                <p className="text-sm opacity-80">Today's Arrivals</p>
+                <p className="text-sm opacity-80">Pending Arrivals</p>
                 <p className="text-2xl font-bold">{arrivals.length}</p>
               </div>
             </div>
@@ -86,7 +92,7 @@ export default function HotelCheckInOut() {
             <div className="flex items-center gap-3">
               <CalendarX className="h-8 w-8 opacity-80" />
               <div>
-                <p className="text-sm opacity-80">Today's Departures</p>
+                <p className="text-sm opacity-80">Due Departures</p>
                 <p className="text-2xl font-bold">{departures.length}</p>
               </div>
             </div>
@@ -130,58 +136,67 @@ export default function HotelCheckInOut() {
               <Card>
                 <CardContent className="p-8 text-center">
                   <CalendarCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No arrivals scheduled for today</p>
+                  <p className="text-muted-foreground">No pending arrivals</p>
                 </CardContent>
               </Card>
             ) : (
-              arrivals.map(booking => (
-                <Card key={booking.id}>
-                  <CardContent className="p-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-lg">
-                            {booking.guest?.first_name} {booking.guest?.last_name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {booking.booking_reference} • {booking.guest?.phone}
-                          </p>
-                          <div className="flex items-center gap-4 mt-2 text-sm">
-                            <div className="flex items-center gap-1">
-                              <BedDouble className="h-4 w-4" />
-                              Room {booking.room?.room_number || 'TBA'}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <DollarSign className="h-4 w-4" />
-                              {formatCurrency(Number(booking.total_amount))}
+              arrivals.map(booking => {
+                const isLateArrival = isBefore(parseISO(booking.check_in_date), today);
+                return (
+                  <Card key={booking.id}>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-lg">
+                              {booking.guest?.first_name} {booking.guest?.last_name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {booking.booking_reference} • {booking.guest?.phone}
+                            </p>
+                            <div className="flex items-center gap-4 mt-2 text-sm">
+                              <div className="flex items-center gap-1">
+                                <BedDouble className="h-4 w-4" />
+                                Room {booking.room?.room_number || 'TBA'}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <DollarSign className="h-4 w-4" />
+                                {formatCurrency(Number(booking.total_amount))}
+                              </div>
+                              <span className="text-muted-foreground">
+                                Expected: {format(parseISO(booking.check_in_date), 'MMM dd')}
+                              </span>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="secondary">
-                          {booking.status === 'pending' ? 'Pending Confirmation' : 'Confirmed'}
-                        </Badge>
-                        <Button
-                          onClick={() => handleCheckIn(booking.id)}
-                          disabled={processingId === booking.id}
-                          className="gap-2"
-                        >
-                          {processingId === booking.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CalendarCheck className="h-4 w-4" />
+                        <div className="flex items-center gap-3">
+                          {isLateArrival && (
+                            <Badge variant="destructive">Late Arrival</Badge>
                           )}
-                          Check In
-                        </Button>
+                          <Badge variant="secondary">
+                            {booking.status === 'pending' ? 'Pending' : 'Confirmed'}
+                          </Badge>
+                          <Button
+                            onClick={() => handleCheckIn(booking.id)}
+                            disabled={processingId === booking.id}
+                            className="gap-2"
+                          >
+                            {processingId === booking.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <CalendarCheck className="h-4 w-4" />
+                            )}
+                            Check In
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         </TabsContent>
@@ -193,7 +208,7 @@ export default function HotelCheckInOut() {
               <Card>
                 <CardContent className="p-8 text-center">
                   <CalendarX className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No departures scheduled for today</p>
+                  <p className="text-muted-foreground">No departures due</p>
                 </CardContent>
               </Card>
             ) : (
@@ -213,7 +228,7 @@ export default function HotelCheckInOut() {
                             {booking.booking_reference} • Room {booking.room?.room_number}
                           </p>
                           <div className="flex items-center gap-4 mt-2 text-sm">
-                            <span>Check-in: {format(new Date(booking.check_in_date), 'MMM dd')}</span>
+                            <span>Check-in: {format(parseISO(booking.check_in_date), 'MMM dd')}</span>
                             <div className="flex items-center gap-1">
                               <DollarSign className="h-4 w-4" />
                               Balance: {formatCurrency(Number(booking.total_amount) - Number(booking.paid_amount))}
@@ -279,7 +294,7 @@ export default function HotelCheckInOut() {
                               Room {booking.room?.room_number}
                             </div>
                             <span>
-                              {format(new Date(booking.check_in_date), 'MMM dd')} - {format(new Date(booking.check_out_date), 'MMM dd')}
+                              {format(parseISO(booking.check_in_date), 'MMM dd')} - {format(parseISO(booking.check_out_date), 'MMM dd')}
                             </span>
                           </div>
                         </div>

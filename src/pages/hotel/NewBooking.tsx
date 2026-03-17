@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,13 +7,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useHotelRooms, useHotelGuests, useCreateBooking, useCreateGuest, useUpdateRoomStatus } from '@/hooks/useHotel';
+import { useHotelRooms, useHotelGuests, useCreateBooking, useCreateGuest, useUpdateRoomStatus, useHotelBookings, useHotelInfo } from '@/hooks/useHotel';
 import { HotelGuest, RoomType } from '@/types/hotel';
-import { ArrowLeft, CalendarIcon, Loader2, UserPlus, Check } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Loader2, UserPlus, Check, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, isWithinInterval, parseISO, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useSettingsContext } from '@/contexts/SettingsContext';
 
 const roomTypeLabels: Record<RoomType, string> = {
   single: 'Single',
@@ -27,9 +28,12 @@ export default function NewBooking() {
   const navigate = useNavigate();
   const { data: rooms } = useHotelRooms();
   const { data: guests } = useHotelGuests();
+  const { data: allBookings } = useHotelBookings();
+  const { data: hotelInfo } = useHotelInfo();
   const createBooking = useCreateBooking();
   const createGuest = useCreateGuest();
   const updateRoomStatus = useUpdateRoomStatus();
+  const { formatCurrency } = useSettingsContext();
 
   const [checkInDate, setCheckInDate] = useState<Date>();
   const [checkOutDate, setCheckOutDate] = useState<Date>();
@@ -49,12 +53,47 @@ export default function NewBooking() {
     id_proof_number: '',
   });
 
-  const availableRooms = rooms?.filter(r => r.status === 'available') || [];
+  // Check if a room has overlapping bookings for the selected dates
+  const isRoomAvailableForDates = (roomId: string): boolean => {
+    if (!checkInDate || !checkOutDate || !allBookings) return true;
+    
+    const activeBookings = allBookings.filter(
+      b => b.room_id === roomId && 
+      b.status !== 'cancelled' && 
+      b.status !== 'checked_out'
+    );
+
+    for (const booking of activeBookings) {
+      const bCheckIn = parseISO(booking.check_in_date);
+      const bCheckOut = parseISO(booking.check_out_date);
+      
+      // Overlap: new check-in < existing check-out AND new check-out > existing check-in
+      if (checkInDate < bCheckOut && checkOutDate > bCheckIn) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Filter rooms: show available + reserved rooms, but mark overlapping ones
+  const availableRooms = useMemo(() => {
+    if (!rooms) return [];
+    return rooms
+      .filter(r => r.status === 'available' || r.status === 'reserved')
+      .map(r => ({
+        ...r,
+        hasOverlap: !isRoomAvailableForDates(r.id),
+      }));
+  }, [rooms, checkInDate, checkOutDate, allBookings]);
+
   const selectedRoom = rooms?.find(r => r.id === selectedRoomId);
 
-  const nights = checkInDate && checkOutDate ? differenceInDays(checkOutDate, checkInDate) : 0;
+  // Allow same-day booking = 1 night minimum
+  const nights = checkInDate && checkOutDate 
+    ? Math.max(differenceInDays(checkOutDate, checkInDate), 1) 
+    : 0;
   const roomPrice = selectedRoom ? selectedRoom.price_per_night * nights : 0;
-  const taxRate = 0.18;
+  const taxRate = (hotelInfo?.tax_rate || 18) / 100;
   const taxAmount = roomPrice * taxRate;
   const totalAmount = roomPrice + taxAmount;
 
@@ -67,8 +106,16 @@ export default function NewBooking() {
       toast.error('Please select a room');
       return;
     }
-    if (nights <= 0) {
-      toast.error('Check-out date must be after check-in date');
+    
+    // Allow same-day: check-out must be >= check-in
+    if (checkOutDate < checkInDate) {
+      toast.error('Check-out date cannot be before check-in date');
+      return;
+    }
+
+    // Double booking prevention
+    if (!isRoomAvailableForDates(selectedRoomId)) {
+      toast.error('This room already has a booking for the selected dates. Please choose different dates or another room.');
       return;
     }
 
@@ -113,6 +160,9 @@ export default function NewBooking() {
     }
   };
 
+  // Today with time stripped for comparison
+  const today = startOfDay(new Date());
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -149,8 +199,12 @@ export default function NewBooking() {
                       <Calendar
                         mode="single"
                         selected={checkInDate}
-                        onSelect={setCheckInDate}
-                        disabled={(date) => date < new Date()}
+                        onSelect={(date) => {
+                          setCheckInDate(date);
+                          // Reset room selection when dates change
+                          setSelectedRoomId('');
+                        }}
+                        disabled={(date) => startOfDay(date) < today}
                         className="pointer-events-auto"
                       />
                     </PopoverContent>
@@ -169,14 +223,22 @@ export default function NewBooking() {
                       <Calendar
                         mode="single"
                         selected={checkOutDate}
-                        onSelect={setCheckOutDate}
-                        disabled={(date) => date <= (checkInDate || new Date())}
+                        onSelect={(date) => {
+                          setCheckOutDate(date);
+                          setSelectedRoomId('');
+                        }}
+                        disabled={(date) => startOfDay(date) < (checkInDate ? startOfDay(checkInDate) : today)}
                         className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
               </div>
+              {checkInDate && checkOutDate && differenceInDays(checkOutDate, checkInDate) === 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Same-day check-in/out = 1 night stay
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -186,36 +248,48 @@ export default function NewBooking() {
               <CardTitle>Room Selection</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availableRooms.length === 0 ? (
-                  <p className="text-muted-foreground col-span-full text-center py-4">No available rooms</p>
-                ) : (
-                  availableRooms.map(room => (
-                    <div
-                      key={room.id}
-                      onClick={() => setSelectedRoomId(room.id)}
-                      className={cn(
-                        "p-4 border rounded-lg cursor-pointer transition-all",
-                        selectedRoomId === room.id 
-                          ? "border-primary bg-primary/5 ring-2 ring-primary" 
-                          : "hover:border-primary/50"
-                      )}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-bold">Room {room.room_number}</p>
-                          <p className="text-sm text-muted-foreground capitalize">{roomTypeLabels[room.room_type]}</p>
-                          <p className="text-sm">Capacity: {room.capacity}</p>
+              {!checkInDate || !checkOutDate ? (
+                <p className="text-muted-foreground text-center py-4">Please select dates first to see available rooms</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {availableRooms.length === 0 ? (
+                    <p className="text-muted-foreground col-span-full text-center py-4">No available rooms</p>
+                  ) : (
+                    availableRooms.map(room => (
+                      <div
+                        key={room.id}
+                        onClick={() => !room.hasOverlap && setSelectedRoomId(room.id)}
+                        className={cn(
+                          "p-4 border rounded-lg transition-all",
+                          room.hasOverlap 
+                            ? "opacity-50 cursor-not-allowed border-destructive/30 bg-destructive/5"
+                            : "cursor-pointer hover:border-primary/50",
+                          selectedRoomId === room.id && !room.hasOverlap
+                            ? "border-primary bg-primary/5 ring-2 ring-primary" 
+                            : ""
+                        )}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-bold">Room {room.room_number}</p>
+                            <p className="text-sm text-muted-foreground capitalize">{roomTypeLabels[room.room_type]}</p>
+                            <p className="text-sm">Capacity: {room.capacity}</p>
+                          </div>
+                          {room.hasOverlap ? (
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                          ) : selectedRoomId === room.id ? (
+                            <Check className="h-5 w-5 text-primary" />
+                          ) : null}
                         </div>
-                        {selectedRoomId === room.id && (
-                          <Check className="h-5 w-5 text-primary" />
+                        <p className="mt-2 font-semibold text-primary">{formatCurrency(room.price_per_night)}/night</p>
+                        {room.hasOverlap && (
+                          <p className="text-xs text-destructive mt-1">Booked for these dates</p>
                         )}
                       </div>
-                      <p className="mt-2 font-semibold text-primary">${room.price_per_night}/night</p>
-                    </div>
-                  ))
-                )}
-              </div>
+                    ))
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -378,15 +452,15 @@ export default function NewBooking() {
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Room charges:</span>
-                  <span>${roomPrice.toFixed(2)}</span>
+                  <span>{formatCurrency(roomPrice)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Tax (18%):</span>
-                  <span>${taxAmount.toFixed(2)}</span>
+                  <span>Tax ({((hotelInfo?.tax_rate || 18))}%):</span>
+                  <span>{formatCurrency(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Total:</span>
-                  <span>${totalAmount.toFixed(2)}</span>
+                  <span>{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
 
