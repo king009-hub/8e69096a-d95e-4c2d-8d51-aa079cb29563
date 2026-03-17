@@ -68,7 +68,7 @@ export function StaffPinLogin() {
   }, [pin]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="h-full bg-background flex items-center justify-center p-4">
       <Card className={`w-full max-w-sm shadow-2xl transition-transform ${shake ? 'animate-shake' : ''}`}>
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-3 p-4 bg-primary/10 rounded-full w-fit">
