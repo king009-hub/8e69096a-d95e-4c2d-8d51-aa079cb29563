@@ -27,7 +27,7 @@ export function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-full bg-background">
       {/* Desktop hover zone for sidebar */}
       <div className="hidden md:block fixed left-0 top-0 w-4 h-full z-40 group">
         <div className="fixed left-0 top-0 h-full z-50 -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-in-out">
