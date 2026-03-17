@@ -98,7 +98,7 @@ export function Sidebar() {
   const filteredOwnerNav = filterNavigationByRole(ownerNavigation, userRole as UserRole, 'pos', rolePermissions);
   
   return (
-    <div className="w-56 md:w-64 bg-card border-r border-border h-screen shadow-lg flex flex-col">
+    <div className="w-56 md:w-64 bg-card border-r border-border h-full shadow-lg flex flex-col">
       <div className="p-4 md:p-6">
         <div className="flex items-center gap-2">
           {mode === 'hotel' ? (
