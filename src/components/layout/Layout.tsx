@@ -1,13 +1,16 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Package, User, LogIn } from "lucide-react";
+import { LogOut, Package, User, LogIn, Clock, StopCircle } from "lucide-react";
 import { useRealtimePermissions } from "@/hooks/useRealtimePermissions";
 import { useAppMode } from "@/contexts/AppModeContext";
 import { useStaffSession } from "@/contexts/StaffSessionContext";
 import { StaffPinLogin } from "@/components/hotel/StaffPinLogin";
+import { ShiftOpenDialog } from "@/components/hotel/ShiftOpenDialog";
+import { ShiftCloseDialog } from "@/components/hotel/ShiftCloseDialog";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,7 +19,8 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { signOut } = useAuth();
   const { mode } = useAppMode();
-  const { activeStaff, isStaffLoggedIn, logoutStaff } = useStaffSession();
+  const { activeStaff, activeShift, isStaffLoggedIn, isShiftOpen, logoutStaff } = useStaffSession();
+  const [showCloseShift, setShowCloseShift] = useState(false);
   
   // Subscribe to real-time permission updates
   useRealtimePermissions();
@@ -24,6 +28,11 @@ export function Layout({ children }: LayoutProps) {
   // In hotel mode, require staff PIN login
   if (mode === 'hotel' && !isStaffLoggedIn) {
     return <StaffPinLogin />;
+  }
+
+  // In hotel mode, require shift to be open
+  if (mode === 'hotel' && isStaffLoggedIn && !isShiftOpen) {
+    return <ShiftOpenDialog />;
   }
 
   return (
@@ -49,14 +58,30 @@ export function Layout({ children }: LayoutProps) {
 
       <main className="flex-1 overflow-auto w-full">
         <div className="flex justify-end items-center gap-2 p-1">
-          {/* Show active staff info in hotel mode */}
+          {/* Show active staff + shift info in hotel mode */}
           {mode === 'hotel' && activeStaff && (
-            <div className="flex items-center gap-2 mr-auto ml-2">
+            <div className="flex items-center gap-2 mr-auto ml-2 flex-wrap">
               <Badge variant="secondary" className="gap-1 text-xs">
                 <User className="h-3 w-3" />
                 {activeStaff.first_name} {activeStaff.last_name}
                 <span className="text-muted-foreground capitalize">({activeStaff.role})</span>
               </Badge>
+              {activeShift && (
+                <Badge variant="outline" className="gap-1 text-xs">
+                  <Clock className="h-3 w-3" />
+                  {activeShift.shift_label} shift • {format(new Date(activeShift.opened_at), 'p')}
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCloseShift(true)}
+                className="gap-1 text-xs h-7 text-destructive hover:text-destructive"
+                title="Close shift"
+              >
+                <StopCircle className="h-3 w-3" />
+                End Shift
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -83,6 +108,11 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Shift close dialog */}
+      {mode === 'hotel' && (
+        <ShiftCloseDialog open={showCloseShift} onOpenChange={setShowCloseShift} />
+      )}
     </div>
   );
 }
