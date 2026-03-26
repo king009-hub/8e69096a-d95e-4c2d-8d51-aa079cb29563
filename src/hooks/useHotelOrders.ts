@@ -25,6 +25,8 @@ export interface HotelOrder {
   room_id: string | null;
   table_number: string | null;
   waiter_id: string | null;
+  staff_id: string | null;
+  shift_id: string | null;
   status: string;
   notes: string | null;
   subtotal: number;
@@ -33,6 +35,10 @@ export interface HotelOrder {
   total_amount: number;
   is_billed: boolean;
   invoice_id: string | null;
+  payment_status: string | null;
+  cancel_reason: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
   created_at: string;
   updated_at: string;
   items?: HotelOrderItem[];
