@@ -123,6 +123,8 @@ interface PlaceOrderParams {
   roomId?: string | null;
   tableNumber?: string | null;
   waiterId: string;
+  staffId?: string | null;
+  shiftId?: string | null;
   notes?: string;
   taxRate: number;
   discount?: number;
