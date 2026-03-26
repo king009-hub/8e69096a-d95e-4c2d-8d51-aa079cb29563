@@ -251,6 +251,8 @@ export function useHotelPOS(hotelTaxRate?: number, staffId?: string | null, shif
           payment_method: payments.length > 1 ? 'cash' : dbPaymentMethod,
           notes: selectedBooking ? `Room ${selectedBooking.room?.room_number}` : 'Walk-in',
           invoice_number: '',
+          staff_id: staffId || null,
+          shift_id: shiftId || null,
         }])
         .select()
         .single();
