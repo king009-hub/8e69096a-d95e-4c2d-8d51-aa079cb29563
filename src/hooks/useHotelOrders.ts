@@ -157,6 +157,8 @@ export function usePlaceOrder() {
           room_id: params.roomId || null,
           table_number: params.tableNumber || null,
           waiter_id: params.waiterId,
+          staff_id: params.staffId || null,
+          shift_id: params.shiftId || null,
           notes: params.notes || null,
           subtotal,
           tax_amount: taxAmt,
