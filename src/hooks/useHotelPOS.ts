@@ -165,6 +165,7 @@ export function useHotelPOS(hotelTaxRate?: number, staffId?: string | null, shif
               movement_type: 'out',
               reason: 'POS Sale',
               reference_id: invoiceId,
+              shift_id: shiftId || null,
             }]);
 
           // If linked to main inventory, deduct there too
