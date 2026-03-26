@@ -407,6 +407,8 @@ export default function HotelPOS() {
         orderIds: selectedOrderIds, bookingId: selectedBooking?.id,
         guestId: selectedBooking?.guest_id, paymentMethod: 'cash',
         paymentStatus: selectedBooking ? 'pending' : 'paid',
+        staffId: activeStaff?.staff_id || null,
+        shiftId: activeShift?.id || null,
       });
       setSelectedOrderIds([]); setShowBillDialog(false);
     } catch { } finally { setIsProcessing(false); }
