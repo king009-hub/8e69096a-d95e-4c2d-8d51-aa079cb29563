@@ -118,6 +118,8 @@ export function useHotelPOS(hotelTaxRate?: number, staffId?: string | null, shif
             total_amount: 0,
             payment_status: 'pending',
             invoice_number: '',
+            staff_id: staffId || null,
+            shift_id: shiftId || null,
           }])
           .select()
           .single();
