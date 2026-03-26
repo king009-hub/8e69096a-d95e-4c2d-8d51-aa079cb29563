@@ -60,7 +60,7 @@ interface SplitPayment {
 
 export default function HotelPOS() {
   const { formatCurrency } = useSettingsContext();
-  const { activeStaff } = useStaffSession();
+  const { activeStaff, activeShift } = useStaffSession();
   const { data: services = [], isLoading: servicesLoading } = useAvailableServices();
   const { data: categories = [] } = useActiveServiceCategories();
   const { data: bookings = [] } = useHotelBookings();
