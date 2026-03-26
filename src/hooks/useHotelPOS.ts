@@ -17,12 +17,12 @@ export interface HotelPOSPayment {
   amount: number;
 }
 
-export function useHotelPOS(hotelTaxRate?: number) {
+export function useHotelPOS(hotelTaxRate?: number, staffId?: string | null, shiftId?: string | null) {
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<HotelCartItem[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<HotelBooking | null>(null);
   const [discount, setDiscount] = useState(0);
-  const taxRate = hotelTaxRate ?? 18; // Use provided rate or default to 18%
+  const taxRate = hotelTaxRate ?? 18;
 
   const addToCart = useCallback((service: ServiceMenuItem, quantity: number = 1) => {
     // Check stock if tracking enabled
