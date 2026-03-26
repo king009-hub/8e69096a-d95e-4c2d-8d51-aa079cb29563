@@ -377,6 +377,7 @@ export function useAddItemsToOrder() {
                 movement_type: 'out',
                 reason: `Order ${orderNumber} (extra)`,
                 reference_id: orderId,
+                shift_id: shiftId || null,
               }]);
 
             if (svc.product_id) {
