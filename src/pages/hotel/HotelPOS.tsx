@@ -82,7 +82,7 @@ export default function HotelPOS() {
     taxRate, taxAmount, total, addToCart, updateQuantity,
     removeFromCart, clearCart, setSelectedBooking, setDiscount,
     chargeToRoom, processDirectPayment,
-  } = useHotelPOS(hotelTaxRate);
+  } = useHotelPOS(hotelTaxRate, activeStaff?.staff_id, activeShift?.id);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
