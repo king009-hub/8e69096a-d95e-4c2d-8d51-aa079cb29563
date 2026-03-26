@@ -277,6 +277,7 @@ export default function HotelPOS() {
     try {
       await addItemsToOrder.mutateAsync({
         orderId: addingToOrder.id, orderNumber: addingToOrder.order_number, taxRate,
+        shiftId: activeShift?.id || null,
         items: cart.map(item => ({
           serviceItemId: item.service.id, name: item.service.name, quantity: item.quantity,
           unitPrice: item.unit_price, notes: itemNotes[item.service.id] || undefined, category: item.service.category,
