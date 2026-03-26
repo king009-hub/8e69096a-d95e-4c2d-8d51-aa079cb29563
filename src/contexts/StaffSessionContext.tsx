@@ -245,6 +245,7 @@ export function StaffSessionProvider({ children }: { children: React.ReactNode }
         shift_duration: shiftDuration,
         kitchen_sales: kitchenItems,
         bar_sales: barItems,
+        stock_consumed: stockSummary,
       };
 
       const { error } = await supabase
