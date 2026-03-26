@@ -13,6 +13,8 @@ export interface HotelOrderItem {
   total_price: number;
   notes: string | null;
   status: string;
+  item_type: string | null;
+  shift_id: string | null;
   created_at: string;
 }
 
