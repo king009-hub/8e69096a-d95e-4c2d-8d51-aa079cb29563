@@ -235,6 +235,8 @@ export default function HotelPOS() {
         roomId: selectedBooking?.room_id || null,
         tableNumber: tableNumber || null,
         waiterId,
+        staffId: activeStaff?.staff_id || null,
+        shiftId: activeShift?.id || null,
         notes: orderNotes || undefined,
         taxRate,
         discount,
