@@ -188,15 +188,27 @@ export function StaffSessionProvider({ children }: { children: React.ReactNode }
         });
       });
 
-      // Get bookings activity (for receptionist)
+      // Get bookings linked to this shift or by staff
       const { data: bookings } = await supabase
         .from('hotel_bookings')
         .select('*')
-        .eq('staff_id', staffId)
+        .or(`shift_id.eq.${shiftId},staff_id.eq.${staffId}`)
         .gte('created_at', activeShift.opened_at);
 
       const checkIns = bookings?.filter(b => b.status === 'checked_in').length || 0;
       const checkOuts = bookings?.filter(b => b.status === 'checked_out').length || 0;
+
+      // Get stock movements during this shift
+      const { data: stockMovements } = await supabase
+        .from('hotel_stock_movements')
+        .select('*, service_item:hotel_service_menu(name)')
+        .eq('shift_id', shiftId);
+      
+      const stockSummary: Record<string, number> = {};
+      stockMovements?.forEach((m: any) => {
+        const name = m.service_item?.name || 'Unknown';
+        stockSummary[name] = (stockSummary[name] || 0) + m.quantity;
+      });
 
       // Room stats
       const { data: rooms } = await supabase
