@@ -477,6 +477,8 @@ export function useBillOrders() {
         .insert([{
           booking_id: bookingId || null,
           guest_id: guestId || null,
+          staff_id: staffId || null,
+          shift_id: shiftId || null,
           subtotal: totalSubtotal,
           tax_amount: totalTax,
           discount_amount: totalDiscount,
