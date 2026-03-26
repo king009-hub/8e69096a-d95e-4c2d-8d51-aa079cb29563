@@ -267,6 +267,7 @@ export function useHotelPOS(hotelTaxRate?: number, staffId?: string | null, shif
         unit_price: item.unit_price,
         quantity: item.quantity,
         total_price: item.quantity * item.unit_price,
+        shift_id: shiftId || null,
       }));
 
       await supabase.from('hotel_invoice_items').insert(invoiceItems);
