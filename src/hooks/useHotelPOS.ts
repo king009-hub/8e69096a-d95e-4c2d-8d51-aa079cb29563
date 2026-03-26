@@ -288,6 +288,7 @@ export function useHotelPOS(hotelTaxRate?: number, staffId?: string | null, shif
               movement_type: 'out',
               reason: 'Direct POS Sale',
               reference_id: invoice.id,
+              shift_id: shiftId || null,
             }]);
 
           if (item.service.product_id) {
