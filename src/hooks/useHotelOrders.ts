@@ -320,10 +320,11 @@ export function useAddItemsToOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ orderId, orderNumber, taxRate, items }: {
+    mutationFn: async ({ orderId, orderNumber, taxRate, shiftId, items }: {
       orderId: string;
       orderNumber: string;
       taxRate: number;
+      shiftId?: string | null;
       items: {
         serviceItemId: string | null;
         name: string;
