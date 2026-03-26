@@ -152,25 +152,35 @@ export function StaffSessionProvider({ children }: { children: React.ReactNode }
       const shiftId = activeShift.id;
       const staffId = activeStaff.staff_id;
 
-      // Get orders created during this shift
+      // Get orders linked to this shift
       const { data: orders } = await supabase
         .from('hotel_orders')
         .select('*, hotel_order_items(*)')
-        .or(`staff_id.eq.${staffId},waiter_id.eq.${staffId}`)
-        .gte('created_at', activeShift.opened_at);
+        .eq('shift_id', shiftId);
 
-      const totalOrders = orders?.length || 0;
-      const completedOrders = orders?.filter(o => o.status === 'completed' || o.status === 'delivered').length || 0;
-      const totalSales = orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
-      const billedSales = orders?.filter(o => o.is_billed).reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
-      const totalItems = orders?.reduce((sum, o) => sum + (o.hotel_order_items?.length || 0), 0) || 0;
+      // Fallback: also get orders by staff + time if shift_id wasn't set
+      let allOrders = orders || [];
+      if (allOrders.length === 0) {
+        const { data: fallbackOrders } = await supabase
+          .from('hotel_orders')
+          .select('*, hotel_order_items(*)')
+          .or(`staff_id.eq.${staffId},waiter_id.eq.${staffId}`)
+          .gte('created_at', activeShift.opened_at);
+        allOrders = fallbackOrders || [];
+      }
+
+      const totalOrders = allOrders.length;
+      const completedOrders = allOrders.filter(o => o.status === 'completed' || o.status === 'delivered' || o.status === 'billed').length;
+      const totalSales = allOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      const billedSales = allOrders.filter(o => o.is_billed).reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      const totalItems = allOrders.reduce((sum, o) => sum + (o.hotel_order_items?.length || 0), 0);
 
       // Kitchen vs bar breakdown
       const kitchenItems: Record<string, number> = {};
       const barItems: Record<string, number> = {};
-      orders?.forEach(o => {
+      allOrders.forEach(o => {
         o.hotel_order_items?.forEach((item: any) => {
-          if (item.item_type === 'beverage' || item.item_type === 'drink') {
+          if (item.item_type === 'beverage' || item.item_type === 'drink' || item.item_type === 'minibar') {
             barItems[item.name] = (barItems[item.name] || 0) + item.quantity;
           } else {
             kitchenItems[item.name] = (kitchenItems[item.name] || 0) + item.quantity;
