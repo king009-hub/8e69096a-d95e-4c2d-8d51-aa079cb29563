@@ -60,7 +60,7 @@ interface SplitPayment {
 
 export default function HotelPOS() {
   const { formatCurrency } = useSettingsContext();
-  const { activeStaff } = useStaffSession();
+  const { activeStaff, activeShift } = useStaffSession();
   const { data: services = [], isLoading: servicesLoading } = useAvailableServices();
   const { data: categories = [] } = useActiveServiceCategories();
   const { data: bookings = [] } = useHotelBookings();
@@ -82,7 +82,7 @@ export default function HotelPOS() {
     taxRate, taxAmount, total, addToCart, updateQuantity,
     removeFromCart, clearCart, setSelectedBooking, setDiscount,
     chargeToRoom, processDirectPayment,
-  } = useHotelPOS(hotelTaxRate);
+  } = useHotelPOS(hotelTaxRate, activeStaff?.staff_id, activeShift?.id);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -235,6 +235,8 @@ export default function HotelPOS() {
         roomId: selectedBooking?.room_id || null,
         tableNumber: tableNumber || null,
         waiterId,
+        staffId: activeStaff?.staff_id || null,
+        shiftId: activeShift?.id || null,
         notes: orderNotes || undefined,
         taxRate,
         discount,
@@ -275,6 +277,7 @@ export default function HotelPOS() {
     try {
       await addItemsToOrder.mutateAsync({
         orderId: addingToOrder.id, orderNumber: addingToOrder.order_number, taxRate,
+        shiftId: activeShift?.id || null,
         items: cart.map(item => ({
           serviceItemId: item.service.id, name: item.service.name, quantity: item.quantity,
           unitPrice: item.unit_price, notes: itemNotes[item.service.id] || undefined, category: item.service.category,
@@ -404,6 +407,8 @@ export default function HotelPOS() {
         orderIds: selectedOrderIds, bookingId: selectedBooking?.id,
         guestId: selectedBooking?.guest_id, paymentMethod: 'cash',
         paymentStatus: selectedBooking ? 'pending' : 'paid',
+        staffId: activeStaff?.staff_id || null,
+        shiftId: activeShift?.id || null,
       });
       setSelectedOrderIds([]); setShowBillDialog(false);
     } catch { } finally { setIsProcessing(false); }

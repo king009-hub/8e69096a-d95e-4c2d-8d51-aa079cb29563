@@ -197,6 +197,26 @@ export function ShiftCloseDialog({ open, onOpenChange }: ShiftCloseDialogProps) 
                 </Card>
               )}
 
+              {/* Stock Consumed */}
+              {Object.keys(report.stock_consumed || {}).length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-1">
+                      <ShoppingCart className="h-4 w-4" /> Stock Consumed
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1 text-sm">
+                      {Object.entries(report.stock_consumed).map(([name, qty]) => (
+                        <div key={name} className="flex justify-between">
+                          <span>{name}</span>
+                          <Badge variant="outline">×{qty as number}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               {/* Bar Items */}
               {Object.keys(report.bar_sales || {}).length > 0 && (
                 <Card>

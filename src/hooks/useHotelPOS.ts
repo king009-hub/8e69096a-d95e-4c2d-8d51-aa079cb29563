@@ -17,12 +17,12 @@ export interface HotelPOSPayment {
   amount: number;
 }
 
-export function useHotelPOS(hotelTaxRate?: number) {
+export function useHotelPOS(hotelTaxRate?: number, staffId?: string | null, shiftId?: string | null) {
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<HotelCartItem[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<HotelBooking | null>(null);
   const [discount, setDiscount] = useState(0);
-  const taxRate = hotelTaxRate ?? 18; // Use provided rate or default to 18%
+  const taxRate = hotelTaxRate ?? 18;
 
   const addToCart = useCallback((service: ServiceMenuItem, quantity: number = 1) => {
     // Check stock if tracking enabled
@@ -118,6 +118,8 @@ export function useHotelPOS(hotelTaxRate?: number) {
             total_amount: 0,
             payment_status: 'pending',
             invoice_number: '',
+            staff_id: staffId || null,
+            shift_id: shiftId || null,
           }])
           .select()
           .single();
@@ -134,6 +136,7 @@ export function useHotelPOS(hotelTaxRate?: number) {
         unit_price: item.unit_price,
         quantity: item.quantity,
         total_price: item.quantity * item.unit_price,
+        shift_id: shiftId || null,
       }));
 
       const { error: itemsError } = await supabase
@@ -162,6 +165,7 @@ export function useHotelPOS(hotelTaxRate?: number) {
               movement_type: 'out',
               reason: 'POS Sale',
               reference_id: invoiceId,
+              shift_id: shiftId || null,
             }]);
 
           // If linked to main inventory, deduct there too
@@ -247,6 +251,8 @@ export function useHotelPOS(hotelTaxRate?: number) {
           payment_method: payments.length > 1 ? 'cash' : dbPaymentMethod,
           notes: selectedBooking ? `Room ${selectedBooking.room?.room_number}` : 'Walk-in',
           invoice_number: '',
+          staff_id: staffId || null,
+          shift_id: shiftId || null,
         }])
         .select()
         .single();
@@ -261,6 +267,7 @@ export function useHotelPOS(hotelTaxRate?: number) {
         unit_price: item.unit_price,
         quantity: item.quantity,
         total_price: item.quantity * item.unit_price,
+        shift_id: shiftId || null,
       }));
 
       await supabase.from('hotel_invoice_items').insert(invoiceItems);
@@ -281,6 +288,7 @@ export function useHotelPOS(hotelTaxRate?: number) {
               movement_type: 'out',
               reason: 'Direct POS Sale',
               reference_id: invoice.id,
+              shift_id: shiftId || null,
             }]);
 
           if (item.service.product_id) {

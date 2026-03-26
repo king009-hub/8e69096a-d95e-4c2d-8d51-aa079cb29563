@@ -13,6 +13,8 @@ export interface HotelOrderItem {
   total_price: number;
   notes: string | null;
   status: string;
+  item_type: string | null;
+  shift_id: string | null;
   created_at: string;
 }
 
@@ -23,6 +25,8 @@ export interface HotelOrder {
   room_id: string | null;
   table_number: string | null;
   waiter_id: string | null;
+  staff_id: string | null;
+  shift_id: string | null;
   status: string;
   notes: string | null;
   subtotal: number;
@@ -31,6 +35,10 @@ export interface HotelOrder {
   total_amount: number;
   is_billed: boolean;
   invoice_id: string | null;
+  payment_status: string | null;
+  cancel_reason: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
   created_at: string;
   updated_at: string;
   items?: HotelOrderItem[];
@@ -115,6 +123,8 @@ interface PlaceOrderParams {
   roomId?: string | null;
   tableNumber?: string | null;
   waiterId: string;
+  staffId?: string | null;
+  shiftId?: string | null;
   notes?: string;
   taxRate: number;
   discount?: number;
@@ -147,6 +157,8 @@ export function usePlaceOrder() {
           room_id: params.roomId || null,
           table_number: params.tableNumber || null,
           waiter_id: params.waiterId,
+          staff_id: params.staffId || null,
+          shift_id: params.shiftId || null,
           notes: params.notes || null,
           subtotal,
           tax_amount: taxAmt,
@@ -171,6 +183,7 @@ export function usePlaceOrder() {
         notes: item.notes || null,
         status: 'pending',
         item_type: item.category || 'food',
+        shift_id: params.shiftId || null,
       }));
 
       const { error: itemsError } = await supabase
@@ -202,6 +215,7 @@ export function usePlaceOrder() {
                 movement_type: 'out',
                 reason: `Order ${order.order_number}`,
                 reference_id: order.id,
+                shift_id: params.shiftId || null,
               }]);
 
             if (svc.product_id) {
@@ -306,10 +320,11 @@ export function useAddItemsToOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ orderId, orderNumber, taxRate, items }: {
+    mutationFn: async ({ orderId, orderNumber, taxRate, shiftId, items }: {
       orderId: string;
       orderNumber: string;
       taxRate: number;
+      shiftId?: string | null;
       items: {
         serviceItemId: string | null;
         name: string;
@@ -330,6 +345,7 @@ export function useAddItemsToOrder() {
         notes: item.notes || null,
         status: 'pending',
         item_type: item.category || 'food',
+        shift_id: shiftId || null,
       }));
 
       const { error: itemsError } = await supabase
@@ -361,6 +377,7 @@ export function useAddItemsToOrder() {
                 movement_type: 'out',
                 reason: `Order ${orderNumber} (extra)`,
                 reference_id: orderId,
+                shift_id: shiftId || null,
               }]);
 
             if (svc.product_id) {
@@ -429,12 +446,16 @@ export function useBillOrders() {
       guestId,
       paymentMethod,
       paymentStatus,
+      staffId,
+      shiftId,
     }: {
       orderIds: string[];
       bookingId?: string | null;
       guestId?: string | null;
       paymentMethod?: string;
       paymentStatus?: string;
+      staffId?: string | null;
+      shiftId?: string | null;
     }) => {
       // Get all orders
       const { data: orders, error: ordersError } = await supabase
@@ -456,6 +477,8 @@ export function useBillOrders() {
         .insert([{
           booking_id: bookingId || null,
           guest_id: guestId || null,
+          staff_id: staffId || null,
+          shift_id: shiftId || null,
           subtotal: totalSubtotal,
           tax_amount: totalTax,
           discount_amount: totalDiscount,
@@ -478,6 +501,7 @@ export function useBillOrders() {
           unit_price: item.unit_price,
           quantity: item.quantity,
           total_price: item.total_price,
+          shift_id: shiftId || null,
         }))
       );
 
