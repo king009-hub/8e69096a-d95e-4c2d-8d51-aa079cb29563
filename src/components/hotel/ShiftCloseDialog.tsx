@@ -217,6 +217,8 @@ export function ShiftCloseDialog({ open, onOpenChange }: ShiftCloseDialogProps) 
                   </CardContent>
                 </Card>
               )}
+              {/* Bar Items */}
+              {Object.keys(report.bar_sales || {}).length > 0 && (
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-1">
