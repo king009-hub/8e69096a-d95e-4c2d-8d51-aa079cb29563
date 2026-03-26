@@ -501,6 +501,7 @@ export function useBillOrders() {
           unit_price: item.unit_price,
           quantity: item.quantity,
           total_price: item.total_price,
+          shift_id: shiftId || null,
         }))
       );
 
