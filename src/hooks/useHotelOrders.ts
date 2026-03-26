@@ -446,12 +446,16 @@ export function useBillOrders() {
       guestId,
       paymentMethod,
       paymentStatus,
+      staffId,
+      shiftId,
     }: {
       orderIds: string[];
       bookingId?: string | null;
       guestId?: string | null;
       paymentMethod?: string;
       paymentStatus?: string;
+      staffId?: string | null;
+      shiftId?: string | null;
     }) => {
       // Get all orders
       const { data: orders, error: ordersError } = await supabase
