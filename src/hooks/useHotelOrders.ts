@@ -215,6 +215,7 @@ export function usePlaceOrder() {
                 movement_type: 'out',
                 reason: `Order ${order.order_number}`,
                 reference_id: order.id,
+                shift_id: params.shiftId || null,
               }]);
 
             if (svc.product_id) {
