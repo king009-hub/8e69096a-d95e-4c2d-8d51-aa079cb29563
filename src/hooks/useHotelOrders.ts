@@ -345,6 +345,7 @@ export function useAddItemsToOrder() {
         notes: item.notes || null,
         status: 'pending',
         item_type: item.category || 'food',
+        shift_id: shiftId || null,
       }));
 
       const { error: itemsError } = await supabase
