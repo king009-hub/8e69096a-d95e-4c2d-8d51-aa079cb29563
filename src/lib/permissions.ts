@@ -93,6 +93,7 @@ export const defaultHotelRoutePermissions: RoutePermission[] = [
   { path: '/hotel/check-in-out', allowedRoles: ['admin', 'manager', 'cashier'] },
   { path: '/hotel/guests', allowedRoles: ['admin', 'manager', 'cashier'] },
   { path: '/hotel/housekeeping', allowedRoles: ['admin', 'manager', 'cashier', 'user'] },
+  { path: '/restaurant', allowedRoles: ['admin', 'manager', 'cashier', 'user'] },
 ];
 
 /**
