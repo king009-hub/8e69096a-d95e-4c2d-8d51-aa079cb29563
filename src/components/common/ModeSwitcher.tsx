@@ -1,13 +1,13 @@
 import { Button } from '@/components/ui/button';
 import { useAppMode } from '@/contexts/AppModeContext';
-import { Building2, ShoppingCart } from 'lucide-react';
+import { Building2, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function ModeSwitcher() {
   const { mode, setMode } = useAppMode();
 
   return (
-    <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+    <div className="flex items-center gap-1 p-1 bg-muted rounded-lg flex-wrap">
       <Button
         variant={mode === 'pos' ? 'default' : 'ghost'}
         size="sm"
@@ -31,6 +31,18 @@ export function ModeSwitcher() {
       >
         <Building2 className="h-4 w-4" />
         <span className="hidden sm:inline">Hotel</span>
+      </Button>
+      <Button
+        variant={mode === 'restaurant' ? 'default' : 'ghost'}
+        size="sm"
+        onClick={() => setMode('restaurant')}
+        className={cn(
+          "gap-2 transition-all",
+          mode === 'restaurant' && "shadow-sm"
+        )}
+      >
+        <UtensilsCrossed className="h-4 w-4" />
+        <span className="hidden sm:inline">Restaurant</span>
       </Button>
     </div>
   );

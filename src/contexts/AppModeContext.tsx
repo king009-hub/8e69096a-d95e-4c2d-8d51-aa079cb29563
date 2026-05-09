@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type AppMode = 'pos' | 'hotel';
+export type AppMode = 'pos' | 'hotel' | 'restaurant';
 
 interface AppModeContextType {
   mode: AppMode;

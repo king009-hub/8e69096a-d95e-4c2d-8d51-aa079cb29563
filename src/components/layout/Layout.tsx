@@ -25,13 +25,13 @@ export function Layout({ children }: LayoutProps) {
   // Subscribe to real-time permission updates
   useRealtimePermissions();
 
-  // In hotel mode, require staff PIN login
-  if (mode === 'hotel' && !isStaffLoggedIn) {
+  // In hotel/restaurant mode, require staff PIN login
+  if ((mode === 'hotel' || mode === 'restaurant') && !isStaffLoggedIn) {
     return <StaffPinLogin />;
   }
 
-  // In hotel mode, require shift to be open
-  if (mode === 'hotel' && isStaffLoggedIn && !isShiftOpen) {
+  // In hotel/restaurant mode, require shift to be open
+  if ((mode === 'hotel' || mode === 'restaurant') && isStaffLoggedIn && !isShiftOpen) {
     return <ShiftOpenDialog />;
   }
 
@@ -58,8 +58,8 @@ export function Layout({ children }: LayoutProps) {
 
       <main className="flex-1 overflow-auto w-full">
         <div className="flex justify-end items-center gap-2 p-1">
-          {/* Show active staff + shift info in hotel mode */}
-          {mode === 'hotel' && activeStaff && (
+          {/* Show active staff + shift info in hotel/restaurant mode */}
+          {(mode === 'hotel' || mode === 'restaurant') && activeStaff && (
             <div className="flex items-center gap-2 mr-auto ml-2 flex-wrap">
               <Badge variant="secondary" className="gap-1 text-xs">
                 <User className="h-3 w-3" />
@@ -110,7 +110,7 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       {/* Shift close dialog */}
-      {mode === 'hotel' && (
+      {(mode === 'hotel' || mode === 'restaurant') && (
         <ShiftCloseDialog open={showCloseShift} onOpenChange={setShowCloseShift} />
       )}
     </div>

@@ -64,6 +64,15 @@ const hotelNavigation = [
   { name: "Settings", href: "/hotel/settings", icon: Settings },
 ];
 
+const restaurantNavigation = [
+  { name: "Dashboard", href: "/restaurant", icon: LayoutDashboard },
+  { name: "Point of Sale", href: "/hotel/pos", icon: ShoppingCart },
+  { name: "Kitchen Display", href: "/hotel/kitchen", icon: ChefHat },
+  { name: "Bar Display", href: "/hotel/bar", icon: Wine },
+  { name: "Menu", href: "/hotel/service-menu", icon: UtensilsCrossed },
+  { name: "Reports", href: "/hotel/reports", icon: BarChart3 },
+];
+
 const ownerNavigation = [
   { name: "Owner Dashboard", href: "/owner", icon: Shield },
 ];
@@ -81,15 +90,24 @@ export function Sidebar() {
     }
   }, [rolePermissions]);
   
-  const baseNavigation = mode === 'hotel' ? hotelNavigation : posNavigation;
-  const title = mode === 'hotel' ? 'Hotel Manager' : 'StockFlow';
-  const subtitle = mode === 'hotel' ? 'Hotel Management' : 'Inventory Management';
+  const baseNavigation =
+    mode === 'hotel' ? hotelNavigation :
+    mode === 'restaurant' ? restaurantNavigation :
+    posNavigation;
+  const title =
+    mode === 'hotel' ? 'Hotel Manager' :
+    mode === 'restaurant' ? 'Restaurant' :
+    'StockFlow';
+  const subtitle =
+    mode === 'hotel' ? 'Hotel Management' :
+    mode === 'restaurant' ? 'Restaurant Operations' :
+    'Inventory Management';
   
   // Filter navigation based on user role and database permissions
   let navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, mode, rolePermissions);
   
-  // In hotel mode, further filter by active staff's allowed routes
-  if (mode === 'hotel' && activeStaff && activeStaff.allowed_hotel_routes.length > 0) {
+  // In hotel/restaurant mode, further filter by active staff's allowed routes
+  if ((mode === 'hotel' || mode === 'restaurant') && activeStaff && activeStaff.allowed_hotel_routes.length > 0) {
     navigation = navigation.filter(item => 
       activeStaff.allowed_hotel_routes.includes(item.href)
     );
@@ -103,6 +121,8 @@ export function Sidebar() {
         <div className="flex items-center gap-2">
           {mode === 'hotel' ? (
             <Hotel className="h-6 w-6 text-primary" />
+          ) : mode === 'restaurant' ? (
+            <UtensilsCrossed className="h-6 w-6 text-primary" />
           ) : (
             <Package className="h-6 w-6 text-primary" />
           )}

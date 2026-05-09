@@ -41,6 +41,7 @@ import HotelServiceMenu from "./pages/hotel/HotelServiceMenu";
 import HotelPOS from "./pages/hotel/HotelPOS";
 import KitchenDisplay from "./pages/hotel/KitchenDisplay";
 import BarDisplay from "./pages/hotel/BarDisplay";
+import RestaurantDashboard from "./pages/restaurant/RestaurantDashboard";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,9 @@ const App = () => (
                 <Route path="/hotel/kitchen" element={<ProtectedRoute><KitchenDisplay /></ProtectedRoute>} />
                 <Route path="/hotel/bar" element={<ProtectedRoute><BarDisplay /></ProtectedRoute>} />
                 <Route path="/hotel/settings" element={<ProtectedRoute><HotelSettings /></ProtectedRoute>} />
+
+                {/* Restaurant Routes */}
+                <Route path="/restaurant" element={<ProtectedRoute><RestaurantDashboard /></ProtectedRoute>} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
