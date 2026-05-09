@@ -1,0 +1,428 @@
+import { Layout } from '@/components/layout/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useSettingsContext } from '@/contexts/SettingsContext';
+import {
+  ChefHat, Wine, ShoppingCart, UtensilsCrossed, TrendingUp, Users,
+  AlertTriangle, Clock, Loader2, ArrowRight, Receipt, CircleDot
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
+interface OrderRow {
+  id: string;
+  order_number: string;
+  table_number: string | null;
+  status: string;
+  total_amount: number;
+  created_at: string;
+  waiter: { first_name: string; last_name: string } | null;
+  items: { name: string; quantity: number; total_price: number; station: string; item_type: string | null }[];
+}
+
+function useRestaurantData() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startIso = today.toISOString();
+
+  return useQuery({
+    queryKey: ['restaurant-dashboard', startIso],
+    queryFn: async () => {
+      const [ordersRes, menuRes, shiftsRes] = await Promise.all([
+        supabase
+          .from('hotel_orders')
+          .select(`
+            id, order_number, table_number, status, total_amount, created_at, waiter_id,
+            waiter:hotel_staff!hotel_orders_waiter_id_fkey(first_name, last_name),
+            items:hotel_order_items(name, quantity, total_price, station, item_type)
+          `)
+          .gte('created_at', startIso)
+          .order('created_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('hotel_service_menu')
+          .select('id, name, category, stock_quantity, min_stock_threshold, track_stock'),
+        supabase
+          .from('hotel_staff_shifts')
+          .select('id, shift_label, staff_id, opened_at, closed_at, status, total_sales, total_items, staff:hotel_staff!hotel_staff_shifts_staff_id_fkey(first_name, last_name, role)')
+          .eq('status', 'open'),
+      ]);
+
+      if (ordersRes.error) throw ordersRes.error;
+      if (menuRes.error) throw menuRes.error;
+      if (shiftsRes.error) throw shiftsRes.error;
+
+      const orders = (ordersRes.data || []) as unknown as OrderRow[];
+
+      // Aggregations
+      let kitchenSales = 0;
+      let barSales = 0;
+      let kitchenItems = 0;
+      let barItems = 0;
+      const itemTotals = new Map<string, { name: string; qty: number; total: number }>();
+      const waiterTotals = new Map<string, { name: string; orders: number; total: number }>();
+
+      for (const o of orders) {
+        const waiterName = o.waiter ? `${o.waiter.first_name} ${o.waiter.last_name}` : 'Unassigned';
+        const w = waiterTotals.get(waiterName) || { name: waiterName, orders: 0, total: 0 };
+        w.orders += 1;
+        w.total += Number(o.total_amount || 0);
+        waiterTotals.set(waiterName, w);
+
+        for (const it of o.items || []) {
+          const isBar = it.station === 'bar' || it.item_type === 'drink' || it.item_type === 'beverage';
+          if (isBar) {
+            barSales += Number(it.total_price || 0);
+            barItems += it.quantity;
+          } else {
+            kitchenSales += Number(it.total_price || 0);
+            kitchenItems += it.quantity;
+          }
+          const k = itemTotals.get(it.name) || { name: it.name, qty: 0, total: 0 };
+          k.qty += it.quantity;
+          k.total += Number(it.total_price || 0);
+          itemTotals.set(it.name, k);
+        }
+      }
+
+      const activeOrders = orders.filter(o =>
+        ['pending', 'preparing', 'ready', 'awaiting_approval', 'pending_handover', 'confirmed'].includes(o.status)
+      );
+      const tablesInUse = new Set(activeOrders.map(o => o.table_number).filter(Boolean));
+
+      const lowStock = (menuRes.data || []).filter((m: any) =>
+        m.track_stock && m.stock_quantity <= m.min_stock_threshold
+      );
+
+      const topItems = Array.from(itemTotals.values())
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 5);
+
+      const topWaiters = Array.from(waiterTotals.values())
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
+      return {
+        orders,
+        activeOrders,
+        tablesInUse: Array.from(tablesInUse) as string[],
+        kitchenSales,
+        barSales,
+        kitchenItems,
+        barItems,
+        totalSales: kitchenSales + barSales,
+        ordersCount: orders.length,
+        topItems,
+        topWaiters,
+        lowStock,
+        activeShifts: shiftsRes.data || [],
+      };
+    },
+    refetchInterval: 15000,
+  });
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-500',
+  preparing: 'bg-blue-500',
+  ready: 'bg-emerald-500',
+  served: 'bg-gray-400',
+  awaiting_approval: 'bg-purple-500',
+  pending_handover: 'bg-orange-500',
+  confirmed: 'bg-cyan-500',
+};
+
+export default function RestaurantDashboard() {
+  const navigate = useNavigate();
+  const { formatCurrency } = useSettingsContext();
+  const { data, isLoading } = useRestaurantData();
+
+  if (isLoading || !data) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  const salesChartData = [
+    { name: 'Kitchen', sales: data.kitchenSales, items: data.kitchenItems, fill: 'hsl(var(--primary))' },
+    { name: 'Bar', sales: data.barSales, items: data.barItems, fill: 'hsl(var(--accent))' },
+  ];
+
+  return (
+    <Layout>
+      <div className="space-y-4 md:space-y-6 p-3 md:p-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <UtensilsCrossed className="h-7 w-7 text-primary" />
+              Restaurant Dashboard
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(), 'EEEE, MMM d, yyyy')} • Live overview
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/hotel/pos')} className="gap-2">
+              <ShoppingCart className="h-4 w-4" /> New Order
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/hotel/kitchen')} className="gap-2">
+              <ChefHat className="h-4 w-4" /> Kitchen
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/hotel/bar')} className="gap-2">
+              <Wine className="h-4 w-4" /> Bar
+            </Button>
+          </div>
+        </div>
+
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Today's Sales</p>
+                  <p className="text-xl md:text-2xl font-bold">{formatCurrency(data.totalSales)}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-emerald-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Active Orders</p>
+                  <p className="text-xl md:text-2xl font-bold">{data.activeOrders.length}</p>
+                </div>
+                <Receipt className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Tables in Use</p>
+                  <p className="text-xl md:text-2xl font-bold">{data.tablesInUse.length}</p>
+                </div>
+                <CircleDot className="h-8 w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Open Shifts</p>
+                  <p className="text-xl md:text-2xl font-bold">{data.activeShifts.length}</p>
+                </div>
+                <Users className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sales split + Top items */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" /> Kitchen vs Bar Sales (Today)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="rounded-lg border p-3 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ChefHat className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-medium">Kitchen</span>
+                  </div>
+                  <p className="text-lg font-bold">{formatCurrency(data.kitchenSales)}</p>
+                  <p className="text-xs text-muted-foreground">{data.kitchenItems} items</p>
+                </div>
+                <div className="rounded-lg border p-3 bg-accent/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Wine className="h-4 w-4 text-accent-foreground" />
+                    <span className="text-xs font-medium">Bar</span>
+                  </div>
+                  <p className="text-lg font-bold">{formatCurrency(data.barSales)}</p>
+                  <p className="text-xs text-muted-foreground">{data.barItems} items</p>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={salesChartData}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(v: any) => formatCurrency(Number(v))} />
+                  <Bar dataKey="sales" radius={[6, 6, 0, 0]}>
+                    {salesChartData.map((d, i) => (
+                      <Cell key={i} fill={d.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Top Selling Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.topItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">No sales yet today</p>
+              ) : (
+                <ul className="space-y-2">
+                  {data.topItems.map((it, i) => (
+                    <li key={it.name} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="w-6 h-6 rounded-full p-0 flex items-center justify-center">
+                          {i + 1}
+                        </Badge>
+                        <div>
+                          <p className="text-sm font-medium">{it.name}</p>
+                          <p className="text-xs text-muted-foreground">{it.qty} sold</p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold">{formatCurrency(it.total)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Live orders + Tables */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Live Orders ({data.activeOrders.length})
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/hotel/pos')} className="gap-1">
+              View all <ArrowRight className="h-3 w-3" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {data.activeOrders.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No active orders right now</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {data.activeOrders.slice(0, 9).map(o => (
+                  <div key={o.id} className="rounded-lg border p-3 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[o.status] || 'bg-gray-400'}`} />
+                        <span className="text-sm font-bold">#{o.order_number}</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs capitalize">{o.status.replace('_', ' ')}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                      <span>{o.table_number ? `Table ${o.table_number}` : 'Takeaway'}</span>
+                      <span>{format(new Date(o.created_at), 'p')}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-2 truncate">
+                      {(o.items || []).slice(0, 2).map(i => `${i.quantity}× ${i.name}`).join(', ')}
+                      {(o.items?.length || 0) > 2 && ` +${o.items.length - 2}`}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">{o.waiter ? `${o.waiter.first_name}` : '—'}</span>
+                      <span className="text-sm font-bold">{formatCurrency(o.total_amount)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Staff/shift performance + Low stock */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" /> Staff Performance (Today)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.topWaiters.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No staff activity yet</p>
+              ) : (
+                <ul className="space-y-2">
+                  {data.topWaiters.map((w, i) => (
+                    <li key={w.name} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="w-6 h-6 rounded-full p-0 flex items-center justify-center">
+                          {i + 1}
+                        </Badge>
+                        <div>
+                          <p className="text-sm font-medium">{w.name}</p>
+                          <p className="text-xs text-muted-foreground">{w.orders} orders</p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold">{formatCurrency(w.total)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {data.activeShifts.length > 0 && (
+                <>
+                  <div className="border-t my-3" />
+                  <p className="text-xs font-medium mb-2 text-muted-foreground">Open Shifts</p>
+                  <div className="space-y-1">
+                    {data.activeShifts.map((s: any) => (
+                      <div key={s.id} className="flex items-center justify-between text-xs">
+                        <span>
+                          {s.staff?.first_name} {s.staff?.last_name}
+                          <span className="text-muted-foreground ml-1 capitalize">({s.staff?.role})</span>
+                        </span>
+                        <Badge variant="outline" className="text-xs capitalize">{s.shift_label}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-500" /> Low Stock Alerts ({data.lowStock.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.lowStock.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">All items well stocked ✓</p>
+              ) : (
+                <ul className="space-y-2">
+                  {data.lowStock.slice(0, 8).map((m: any) => (
+                    <li key={m.id} className="flex items-center justify-between p-2 rounded-md border border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
+                      <div>
+                        <p className="text-sm font-medium">{m.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{m.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-orange-600">{m.stock_quantity}</p>
+                        <p className="text-xs text-muted-foreground">min {m.min_stock_threshold}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </Layout>
+  );
+}
