@@ -206,7 +206,7 @@ export function hasRouteAccessWithData(
 export function filterNavigationByRole<T extends { href: string }>(
   items: T[],
   userRole: UserRole | null,
-  mode: 'pos' | 'hotel',
+  mode: 'pos' | 'hotel' | 'restaurant',
   permissions?: RolePermissionData[] | null
 ): T[] {
   if (!userRole) return [];
@@ -220,7 +220,7 @@ export function filterNavigationByRole<T extends { href: string }>(
   if (perms) {
     const rolePermission = perms.find(p => p.role === userRole);
     if (rolePermission) {
-      const allowedRoutes = mode === 'hotel' ? rolePermission.hotel_routes : rolePermission.pos_routes;
+      const allowedRoutes = mode === 'pos' ? rolePermission.pos_routes : rolePermission.hotel_routes;
       return items.filter(item => allowedRoutes.includes(item.href));
     }
     // Role not found - return empty (deny all)
@@ -228,7 +228,7 @@ export function filterNavigationByRole<T extends { href: string }>(
   }
   
   // Fallback to static permissions
-  const staticPermissions = mode === 'hotel' ? defaultHotelRoutePermissions : defaultPosRoutePermissions;
+  const staticPermissions = mode === 'pos' ? defaultPosRoutePermissions : defaultHotelRoutePermissions;
   
   return items.filter(item => {
     const permission = staticPermissions.find(p => p.path === item.href);
