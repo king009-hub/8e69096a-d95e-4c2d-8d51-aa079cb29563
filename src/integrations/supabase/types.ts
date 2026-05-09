@@ -139,6 +139,47 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_bar_crates: {
+        Row: {
+          capacity: number
+          created_at: string | null
+          empty_crates_count: number | null
+          full_crates_count: number | null
+          id: string
+          ingredient_id: string | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string | null
+          empty_crates_count?: number | null
+          full_crates_count?: number | null
+          id?: string
+          ingredient_id?: string | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          capacity?: number
+          created_at?: string | null
+          empty_crates_count?: number | null
+          full_crates_count?: number | null
+          id?: string
+          ingredient_id?: string | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_bar_crates_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_bookings: {
         Row: {
           adults: number
@@ -227,6 +268,132 @@ export type Database = {
           },
           {
             foreignKeyName: "hotel_bookings_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_damages: {
+        Row: {
+          charged_to_guest_id: string | null
+          charged_to_staff_id: string | null
+          damage_cost: number
+          description: string | null
+          id: string
+          item_name: string
+          location: string | null
+          reported_at: string | null
+          status: string | null
+        }
+        Insert: {
+          charged_to_guest_id?: string | null
+          charged_to_staff_id?: string | null
+          damage_cost?: number
+          description?: string | null
+          id?: string
+          item_name: string
+          location?: string | null
+          reported_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          charged_to_guest_id?: string | null
+          charged_to_staff_id?: string | null
+          damage_cost?: number
+          description?: string | null
+          id?: string
+          item_name?: string
+          location?: string | null
+          reported_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_damages_charged_to_guest_id_fkey"
+            columns: ["charged_to_guest_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_damages_charged_to_staff_id_fkey"
+            columns: ["charged_to_staff_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_expense_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      hotel_expenses: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string | null
+          description: string
+          expense_date: string
+          id: string
+          payment_method: Database["public"]["Enums"]["hotel_payment_method"]
+          reference_number: string | null
+          shift_id: string | null
+          staff_id: string | null
+        }
+        Insert: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string | null
+          description: string
+          expense_date?: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["hotel_payment_method"]
+          reference_number?: string | null
+          shift_id?: string | null
+          staff_id?: string | null
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string | null
+          description?: string
+          expense_date?: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["hotel_payment_method"]
+          reference_number?: string | null
+          shift_id?: string | null
+          staff_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_expenses_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "hotel_staff"
@@ -403,6 +570,7 @@ export type Database = {
           logo_url: string | null
           name: string
           phone: string | null
+          tax_inclusive: boolean | null
           tax_rate: number | null
           updated_at: string | null
         }
@@ -415,6 +583,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          tax_inclusive?: boolean | null
           tax_rate?: number | null
           updated_at?: string | null
         }
@@ -427,8 +596,110 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          tax_inclusive?: boolean | null
           tax_rate?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      hotel_ingredient_movements: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_id: string
+          movement_type: string
+          notes: string | null
+          quantity: number
+          reason: string
+          reference_id: string | null
+          total_cost: number | null
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_id: string
+          movement_type: string
+          notes?: string | null
+          quantity: number
+          reason: string
+          reference_id?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string
+          movement_type?: string
+          notes?: string | null
+          quantity?: number
+          reason?: string
+          reference_id?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_ingredient_movements_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_ingredients: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          empty_units_count: number | null
+          id: string
+          is_liquid: boolean | null
+          min_stock_threshold: number
+          name: string
+          open_unit_volume: number | null
+          purchase_price: number
+          stock_quantity: number
+          track_empties: boolean | null
+          unit: string
+          updated_at: string | null
+          volume_per_unit: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          empty_units_count?: number | null
+          id?: string
+          is_liquid?: boolean | null
+          min_stock_threshold?: number
+          name: string
+          open_unit_volume?: number | null
+          purchase_price?: number
+          stock_quantity?: number
+          track_empties?: boolean | null
+          unit?: string
+          updated_at?: string | null
+          volume_per_unit?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          empty_units_count?: number | null
+          id?: string
+          is_liquid?: boolean | null
+          min_stock_threshold?: number
+          name?: string
+          open_unit_volume?: number | null
+          purchase_price?: number
+          stock_quantity?: number
+          track_empties?: boolean | null
+          unit?: string
+          updated_at?: string | null
+          volume_per_unit?: number | null
         }
         Relationships: []
       }
@@ -443,6 +714,7 @@ export type Database = {
           shift_id: string | null
           total_price: number
           unit_price: number
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
@@ -454,6 +726,7 @@ export type Database = {
           shift_id?: string | null
           total_price: number
           unit_price: number
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
@@ -465,6 +738,7 @@ export type Database = {
           shift_id?: string | null
           total_price?: number
           unit_price?: number
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -491,6 +765,8 @@ export type Database = {
           guest_id: string | null
           id: string
           invoice_number: string
+          is_split_payment: boolean | null
+          late_checkout_fee: number | null
           notes: string | null
           payment_method:
             | Database["public"]["Enums"]["hotel_payment_method"]
@@ -510,6 +786,8 @@ export type Database = {
           guest_id?: string | null
           id?: string
           invoice_number: string
+          is_split_payment?: boolean | null
+          late_checkout_fee?: number | null
           notes?: string | null
           payment_method?:
             | Database["public"]["Enums"]["hotel_payment_method"]
@@ -529,6 +807,8 @@ export type Database = {
           guest_id?: string | null
           id?: string
           invoice_number?: string
+          is_split_payment?: boolean | null
+          late_checkout_fee?: number | null
           notes?: string | null
           payment_method?:
             | Database["public"]["Enums"]["hotel_payment_method"]
@@ -574,46 +854,58 @@ export type Database = {
       }
       hotel_order_items: {
         Row: {
+          cancel_reason: string | null
           created_at: string | null
           id: string
           item_type: string | null
           name: string
           notes: string | null
           order_id: string
+          purchase_price: number | null
           quantity: number
           service_item_id: string | null
           shift_id: string | null
+          station: string
           status: string
           total_price: number
           unit_price: number
+          updated_at: string | null
         }
         Insert: {
+          cancel_reason?: string | null
           created_at?: string | null
           id?: string
           item_type?: string | null
           name: string
           notes?: string | null
           order_id: string
+          purchase_price?: number | null
           quantity?: number
           service_item_id?: string | null
           shift_id?: string | null
+          station?: string
           status?: string
           total_price?: number
           unit_price?: number
+          updated_at?: string | null
         }
         Update: {
+          cancel_reason?: string | null
           created_at?: string | null
           id?: string
           item_type?: string | null
           name?: string
           notes?: string | null
           order_id?: string
+          purchase_price?: number | null
           quantity?: number
           service_item_id?: string | null
           shift_id?: string | null
+          station?: string
           status?: string
           total_price?: number
           unit_price?: number
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -716,6 +1008,7 @@ export type Database = {
       }
       hotel_orders: {
         Row: {
+          bar_status: string
           booking_id: string | null
           cancel_reason: string | null
           cancelled_at: string | null
@@ -725,10 +1018,18 @@ export type Database = {
           id: string
           invoice_id: string | null
           is_billed: boolean
+          kitchen_status: string
           notes: string | null
           order_number: string
+          payment_method: string | null
+          payment_received_at: string | null
           payment_status: string | null
+          posted_to_invoice_id: string | null
+          preparing_started_at: string | null
+          ready_at: string | null
           room_id: string | null
+          settled_at: string | null
+          settled_by: string | null
           shift_id: string | null
           staff_id: string | null
           status: string
@@ -743,6 +1044,7 @@ export type Database = {
           waiter_id: string | null
         }
         Insert: {
+          bar_status?: string
           booking_id?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
@@ -752,10 +1054,18 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           is_billed?: boolean
+          kitchen_status?: string
           notes?: string | null
           order_number?: string
+          payment_method?: string | null
+          payment_received_at?: string | null
           payment_status?: string | null
+          posted_to_invoice_id?: string | null
+          preparing_started_at?: string | null
+          ready_at?: string | null
           room_id?: string | null
+          settled_at?: string | null
+          settled_by?: string | null
           shift_id?: string | null
           staff_id?: string | null
           status?: string
@@ -770,6 +1080,7 @@ export type Database = {
           waiter_id?: string | null
         }
         Update: {
+          bar_status?: string
           booking_id?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
@@ -779,10 +1090,18 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           is_billed?: boolean
+          kitchen_status?: string
           notes?: string | null
           order_number?: string
+          payment_method?: string | null
+          payment_received_at?: string | null
           payment_status?: string | null
+          posted_to_invoice_id?: string | null
+          preparing_started_at?: string | null
+          ready_at?: string | null
           room_id?: string | null
+          settled_at?: string | null
+          settled_by?: string | null
           shift_id?: string | null
           staff_id?: string | null
           status?: string
@@ -819,10 +1138,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "hotel_orders_posted_to_invoice_id_fkey"
+            columns: ["posted_to_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_invoices"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "hotel_orders_room_id_fkey"
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "hotel_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_orders_settled_by_fkey"
+            columns: ["settled_by"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
             referencedColumns: ["id"]
           },
           {
@@ -849,6 +1182,54 @@ export type Database = {
           {
             foreignKeyName: "hotel_orders_waiter_id_fkey"
             columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          invoice_id: string
+          payment_method: Database["public"]["Enums"]["hotel_payment_method"]
+          shift_id: string | null
+          staff_id: string | null
+          transaction_reference: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          invoice_id: string
+          payment_method: Database["public"]["Enums"]["hotel_payment_method"]
+          shift_id?: string | null
+          staff_id?: string | null
+          transaction_reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          invoice_id?: string
+          payment_method?: Database["public"]["Enums"]["hotel_payment_method"]
+          shift_id?: string | null
+          staff_id?: string | null
+          transaction_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_payments_staff_id_fkey"
+            columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "hotel_staff"
             referencedColumns: ["id"]
@@ -969,6 +1350,71 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_service_item_recipes: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_id: string | null
+          is_extra: boolean | null
+          product_id: string | null
+          quantity_required: number
+          service_item_id: string
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string | null
+          is_extra?: boolean | null
+          product_id?: string | null
+          quantity_required: number
+          service_item_id: string
+          unit?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string | null
+          is_extra?: boolean | null
+          product_id?: string | null
+          quantity_required?: number
+          service_item_id?: string
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_service_item_recipes_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_service_item_recipes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_service_item_recipes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_calculated_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_service_item_recipes_service_item_id_fkey"
+            columns: ["service_item_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_service_menu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_service_menu: {
         Row: {
           category: string
@@ -978,8 +1424,9 @@ export type Database = {
           is_available: boolean | null
           min_stock_threshold: number | null
           name: string
-          price: number
           product_id: string | null
+          purchase_price: number | null
+          selling_price: number
           sort_order: number | null
           stock_quantity: number | null
           track_stock: boolean | null
@@ -993,8 +1440,9 @@ export type Database = {
           is_available?: boolean | null
           min_stock_threshold?: number | null
           name: string
-          price?: number
           product_id?: string | null
+          purchase_price?: number | null
+          selling_price?: number
           sort_order?: number | null
           stock_quantity?: number | null
           track_stock?: boolean | null
@@ -1008,8 +1456,9 @@ export type Database = {
           is_available?: boolean | null
           min_stock_threshold?: number | null
           name?: string
-          price?: number
           product_id?: string | null
+          purchase_price?: number | null
+          selling_price?: number
           sort_order?: number | null
           stock_quantity?: number | null
           track_stock?: boolean | null
@@ -1137,6 +1586,8 @@ export type Database = {
           last_name: string
           phone: string | null
           pin: string | null
+          pin_failed_attempts: number | null
+          pin_locked_until: string | null
           role: Database["public"]["Enums"]["staff_role"]
           salary: number | null
           shift: string | null
@@ -1154,6 +1605,8 @@ export type Database = {
           last_name: string
           phone?: string | null
           pin?: string | null
+          pin_failed_attempts?: number | null
+          pin_locked_until?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           salary?: number | null
           shift?: string | null
@@ -1171,6 +1624,8 @@ export type Database = {
           last_name?: string
           phone?: string | null
           pin?: string | null
+          pin_failed_attempts?: number | null
+          pin_locked_until?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           salary?: number | null
           shift?: string | null
@@ -1213,6 +1668,109 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "hotel_staff_attendance_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_staff_loans: {
+        Row: {
+          balance_amount: number
+          created_at: string | null
+          id: string
+          issued_date: string
+          monthly_deduction: number
+          reason: string | null
+          staff_id: string
+          status: string
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          balance_amount?: number
+          created_at?: string | null
+          id?: string
+          issued_date?: string
+          monthly_deduction?: number
+          reason?: string | null
+          staff_id: string
+          status?: string
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Update: {
+          balance_amount?: number
+          created_at?: string | null
+          id?: string
+          issued_date?: string
+          monthly_deduction?: number
+          reason?: string | null
+          staff_id?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_staff_loans_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_staff_payments: {
+        Row: {
+          base_salary: number
+          bonus_amount: number | null
+          created_at: string | null
+          id: string
+          loan_deduction: number | null
+          net_amount: number
+          notes: string | null
+          other_deductions: number | null
+          payment_date: string
+          payment_method: Database["public"]["Enums"]["hotel_payment_method"]
+          payment_month: string
+          staff_id: string
+          status: string
+        }
+        Insert: {
+          base_salary?: number
+          bonus_amount?: number | null
+          created_at?: string | null
+          id?: string
+          loan_deduction?: number | null
+          net_amount?: number
+          notes?: string | null
+          other_deductions?: number | null
+          payment_date?: string
+          payment_method?: Database["public"]["Enums"]["hotel_payment_method"]
+          payment_month: string
+          staff_id: string
+          status?: string
+        }
+        Update: {
+          base_salary?: number
+          bonus_amount?: number | null
+          created_at?: string | null
+          id?: string
+          loan_deduction?: number | null
+          net_amount?: number
+          notes?: string | null
+          other_deductions?: number | null
+          payment_date?: string
+          payment_method?: Database["public"]["Enums"]["hotel_payment_method"]
+          payment_month?: string
+          staff_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_staff_payments_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "hotel_staff"
@@ -1351,6 +1909,8 @@ export type Database = {
           reference_id: string | null
           service_item_id: string | null
           shift_id: string | null
+          total_cost: number | null
+          unit_cost: number | null
         }
         Insert: {
           created_at?: string | null
@@ -1363,6 +1923,8 @@ export type Database = {
           reference_id?: string | null
           service_item_id?: string | null
           shift_id?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
         }
         Update: {
           created_at?: string | null
@@ -1375,6 +1937,8 @@ export type Database = {
           reference_id?: string | null
           service_item_id?: string | null
           shift_id?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
         }
         Relationships: [
           {
@@ -1389,6 +1953,71 @@ export type Database = {
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "hotel_staff_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_wastage_log: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_id: string | null
+          notes: string | null
+          product_id: string | null
+          quantity: number
+          reason: string
+          reported_by: string | null
+          service_item_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string | null
+          notes?: string | null
+          product_id?: string | null
+          quantity: number
+          reason: string
+          reported_by?: string | null
+          service_item_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string | null
+          notes?: string | null
+          product_id?: string | null
+          quantity?: number
+          reason?: string
+          reported_by?: string | null
+          service_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_wastage_log_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_wastage_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_wastage_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_calculated_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_wastage_log_service_item_id_fkey"
+            columns: ["service_item_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_service_menu"
             referencedColumns: ["id"]
           },
         ]
@@ -2151,6 +2780,57 @@ export type Database = {
         Args: { product_uuid: string }
         Returns: number
       }
+      clear_current_staff_id: { Args: never; Returns: boolean }
+      close_hotel_staff_shift: {
+        Args: {
+          p_closing_cash: number
+          p_closing_notes?: string
+          p_force_close?: boolean
+          p_shift_id: string
+        }
+        Returns: {
+          available_rooms: number | null
+          bar_sales: Json | null
+          billed_sales: number | null
+          closed_at: string | null
+          closing_cash: number | null
+          closing_notes: string | null
+          closing_report: string | null
+          completed_orders: number | null
+          created_at: string
+          difference: number | null
+          ended_at: string | null
+          expected_cash: number | null
+          id: string
+          kitchen_sales: Json | null
+          occupied_rooms: number | null
+          opened_at: string
+          opening_cash: number | null
+          opening_notes: string | null
+          pending_check_ins: number | null
+          pending_orders: Json | null
+          revenue_billed: number | null
+          revenue_pending: number | null
+          shift_check_ins: number | null
+          shift_check_outs: number | null
+          shift_duration: string | null
+          shift_label: string
+          staff_id: string
+          staff_role: Database["public"]["Enums"]["staff_role"]
+          started_at: string | null
+          status: string
+          summary: Json | null
+          total_items: number | null
+          total_orders: number | null
+          total_sales: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "hotel_staff_shifts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_custom_role: {
         Args: {
           hotel_routes_arr?: string[]
@@ -2162,6 +2842,8 @@ export type Database = {
         }
         Returns: string
       }
+      current_staff_id: { Args: never; Returns: string }
+      current_staff_role: { Args: never; Returns: string }
       delete_custom_role: { Args: { role_name: string }; Returns: boolean }
       generate_booking_reference: { Args: never; Returns: string }
       generate_hotel_invoice_number: { Args: never; Returns: string }
@@ -2179,10 +2861,163 @@ export type Database = {
       }
       get_user_count: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
+      is_manager_or_owner: { Args: never; Returns: boolean }
       log_security_event: {
         Args: { details?: Json; event_type: string; user_id_param?: string }
         Returns: undefined
       }
+      open_hotel_staff_shift:
+        | {
+            Args: {
+              p_opening_cash?: number
+              p_opening_notes?: string
+              p_shift_label?: string
+            }
+            Returns: {
+              available_rooms: number | null
+              bar_sales: Json | null
+              billed_sales: number | null
+              closed_at: string | null
+              closing_cash: number | null
+              closing_notes: string | null
+              closing_report: string | null
+              completed_orders: number | null
+              created_at: string
+              difference: number | null
+              ended_at: string | null
+              expected_cash: number | null
+              id: string
+              kitchen_sales: Json | null
+              occupied_rooms: number | null
+              opened_at: string
+              opening_cash: number | null
+              opening_notes: string | null
+              pending_check_ins: number | null
+              pending_orders: Json | null
+              revenue_billed: number | null
+              revenue_pending: number | null
+              shift_check_ins: number | null
+              shift_check_outs: number | null
+              shift_duration: string | null
+              shift_label: string
+              staff_id: string
+              staff_role: Database["public"]["Enums"]["staff_role"]
+              started_at: string | null
+              status: string
+              summary: Json | null
+              total_items: number | null
+              total_orders: number | null
+              total_sales: number | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "hotel_staff_shifts"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_opening_cash?: number
+              p_opening_notes?: string
+              p_shift_label?: string
+              p_staff_id: string
+              p_staff_role: Database["public"]["Enums"]["staff_role"]
+            }
+            Returns: {
+              available_rooms: number | null
+              bar_sales: Json | null
+              billed_sales: number | null
+              closed_at: string | null
+              closing_cash: number | null
+              closing_notes: string | null
+              closing_report: string | null
+              completed_orders: number | null
+              created_at: string
+              difference: number | null
+              ended_at: string | null
+              expected_cash: number | null
+              id: string
+              kitchen_sales: Json | null
+              occupied_rooms: number | null
+              opened_at: string
+              opening_cash: number | null
+              opening_notes: string | null
+              pending_check_ins: number | null
+              pending_orders: Json | null
+              revenue_billed: number | null
+              revenue_pending: number | null
+              shift_check_ins: number | null
+              shift_check_outs: number | null
+              shift_duration: string | null
+              shift_label: string
+              staff_id: string
+              staff_role: Database["public"]["Enums"]["staff_role"]
+              started_at: string | null
+              status: string
+              summary: Json | null
+              total_items: number | null
+              total_orders: number | null
+              total_sales: number | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "hotel_staff_shifts"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_opening_cash?: number
+              p_opening_notes?: string
+              p_shift_label?: string
+              p_staff_id: string
+              p_staff_role: string
+            }
+            Returns: {
+              available_rooms: number | null
+              bar_sales: Json | null
+              billed_sales: number | null
+              closed_at: string | null
+              closing_cash: number | null
+              closing_notes: string | null
+              closing_report: string | null
+              completed_orders: number | null
+              created_at: string
+              difference: number | null
+              ended_at: string | null
+              expected_cash: number | null
+              id: string
+              kitchen_sales: Json | null
+              occupied_rooms: number | null
+              opened_at: string
+              opening_cash: number | null
+              opening_notes: string | null
+              pending_check_ins: number | null
+              pending_orders: Json | null
+              revenue_billed: number | null
+              revenue_pending: number | null
+              shift_check_ins: number | null
+              shift_check_outs: number | null
+              shift_duration: string | null
+              shift_label: string
+              staff_id: string
+              staff_role: Database["public"]["Enums"]["staff_role"]
+              started_at: string | null
+              status: string
+              summary: Json | null
+              total_items: number | null
+              total_orders: number | null
+              total_sales: number | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "hotel_staff_shifts"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       reset_admin_password: { Args: never; Returns: string }
       safe_update_user_role: {
         Args: {
@@ -2194,6 +3029,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      set_current_staff_id: { Args: { staff_id: string }; Returns: boolean }
+      shift_belongs_to_current_staff: {
+        Args: { target_shift_id: string }
+        Returns: boolean
+      }
       verify_staff_pin: { Args: { staff_pin: string }; Returns: Json }
     }
     Enums: {
@@ -2203,7 +3043,14 @@ export type Database = {
         | "checked_in"
         | "checked_out"
         | "cancelled"
-      hotel_payment_method: "cash" | "card" | "upi" | "bank_transfer"
+      hotel_payment_method:
+        | "cash"
+        | "card"
+        | "upi"
+        | "bank_transfer"
+        | "momo"
+        | "split"
+        | "room_charge"
       housekeeping_status: "pending" | "in_progress" | "completed" | "verified"
       room_status:
         | "available"
@@ -2211,6 +3058,8 @@ export type Database = {
         | "reserved"
         | "maintenance"
         | "cleaning"
+        | "dirty"
+        | "inspected"
       room_type: "single" | "double" | "suite" | "deluxe" | "presidential"
       staff_role:
         | "manager"
@@ -2221,6 +3070,7 @@ export type Database = {
         | "waiter"
         | "barman"
         | "chef"
+        | "accountant"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2355,7 +3205,15 @@ export const Constants = {
         "checked_out",
         "cancelled",
       ],
-      hotel_payment_method: ["cash", "card", "upi", "bank_transfer"],
+      hotel_payment_method: [
+        "cash",
+        "card",
+        "upi",
+        "bank_transfer",
+        "momo",
+        "split",
+        "room_charge",
+      ],
       housekeeping_status: ["pending", "in_progress", "completed", "verified"],
       room_status: [
         "available",
@@ -2363,6 +3221,8 @@ export const Constants = {
         "reserved",
         "maintenance",
         "cleaning",
+        "dirty",
+        "inspected",
       ],
       room_type: ["single", "double", "suite", "deluxe", "presidential"],
       staff_role: [
@@ -2374,6 +3234,7 @@ export const Constants = {
         "waiter",
         "barman",
         "chef",
+        "accountant",
       ],
     },
   },
