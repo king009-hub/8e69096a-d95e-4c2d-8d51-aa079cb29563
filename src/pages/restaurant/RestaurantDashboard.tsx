@@ -725,6 +725,106 @@ export default function RestaurantDashboard() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Split payments */}
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Banknote className="h-3.5 w-3.5" /> Payments
+                  </p>
+                  <Badge variant={isFullyPaid ? 'default' : remaining < orderTotal ? 'secondary' : 'outline'}>
+                    {isFullyPaid ? 'Paid' : remaining < orderTotal ? 'Partial' : 'Unpaid'}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded bg-background p-2">
+                    <p className="text-muted-foreground">Total</p>
+                    <p className="font-bold">{formatCurrency(orderTotal)}</p>
+                  </div>
+                  <div className="rounded bg-background p-2">
+                    <p className="text-muted-foreground">Paid</p>
+                    <p className="font-bold text-emerald-600">{formatCurrency(paidTotal)}</p>
+                  </div>
+                  <div className="rounded bg-background p-2">
+                    <p className="text-muted-foreground">Remaining</p>
+                    <p className={`font-bold ${remaining > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                      {formatCurrency(remaining)}
+                    </p>
+                  </div>
+                </div>
+
+                {paymentsLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : payments.length > 0 ? (
+                  <div className="space-y-1 max-h-32 overflow-auto">
+                    {payments.map(p => {
+                      const method = p.type.replace('order_payment_', '').replace('_', ' ');
+                      return (
+                        <div key={p.id} className="flex items-center justify-between text-xs bg-background rounded px-2 py-1.5">
+                          <div className="flex items-center gap-2">
+                            <Banknote className="h-3 w-3 text-emerald-600" />
+                            <span className="capitalize">{method}</span>
+                            <span className="text-muted-foreground">
+                              {format(new Date(p.created_at), 'p')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold">{formatCurrency(p.amount)}</span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => handleRemovePayment(p.id)}
+                              title="Remove payment"
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2">No payments recorded yet</p>
+                )}
+
+                {!isFullyPaid && (
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                      placeholder="Amount"
+                      className="flex-1"
+                    />
+                    <Select value={payMethod} onValueChange={setPayMethod}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_METHODS.map(m => (
+                          <SelectItem key={m.value} value={m.value}>
+                            <span className="flex items-center gap-2">
+                              <m.icon className="h-3 w-3" /> {m.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={handleAddPayment} disabled={paying || !activeShift}>
+                      {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Pay'}
+                    </Button>
+                  </div>
+                )}
+                {!activeShift && !isFullyPaid && (
+                  <p className="text-xs text-orange-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Open a shift to record payments
+                  </p>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter>
