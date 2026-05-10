@@ -3,15 +3,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import {
   ChefHat, Wine, ShoppingCart, UtensilsCrossed, TrendingUp, Users,
-  AlertTriangle, Clock, Loader2, ArrowRight, Receipt, CircleDot
+  AlertTriangle, Clock, Loader2, ArrowRight, Receipt, CircleDot,
+  Pause, Play, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useState } from 'react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
+import { toast } from 'sonner';
 
 interface OrderRow {
   id: string;
@@ -24,7 +33,12 @@ interface OrderRow {
   items: { name: string; quantity: number; total_price: number; station: string; item_type: string | null }[];
 }
 
-function useRestaurantData() {
+const ORDER_STATUSES = [
+  'pending', 'confirmed', 'preparing', 'ready', 'served',
+  'awaiting_approval', 'pending_handover', 'completed', 'cancelled'
+] as const;
+
+function useRestaurantData(refetchInterval: number | false) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const startIso = today.toISOString();
@@ -122,7 +136,7 @@ function useRestaurantData() {
         activeShifts: shiftsRes.data || [],
       };
     },
-    refetchInterval: 15000,
+    refetchInterval,
   });
 }
 
@@ -139,7 +153,34 @@ const STATUS_COLORS: Record<string, string> = {
 export default function RestaurantDashboard() {
   const navigate = useNavigate();
   const { formatCurrency } = useSettingsContext();
-  const { data, isLoading } = useRestaurantData();
+  const queryClient = useQueryClient();
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const [newStatus, setNewStatus] = useState<string>('');
+  const [updating, setUpdating] = useState(false);
+  const { data, isLoading, isFetching, refetch } = useRestaurantData(autoRefresh ? 15000 : false);
+
+  const openOrder = (o: OrderRow) => {
+    setSelectedOrder(o);
+    setNewStatus(o.status);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!selectedOrder || newStatus === selectedOrder.status) return;
+    setUpdating(true);
+    const { error } = await supabase
+      .from('hotel_orders')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', selectedOrder.id);
+    setUpdating(false);
+    if (error) {
+      toast.error(`Failed to update: ${error.message}`);
+      return;
+    }
+    toast.success(`Order #${selectedOrder.order_number} → ${newStatus.replace('_', ' ')}`);
+    setSelectedOrder(null);
+    queryClient.invalidateQueries({ queryKey: ['restaurant-dashboard'] });
+  };
 
   if (isLoading || !data) {
     return (
@@ -171,6 +212,23 @@ export default function RestaurantDashboard() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="Refresh now"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant={autoRefresh ? 'outline' : 'secondary'}
+              size="icon"
+              onClick={() => setAutoRefresh(v => !v)}
+              title={autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh'}
+            >
+              {autoRefresh ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </Button>
             <Button onClick={() => navigate('/hotel/pos')} className="gap-2">
               <ShoppingCart className="h-4 w-4" /> New Order
             </Button>
@@ -307,6 +365,9 @@ export default function RestaurantDashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <Clock className="h-4 w-4" /> Live Orders ({data.activeOrders.length})
+              <span className="text-xs font-normal text-muted-foreground ml-2">
+                {autoRefresh ? 'Auto-refresh: 15s' : 'Paused'}
+              </span>
             </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate('/hotel/pos')} className="gap-1">
               View all <ArrowRight className="h-3 w-3" />
@@ -318,7 +379,11 @@ export default function RestaurantDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {data.activeOrders.slice(0, 9).map(o => (
-                  <div key={o.id} className="rounded-lg border p-3 hover:shadow-md transition-shadow">
+                  <button
+                    key={o.id}
+                    onClick={() => openOrder(o)}
+                    className="text-left rounded-lg border p-3 hover:shadow-md hover:border-primary transition-all"
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[o.status] || 'bg-gray-400'}`} />
@@ -338,7 +403,7 @@ export default function RestaurantDashboard() {
                       <span className="text-xs">{o.waiter ? `${o.waiter.first_name}` : '—'}</span>
                       <span className="text-sm font-bold">{formatCurrency(o.total_amount)}</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -423,6 +488,94 @@ export default function RestaurantDashboard() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={!!selectedOrder} onOpenChange={(o) => !o && setSelectedOrder(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Order #{selectedOrder?.order_number}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Table</p>
+                  <p className="font-medium">{selectedOrder.table_number || 'Takeaway'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Waiter</p>
+                  <p className="font-medium">
+                    {selectedOrder.waiter
+                      ? `${selectedOrder.waiter.first_name} ${selectedOrder.waiter.last_name}`
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Created</p>
+                  <p className="font-medium">{format(new Date(selectedOrder.created_at), 'PPp')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Current Status</p>
+                  <Badge variant="outline" className="capitalize">
+                    {selectedOrder.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Items</p>
+                <div className="border rounded-md divide-y max-h-60 overflow-auto">
+                  {(selectedOrder.items || []).map((it, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        {it.station === 'bar' ? (
+                          <Wine className="h-3 w-3 text-accent-foreground" />
+                        ) : (
+                          <ChefHat className="h-3 w-3 text-primary" />
+                        )}
+                        <span>{it.quantity}× {it.name}</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(it.total_price)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between mt-2 pt-2 border-t text-sm font-bold">
+                  <span>Total</span>
+                  <span>{formatCurrency(selectedOrder.total_amount)}</span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Update Status</p>
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORDER_STATUSES.map(s => (
+                      <SelectItem key={s} value={s} className="capitalize">
+                        {s.replace('_', ' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedOrder(null)}>Close</Button>
+            <Button
+              onClick={handleUpdateStatus}
+              disabled={updating || !selectedOrder || newStatus === selectedOrder.status}
+            >
+              {updating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
