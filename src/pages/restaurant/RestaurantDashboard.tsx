@@ -2,18 +2,21 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+import { useStaffSession } from '@/contexts/StaffSessionContext';
 import {
   ChefHat, Wine, ShoppingCart, UtensilsCrossed, TrendingUp, Users,
   AlertTriangle, Clock, Loader2, ArrowRight, Receipt, CircleDot,
-  Pause, Play, RefreshCw
+  Pause, Play, RefreshCw, AlertCircle, Banknote, Wallet, CreditCard, Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog';
@@ -36,6 +39,13 @@ interface OrderRow {
 const ORDER_STATUSES = [
   'pending', 'confirmed', 'preparing', 'ready', 'served',
   'awaiting_approval', 'pending_handover', 'completed', 'cancelled'
+] as const;
+
+const PAYMENT_METHODS = [
+  { value: 'cash', label: 'Cash', icon: Banknote },
+  { value: 'card', label: 'Card', icon: CreditCard },
+  { value: 'mobile_money', label: 'Mobile Money', icon: Wallet },
+  { value: 'bank_transfer', label: 'Bank Transfer', icon: Wallet },
 ] as const;
 
 function useRestaurantData(refetchInterval: number | false) {
@@ -140,6 +150,30 @@ function useRestaurantData(refetchInterval: number | false) {
   });
 }
 
+interface OrderPayment {
+  id: string;
+  amount: number;
+  type: string;
+  created_at: string;
+}
+
+function useOrderPayments(orderId: string | null) {
+  return useQuery({
+    queryKey: ['order-payments', orderId],
+    enabled: !!orderId,
+    queryFn: async (): Promise<OrderPayment[]> => {
+      const { data, error } = await supabase
+        .from('hotel_shift_transactions')
+        .select('id, amount, type, created_at')
+        .eq('reference_id', orderId!)
+        .like('type', 'order_payment%')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data || []) as OrderPayment[];
+    },
+  });
+}
+
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-500',
   preparing: 'bg-blue-500',
@@ -153,17 +187,41 @@ const STATUS_COLORS: Record<string, string> = {
 export default function RestaurantDashboard() {
   const navigate = useNavigate();
   const { formatCurrency } = useSettingsContext();
+  const { activeStaff, activeShift } = useStaffSession();
   const queryClient = useQueryClient();
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   const [updating, setUpdating] = useState(false);
-  const { data, isLoading, isFetching, refetch } = useRestaurantData(autoRefresh ? 15000 : false);
+  const [payAmount, setPayAmount] = useState<string>('');
+  const [payMethod, setPayMethod] = useState<string>('cash');
+  const [paying, setPaying] = useState(false);
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useRestaurantData(autoRefresh ? 15000 : false);
+  const {
+    data: payments = [],
+    isLoading: paymentsLoading,
+    refetch: refetchPayments,
+  } = useOrderPayments(selectedOrder?.id ?? null);
+
+  const paidTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const orderTotal = Number(selectedOrder?.total_amount || 0);
+  const remaining = Math.max(orderTotal - paidTotal, 0);
+  const isFullyPaid = selectedOrder ? remaining <= 0.01 : false;
 
   const openOrder = (o: OrderRow) => {
     setSelectedOrder(o);
     setNewStatus(o.status);
+    setPayAmount('');
+    setPayMethod('cash');
   };
+
+  useEffect(() => {
+    if (selectedOrder && payAmount === '') {
+      setPayAmount(remaining > 0 ? String(remaining) : '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrder?.id, paymentsLoading]);
 
   const handleUpdateStatus = async () => {
     if (!selectedOrder || newStatus === selectedOrder.status) return;
@@ -182,11 +240,116 @@ export default function RestaurantDashboard() {
     queryClient.invalidateQueries({ queryKey: ['restaurant-dashboard'] });
   };
 
-  if (isLoading || !data) {
+  const handleAddPayment = async () => {
+    if (!selectedOrder) return;
+    const amount = Number(payAmount);
+    if (!amount || amount <= 0) {
+      toast.error('Enter a payment amount greater than zero');
+      return;
+    }
+    if (amount > remaining + 0.01) {
+      toast.error(`Amount exceeds remaining balance of ${formatCurrency(remaining)}`);
+      return;
+    }
+    if (!activeStaff || !activeShift) {
+      toast.error('Open a shift before recording payments');
+      return;
+    }
+    setPaying(true);
+    const newPaid = paidTotal + amount;
+    const newRemaining = orderTotal - newPaid;
+    const newStatusValue = newRemaining <= 0.01 ? 'paid' : 'partial';
+
+    const { error: txError } = await supabase
+      .from('hotel_shift_transactions')
+      .insert({
+        type: `order_payment_${payMethod}`,
+        amount,
+        reference_id: selectedOrder.id,
+        staff_id: activeStaff.staff_id,
+        shift_id: activeShift.id,
+      });
+    if (txError) {
+      setPaying(false);
+      toast.error(`Payment failed: ${txError.message}`);
+      return;
+    }
+
+    await supabase
+      .from('hotel_orders')
+      .update({
+        payment_status: newStatusValue,
+        payment_method: newRemaining <= 0.01 ? payMethod : null,
+        payment_received_at: newRemaining <= 0.01 ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selectedOrder.id);
+
+    setPaying(false);
+    setPayAmount('');
+    toast.success(
+      newRemaining <= 0.01
+        ? `Order #${selectedOrder.order_number} fully paid`
+        : `Recorded ${formatCurrency(amount)} • ${formatCurrency(newRemaining)} remaining`
+    );
+    refetchPayments();
+    queryClient.invalidateQueries({ queryKey: ['restaurant-dashboard'] });
+  };
+
+  const handleRemovePayment = async (paymentId: string) => {
+    const { error: delError } = await supabase
+      .from('hotel_shift_transactions')
+      .delete()
+      .eq('id', paymentId);
+    if (delError) {
+      toast.error(`Failed to remove: ${delError.message}`);
+      return;
+    }
+    toast.success('Payment removed');
+    refetchPayments();
+    queryClient.invalidateQueries({ queryKey: ['restaurant-dashboard'] });
+  };
+
+  // ===== Loading state =====
+  if (isLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-4 p-3 md:p-6">
+          <Skeleton className="h-12 w-72" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Skeleton className="h-72 w-full" />
+            <Skeleton className="h-72 w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // ===== Error state =====
+  if (isError || !data) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center h-96 gap-3 p-6 text-center">
+          <AlertCircle className="h-10 w-10 text-destructive" />
+          <div>
+            <p className="text-base font-semibold">Failed to load dashboard</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {(error as Error)?.message || 'Something went wrong fetching data.'}
+            </p>
+          </div>
+          <Button onClick={() => refetch()} className="gap-2">
+            <RefreshCw className="h-4 w-4" /> Try again
+          </Button>
         </div>
       </Layout>
     );
@@ -561,6 +724,106 @@ export default function RestaurantDashboard() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Split payments */}
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Banknote className="h-3.5 w-3.5" /> Payments
+                  </p>
+                  <Badge variant={isFullyPaid ? 'default' : remaining < orderTotal ? 'secondary' : 'outline'}>
+                    {isFullyPaid ? 'Paid' : remaining < orderTotal ? 'Partial' : 'Unpaid'}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded bg-background p-2">
+                    <p className="text-muted-foreground">Total</p>
+                    <p className="font-bold">{formatCurrency(orderTotal)}</p>
+                  </div>
+                  <div className="rounded bg-background p-2">
+                    <p className="text-muted-foreground">Paid</p>
+                    <p className="font-bold text-emerald-600">{formatCurrency(paidTotal)}</p>
+                  </div>
+                  <div className="rounded bg-background p-2">
+                    <p className="text-muted-foreground">Remaining</p>
+                    <p className={`font-bold ${remaining > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                      {formatCurrency(remaining)}
+                    </p>
+                  </div>
+                </div>
+
+                {paymentsLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : payments.length > 0 ? (
+                  <div className="space-y-1 max-h-32 overflow-auto">
+                    {payments.map(p => {
+                      const method = p.type.replace('order_payment_', '').replace('_', ' ');
+                      return (
+                        <div key={p.id} className="flex items-center justify-between text-xs bg-background rounded px-2 py-1.5">
+                          <div className="flex items-center gap-2">
+                            <Banknote className="h-3 w-3 text-emerald-600" />
+                            <span className="capitalize">{method}</span>
+                            <span className="text-muted-foreground">
+                              {format(new Date(p.created_at), 'p')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold">{formatCurrency(p.amount)}</span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => handleRemovePayment(p.id)}
+                              title="Remove payment"
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2">No payments recorded yet</p>
+                )}
+
+                {!isFullyPaid && (
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                      placeholder="Amount"
+                      className="flex-1"
+                    />
+                    <Select value={payMethod} onValueChange={setPayMethod}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_METHODS.map(m => (
+                          <SelectItem key={m.value} value={m.value}>
+                            <span className="flex items-center gap-2">
+                              <m.icon className="h-3 w-3" /> {m.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={handleAddPayment} disabled={paying || !activeShift}>
+                      {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Pay'}
+                    </Button>
+                  </div>
+                )}
+                {!activeShift && !isFullyPaid && (
+                  <p className="text-xs text-orange-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Open a shift to record payments
+                  </p>
+                )}
               </div>
             </div>
           )}
