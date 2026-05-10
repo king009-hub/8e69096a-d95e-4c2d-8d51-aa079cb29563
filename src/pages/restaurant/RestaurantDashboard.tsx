@@ -2,18 +2,21 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+import { useStaffSession } from '@/contexts/StaffSessionContext';
 import {
   ChefHat, Wine, ShoppingCart, UtensilsCrossed, TrendingUp, Users,
   AlertTriangle, Clock, Loader2, ArrowRight, Receipt, CircleDot,
-  Pause, Play, RefreshCw
+  Pause, Play, RefreshCw, AlertCircle, Banknote, Wallet, CreditCard, Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog';
@@ -36,6 +39,13 @@ interface OrderRow {
 const ORDER_STATUSES = [
   'pending', 'confirmed', 'preparing', 'ready', 'served',
   'awaiting_approval', 'pending_handover', 'completed', 'cancelled'
+] as const;
+
+const PAYMENT_METHODS = [
+  { value: 'cash', label: 'Cash', icon: Banknote },
+  { value: 'card', label: 'Card', icon: CreditCard },
+  { value: 'mobile_money', label: 'Mobile Money', icon: Wallet },
+  { value: 'bank_transfer', label: 'Bank Transfer', icon: Wallet },
 ] as const;
 
 function useRestaurantData(refetchInterval: number | false) {
@@ -140,6 +150,30 @@ function useRestaurantData(refetchInterval: number | false) {
   });
 }
 
+interface OrderPayment {
+  id: string;
+  amount: number;
+  type: string;
+  created_at: string;
+}
+
+function useOrderPayments(orderId: string | null) {
+  return useQuery({
+    queryKey: ['order-payments', orderId],
+    enabled: !!orderId,
+    queryFn: async (): Promise<OrderPayment[]> => {
+      const { data, error } = await supabase
+        .from('hotel_shift_transactions')
+        .select('id, amount, type, created_at')
+        .eq('reference_id', orderId!)
+        .like('type', 'order_payment%')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data || []) as OrderPayment[];
+    },
+  });
+}
+
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-500',
   preparing: 'bg-blue-500',
@@ -153,17 +187,41 @@ const STATUS_COLORS: Record<string, string> = {
 export default function RestaurantDashboard() {
   const navigate = useNavigate();
   const { formatCurrency } = useSettingsContext();
+  const { activeStaff, activeShift } = useStaffSession();
   const queryClient = useQueryClient();
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   const [updating, setUpdating] = useState(false);
-  const { data, isLoading, isFetching, refetch } = useRestaurantData(autoRefresh ? 15000 : false);
+  const [payAmount, setPayAmount] = useState<string>('');
+  const [payMethod, setPayMethod] = useState<string>('cash');
+  const [paying, setPaying] = useState(false);
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useRestaurantData(autoRefresh ? 15000 : false);
+  const {
+    data: payments = [],
+    isLoading: paymentsLoading,
+    refetch: refetchPayments,
+  } = useOrderPayments(selectedOrder?.id ?? null);
+
+  const paidTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const orderTotal = Number(selectedOrder?.total_amount || 0);
+  const remaining = Math.max(orderTotal - paidTotal, 0);
+  const isFullyPaid = selectedOrder ? remaining <= 0.01 : false;
 
   const openOrder = (o: OrderRow) => {
     setSelectedOrder(o);
     setNewStatus(o.status);
+    setPayAmount('');
+    setPayMethod('cash');
   };
+
+  useEffect(() => {
+    if (selectedOrder && payAmount === '') {
+      setPayAmount(remaining > 0 ? String(remaining) : '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrder?.id, paymentsLoading]);
 
   const handleUpdateStatus = async () => {
     if (!selectedOrder || newStatus === selectedOrder.status) return;
@@ -182,11 +240,116 @@ export default function RestaurantDashboard() {
     queryClient.invalidateQueries({ queryKey: ['restaurant-dashboard'] });
   };
 
-  if (isLoading || !data) {
+  const handleAddPayment = async () => {
+    if (!selectedOrder) return;
+    const amount = Number(payAmount);
+    if (!amount || amount <= 0) {
+      toast.error('Enter a payment amount greater than zero');
+      return;
+    }
+    if (amount > remaining + 0.01) {
+      toast.error(`Amount exceeds remaining balance of ${formatCurrency(remaining)}`);
+      return;
+    }
+    if (!activeStaff || !activeShift) {
+      toast.error('Open a shift before recording payments');
+      return;
+    }
+    setPaying(true);
+    const newPaid = paidTotal + amount;
+    const newRemaining = orderTotal - newPaid;
+    const newStatusValue = newRemaining <= 0.01 ? 'paid' : 'partial';
+
+    const { error: txError } = await supabase
+      .from('hotel_shift_transactions')
+      .insert({
+        type: `order_payment_${payMethod}`,
+        amount,
+        reference_id: selectedOrder.id,
+        staff_id: activeStaff.staff_id,
+        shift_id: activeShift.id,
+      });
+    if (txError) {
+      setPaying(false);
+      toast.error(`Payment failed: ${txError.message}`);
+      return;
+    }
+
+    await supabase
+      .from('hotel_orders')
+      .update({
+        payment_status: newStatusValue,
+        payment_method: newRemaining <= 0.01 ? payMethod : null,
+        payment_received_at: newRemaining <= 0.01 ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selectedOrder.id);
+
+    setPaying(false);
+    setPayAmount('');
+    toast.success(
+      newRemaining <= 0.01
+        ? `Order #${selectedOrder.order_number} fully paid`
+        : `Recorded ${formatCurrency(amount)} • ${formatCurrency(newRemaining)} remaining`
+    );
+    refetchPayments();
+    queryClient.invalidateQueries({ queryKey: ['restaurant-dashboard'] });
+  };
+
+  const handleRemovePayment = async (paymentId: string) => {
+    const { error: delError } = await supabase
+      .from('hotel_shift_transactions')
+      .delete()
+      .eq('id', paymentId);
+    if (delError) {
+      toast.error(`Failed to remove: ${delError.message}`);
+      return;
+    }
+    toast.success('Payment removed');
+    refetchPayments();
+    queryClient.invalidateQueries({ queryKey: ['restaurant-dashboard'] });
+  };
+
+  // ===== Loading state =====
+  if (isLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-4 p-3 md:p-6">
+          <Skeleton className="h-12 w-72" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Skeleton className="h-72 w-full" />
+            <Skeleton className="h-72 w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // ===== Error state =====
+  if (isError || !data) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center h-96 gap-3 p-6 text-center">
+          <AlertCircle className="h-10 w-10 text-destructive" />
+          <div>
+            <p className="text-base font-semibold">Failed to load dashboard</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {(error as Error)?.message || 'Something went wrong fetching data.'}
+            </p>
+          </div>
+          <Button onClick={() => refetch()} className="gap-2">
+            <RefreshCw className="h-4 w-4" /> Try again
+          </Button>
         </div>
       </Layout>
     );
