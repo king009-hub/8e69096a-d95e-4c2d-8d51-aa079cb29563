@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, DollarSign, PlayCircle, Loader2 } from 'lucide-react';
+import { Clock, DollarSign, PlayCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export function ShiftOpenDialog() {
   const { activeStaff, openShift } = useStaffSession();
@@ -15,6 +16,7 @@ export function ShiftOpenDialog() {
   const [openingCash, setOpeningCash] = useState('0');
   const [openingNotes, setOpeningNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const handleOpenShift = async () => {
     setIsLoading(true);
@@ -29,6 +31,39 @@ export function ShiftOpenDialog() {
       toast.success('Shift opened successfully!');
     } else {
       toast.error(result.error || 'Failed to open shift');
+    }
+  };
+
+  const runIntegrityCheck = async () => {
+    setChecking(true);
+    try {
+      // 1. Find any rows still marked closed but missing closed_at
+      const { data: orphaned, error: scanErr } = await supabase
+        .from('hotel_staff_shifts')
+        .select('id, staff_id, shift_label, opened_at')
+        .eq('status', 'closed')
+        .is('closed_at', null);
+      if (scanErr) throw scanErr;
+
+      if (!orphaned || orphaned.length === 0) {
+        toast.success('Integrity OK — no orphaned closed shifts found');
+        return;
+      }
+
+      // 2. Backfill them
+      const nowIso = new Date().toISOString();
+      const ids = orphaned.map(o => o.id);
+      const { error: fixErr } = await supabase
+        .from('hotel_staff_shifts')
+        .update({ closed_at: nowIso, ended_at: nowIso })
+        .in('id', ids);
+      if (fixErr) throw fixErr;
+
+      toast.success(`Fixed ${orphaned.length} orphaned shift${orphaned.length > 1 ? 's' : ''} — unique constraint cleared`);
+    } catch (err: any) {
+      toast.error(`Integrity check failed: ${err.message}`);
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -97,6 +132,22 @@ export function ShiftOpenDialog() {
                 Start Shift
               </>
             )}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={runIntegrityCheck}
+            disabled={checking}
+          >
+            {checking ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <ShieldCheck className="h-4 w-4 mr-2" />
+            )}
+            Check shift integrity
           </Button>
         </CardContent>
       </Card>
