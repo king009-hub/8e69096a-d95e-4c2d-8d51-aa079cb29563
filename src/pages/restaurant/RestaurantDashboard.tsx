@@ -216,6 +216,10 @@ export default function RestaurantDashboard() {
     setPayMethod('cash');
   };
 
+  // Idempotency refs: prevent duplicate split payments from double-clicks or retries
+  const paymentLockRef = useRef(false);
+  const recentPaymentsRef = useRef<Map<string, number>>(new Map());
+
   useEffect(() => {
     if (selectedOrder && payAmount === '') {
       setPayAmount(remaining > 0 ? String(remaining) : '');
