@@ -113,6 +113,15 @@ export function StaffSessionProvider({ children }: { children: React.ReactNode }
   const openShift = useCallback(async (data: { shift_label: string; opening_cash: number; opening_notes?: string }) => {
     if (!activeStaff) return { success: false, error: 'No staff logged in' };
     try {
+      // Pre-cleanup: close any orphaned open rows for this staff to avoid
+      // duplicate key violations on the partial unique index (closed_at IS NULL).
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from('hotel_staff_shifts')
+        .update({ status: 'closed', closed_at: nowIso, ended_at: nowIso })
+        .eq('staff_id', activeStaff.staff_id)
+        .is('closed_at', null);
+
       const { data: shift, error } = await supabase
         .from('hotel_staff_shifts')
         .insert({
@@ -122,7 +131,7 @@ export function StaffSessionProvider({ children }: { children: React.ReactNode }
           opening_cash: data.opening_cash,
           opening_notes: data.opening_notes || null,
           status: 'open',
-          opened_at: new Date().toISOString(),
+          opened_at: nowIso,
         })
         .select()
         .single();
