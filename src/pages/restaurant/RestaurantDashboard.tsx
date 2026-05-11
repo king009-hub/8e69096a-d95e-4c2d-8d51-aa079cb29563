@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog';
@@ -216,6 +216,10 @@ export default function RestaurantDashboard() {
     setPayMethod('cash');
   };
 
+  // Idempotency refs: prevent duplicate split payments from double-clicks or retries
+  const paymentLockRef = useRef(false);
+  const recentPaymentsRef = useRef<Map<string, number>>(new Map());
+
   useEffect(() => {
     if (selectedOrder && payAmount === '') {
       setPayAmount(remaining > 0 ? String(remaining) : '');
@@ -242,6 +246,10 @@ export default function RestaurantDashboard() {
 
   const handleAddPayment = async () => {
     if (!selectedOrder) return;
+    // Idempotency guard: prevent rapid duplicate submissions (double clicks / retries)
+    if (paymentLockRef.current) {
+      return;
+    }
     const amount = Number(payAmount);
     if (!amount || amount <= 0) {
       toast.error('Enter a payment amount greater than zero');
@@ -255,6 +263,15 @@ export default function RestaurantDashboard() {
       toast.error('Open a shift before recording payments');
       return;
     }
+    // Signature-based dedupe: same order+method+amount+paid-state within 10s = duplicate
+    const signature = `${selectedOrder.id}|${payMethod}|${amount.toFixed(2)}|${paidTotal.toFixed(2)}`;
+    const now = Date.now();
+    const lastAt = recentPaymentsRef.current.get(signature);
+    if (lastAt && now - lastAt < 10_000) {
+      toast.warning('Duplicate payment ignored');
+      return;
+    }
+    paymentLockRef.current = true;
     setPaying(true);
     const newPaid = paidTotal + amount;
     const newRemaining = orderTotal - newPaid;
@@ -270,9 +287,15 @@ export default function RestaurantDashboard() {
         shift_id: activeShift.id,
       });
     if (txError) {
+      paymentLockRef.current = false;
       setPaying(false);
       toast.error(`Payment failed: ${txError.message}`);
       return;
+    }
+    recentPaymentsRef.current.set(signature, now);
+    // Trim old entries
+    for (const [k, t] of recentPaymentsRef.current) {
+      if (now - t > 30_000) recentPaymentsRef.current.delete(k);
     }
 
     await supabase
@@ -285,6 +308,7 @@ export default function RestaurantDashboard() {
       })
       .eq('id', selectedOrder.id);
 
+    paymentLockRef.current = false;
     setPaying(false);
     setPayAmount('');
     toast.success(
