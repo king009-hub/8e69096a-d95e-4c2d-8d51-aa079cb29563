@@ -39,7 +39,7 @@ function useShiftReports() {
   });
 }
 
-export default function HotelReports() {
+export default function HotelReports({ mode = 'hotel' }: { mode?: 'hotel' | 'restaurant' }) {
   const [dateRange, setDateRange] = useState("30");
   const { formatCurrency } = useSettingsContext();
   const { data: dashboard } = useHotelDashboard();
@@ -116,7 +116,7 @@ export default function HotelReports() {
   const generatePDF = (reportType: string) => {
     const doc = new jsPDF();
     doc.setFontSize(20);
-    doc.text(`Hotel ${reportType} Report`, 20, 20);
+    doc.text(`${mode === 'restaurant' ? 'Restaurant' : 'Hotel'} ${reportType} Report`, 20, 20);
     doc.setFontSize(10);
     doc.text(`Generated: ${format(new Date(), 'PPP')}`, 20, 30);
     doc.text(`Period: Last ${dateRange} days`, 20, 36);
@@ -147,7 +147,7 @@ export default function HotelReports() {
         body: occupancyByDay.map(d => [d.date, `${d.occupancy}%`]),
       });
     }
-    doc.save(`hotel-${reportType.toLowerCase()}-report.pdf`);
+    doc.save(`${mode === 'restaurant' ? 'restaurant' : 'hotel'}-${reportType.toLowerCase()}-report.pdf`);
   };
 
   const filteredShifts = shifts.filter(s =>
@@ -160,7 +160,7 @@ export default function HotelReports() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Reports & Analytics</h1>
-            <p className="text-muted-foreground">View hotel performance metrics</p>
+            <p className="text-muted-foreground">{mode === 'restaurant' ? 'View restaurant performance metrics' : 'View hotel performance metrics'}</p>
           </div>
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-48">

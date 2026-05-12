@@ -134,7 +134,7 @@ const defaultCategoryForm: CategoryFormData = {
   sort_order: '0',
 };
 
-export default function HotelServiceMenu() {
+export default function HotelServiceMenu({ mode = 'hotel' }: { mode?: 'hotel' | 'restaurant' }) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
@@ -307,9 +307,9 @@ export default function HotelServiceMenu() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Service Menu</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{mode === 'restaurant' ? 'Menu Management' : 'Service Menu'}</h1>
             <p className="text-muted-foreground">
-              Manage services, categories, and stock
+              {mode === 'restaurant' ? 'Manage menu items, categories, and stock' : 'Manage services, categories, and stock'}
             </p>
           </div>
           <div className="flex gap-2">

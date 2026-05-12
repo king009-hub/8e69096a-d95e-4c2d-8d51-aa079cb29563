@@ -416,13 +416,13 @@ export default function RestaurantDashboard() {
             >
               {autoRefresh ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
-            <Button onClick={() => navigate('/hotel/pos')} className="gap-2">
+            <Button onClick={() => navigate('/restaurant/pos')} className="gap-2">
               <ShoppingCart className="h-4 w-4" /> New Order
             </Button>
-            <Button variant="outline" onClick={() => navigate('/hotel/kitchen')} className="gap-2">
+            <Button variant="outline" onClick={() => navigate('/restaurant/kitchen')} className="gap-2">
               <ChefHat className="h-4 w-4" /> Kitchen
             </Button>
-            <Button variant="outline" onClick={() => navigate('/hotel/bar')} className="gap-2">
+            <Button variant="outline" onClick={() => navigate('/restaurant/bar')} className="gap-2">
               <Wine className="h-4 w-4" /> Bar
             </Button>
           </div>
@@ -556,7 +556,7 @@ export default function RestaurantDashboard() {
                 {autoRefresh ? 'Auto-refresh: 15s' : 'Paused'}
               </span>
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/hotel/pos')} className="gap-1">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/restaurant/pos')} className="gap-1">
               View all <ArrowRight className="h-3 w-3" />
             </Button>
           </CardHeader>
