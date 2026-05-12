@@ -32,7 +32,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   cancelled: { label: 'Cancelled', color: 'bg-destructive', icon: XCircle },
 };
 
-export default function KitchenDisplay() {
+export default function KitchenDisplay({ mode = 'hotel' }: { mode?: 'hotel' | 'restaurant' }) {
   const { data: orders = [], isLoading, refetch } = useActiveOrders();
   useHotelOrdersRealtime();
   const updateOrderStatus = useUpdateOrderStatus();
