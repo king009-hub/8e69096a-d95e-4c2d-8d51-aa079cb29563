@@ -66,11 +66,11 @@ const hotelNavigation = [
 
 const restaurantNavigation = [
   { name: "Dashboard", href: "/restaurant", icon: LayoutDashboard },
-  { name: "Point of Sale", href: "/hotel/pos", icon: ShoppingCart },
-  { name: "Kitchen Display", href: "/hotel/kitchen", icon: ChefHat },
-  { name: "Bar Display", href: "/hotel/bar", icon: Wine },
-  { name: "Menu", href: "/hotel/service-menu", icon: UtensilsCrossed },
-  { name: "Reports", href: "/hotel/reports", icon: BarChart3 },
+  { name: "Point of Sale", href: "/restaurant/pos", icon: ShoppingCart },
+  { name: "Kitchen Display", href: "/restaurant/kitchen", icon: ChefHat },
+  { name: "Bar Display", href: "/restaurant/bar", icon: Wine },
+  { name: "Menu", href: "/restaurant/menu", icon: UtensilsCrossed },
+  { name: "Reports", href: "/restaurant/reports", icon: BarChart3 },
 ];
 
 const ownerNavigation = [
