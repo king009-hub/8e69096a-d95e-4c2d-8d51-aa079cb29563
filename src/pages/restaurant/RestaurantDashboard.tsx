@@ -556,7 +556,7 @@ export default function RestaurantDashboard() {
                 {autoRefresh ? 'Auto-refresh: 15s' : 'Paused'}
               </span>
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/hotel/pos')} className="gap-1">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/restaurant/pos')} className="gap-1">
               View all <ArrowRight className="h-3 w-3" />
             </Button>
           </CardHeader>
