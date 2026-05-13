@@ -173,6 +173,7 @@ export function Sidebar() {
             <li key={item.name}>
               <NavLink
                 to={item.href}
+                end={item.href === '/' || item.href === '/hotel' || item.href === '/restaurant'}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center px-3 md:px-4 py-2 md:py-3 text-sm font-medium rounded-lg transition-colors",
