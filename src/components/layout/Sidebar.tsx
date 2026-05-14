@@ -106,9 +106,11 @@ export function Sidebar() {
   // Filter navigation based on user role and database permissions
   let navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, mode, rolePermissions);
   
-  // In hotel/restaurant mode, further filter by active staff's allowed routes
-  if ((mode === 'hotel' || mode === 'restaurant') && activeStaff && activeStaff.allowed_hotel_routes.length > 0) {
-    navigation = navigation.filter(item => 
+  // In hotel mode, further filter by active staff's allowed routes.
+  // Restaurant mode is exempt because `allowed_hotel_routes` only contains /hotel/* paths,
+  // which would otherwise hide every restaurant nav item.
+  if (mode === 'hotel' && activeStaff && activeStaff.allowed_hotel_routes.length > 0) {
+    navigation = navigation.filter(item =>
       activeStaff.allowed_hotel_routes.includes(item.href)
     );
   }
