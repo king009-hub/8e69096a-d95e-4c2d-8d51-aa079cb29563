@@ -566,10 +566,9 @@ export default function HotelPOS({ mode = 'hotel' }: { mode?: 'hotel' | 'restaur
                       key={service.id}
                       onClick={() => !isOutOfStock && addToCart(service)}
                       className={`
-                        relative rounded-xl border border-border bg-card p-2.5 cursor-pointer
-                        transition-all duration-150 hover:shadow-md hover:-translate-y-0.5
+                        pos-product-card relative p-2.5 cursor-pointer
                         ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}
-                        ${cartItem ? 'ring-2 ring-primary border-primary shadow-md shadow-primary/10' : 'hover:border-primary/40'}
+                        ${cartItem ? 'ring-2 ring-primary border-primary shadow-md shadow-primary/20' : ''}
                       `}
                     >
                       {/* Quantity badge */}
