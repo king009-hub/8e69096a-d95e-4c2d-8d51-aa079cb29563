@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
+import "@/styles/odoo-pos.css";
 import { useAvailableServices } from "@/hooks/useServiceMenu";
 import { useActiveServiceCategories } from "@/hooks/useServiceCategories";
 import { useHotelBookings, useHotelInfo } from "@/hooks/useHotel";
@@ -443,15 +444,15 @@ export default function HotelPOS({ mode = 'hotel' }: { mode?: 'hotel' | 'restaur
   // ─── RENDER ─────────────────────────────────────────────
   return (
     <Layout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+      <div className="odoo-pos h-[calc(100vh-4rem)] flex flex-col overflow-hidden bg-background">
         {/* ─── Compact Top Bar ─── */}
-        <div className="bg-card border-b border-border px-3 py-2 flex items-center gap-2 flex-wrap">
+        <div className="pos-topbar px-3 py-2 flex items-center gap-2 flex-wrap">
           {/* Left: Title + Context */}
           <div className="flex items-center gap-2 min-w-0">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Receipt className="h-4 w-4 text-primary" />
+            <div className="pos-topbar-icon-wrap h-8 w-8 rounded-lg flex items-center justify-center shrink-0">
+              <Receipt className="h-4 w-4" />
             </div>
-            <h1 className="text-sm font-bold text-foreground hidden sm:block">{mode === 'restaurant' ? 'Restaurant POS' : 'Hotel POS'}</h1>
+            <h1 className="pos-topbar-title text-sm font-bold hidden sm:block">{mode === 'restaurant' ? 'Restaurant POS' : 'Hotel POS'}</h1>
           </div>
 
           {/* Center: Table + Room */}
@@ -565,10 +566,9 @@ export default function HotelPOS({ mode = 'hotel' }: { mode?: 'hotel' | 'restaur
                       key={service.id}
                       onClick={() => !isOutOfStock && addToCart(service)}
                       className={`
-                        relative rounded-xl border border-border bg-card p-2.5 cursor-pointer
-                        transition-all duration-150 hover:shadow-md hover:-translate-y-0.5
+                        pos-product-card relative p-2.5 cursor-pointer
                         ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}
-                        ${cartItem ? 'ring-2 ring-primary border-primary shadow-md shadow-primary/10' : 'hover:border-primary/40'}
+                        ${cartItem ? 'ring-2 ring-primary border-primary shadow-md shadow-primary/20' : ''}
                       `}
                     >
                       {/* Quantity badge */}
@@ -605,7 +605,7 @@ export default function HotelPOS({ mode = 'hotel' }: { mode?: 'hotel' | 'restaur
           </div>
 
           {/* ─── RIGHT: Cart & Orders ─── */}
-          <div className={`w-full md:w-[360px] lg:w-[400px] border-l border-border bg-card flex flex-col ${mobileView === 'menu' ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`pos-cart-panel w-full md:w-[360px] lg:w-[400px] border-l border-border flex flex-col ${mobileView === 'menu' ? 'hidden md:flex' : 'flex'}`}>
             <Tabs value={rightTab} onValueChange={(v) => setRightTab(v as any)} className="flex flex-col h-full">
               <TabsList className="w-full rounded-none border-b border-border h-9 bg-transparent p-0">
                 <TabsTrigger value="cart" className="flex-1 gap-1 text-xs rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary h-full">
