@@ -34,7 +34,7 @@ const restaurantRoutes = [
 
 describe("Restaurant sidebar navigation highlighting", () => {
   for (const { path, name } of restaurantRoutes) {
-    it(`highlights "${name}" link when on ${path}`, () => {
+    it(`highlights "${name}" link and sets aria-current="page" when on ${path}`, () => {
       render(
         <MemoryRouter initialEntries={[path]}>
           <Sidebar />
@@ -43,18 +43,20 @@ describe("Restaurant sidebar navigation highlighting", () => {
 
       const activeLink = screen.getByText(name).closest("a");
       expect(activeLink).toHaveClass("bg-primary");
+      expect(activeLink).toHaveAttribute("aria-current", "page");
 
       for (const other of restaurantRoutes) {
         if (other.name === name) continue;
         const otherLink = screen.queryByText(other.name)?.closest("a");
         if (otherLink) {
           expect(otherLink).not.toHaveClass("bg-primary");
+          expect(otherLink).not.toHaveAttribute("aria-current");
         }
       }
     });
   }
 
-  it("navigates from Dashboard to POS and updates highlight", () => {
+  it("navigates from Dashboard to POS and updates highlight and aria-current", () => {
     render(
       <MemoryRouter initialEntries={["/restaurant"]}>
         <Sidebar />
@@ -63,6 +65,7 @@ describe("Restaurant sidebar navigation highlighting", () => {
 
     const dashboardLink = screen.getByText("Dashboard").closest("a");
     expect(dashboardLink).toHaveClass("bg-primary");
+    expect(dashboardLink).toHaveAttribute("aria-current", "page");
 
     const posLink = screen.getByText("Point of Sale").closest("a");
     fireEvent.click(posLink);
@@ -70,10 +73,12 @@ describe("Restaurant sidebar navigation highlighting", () => {
     const updatedPosLink = screen.getByText("Point of Sale").closest("a");
     const updatedDashboardLink = screen.getByText("Dashboard").closest("a");
     expect(updatedPosLink).toHaveClass("bg-primary");
+    expect(updatedPosLink).toHaveAttribute("aria-current", "page");
     expect(updatedDashboardLink).not.toHaveClass("bg-primary");
+    expect(updatedDashboardLink).not.toHaveAttribute("aria-current");
   });
 
-  it("navigates through all restaurant routes via sidebar clicks", () => {
+  it("navigates through all restaurant routes via sidebar clicks and updates aria-current", () => {
     render(
       <MemoryRouter initialEntries={["/restaurant"]}>
         <Sidebar />
@@ -81,7 +86,9 @@ describe("Restaurant sidebar navigation highlighting", () => {
     );
 
     // Start at dashboard
-    expect(screen.getByText("Dashboard").closest("a")).toHaveClass("bg-primary");
+    const dashboardLink = screen.getByText("Dashboard").closest("a");
+    expect(dashboardLink).toHaveClass("bg-primary");
+    expect(dashboardLink).toHaveAttribute("aria-current", "page");
 
     const routeOrder = [
       { path: "/restaurant/pos", name: "Point of Sale" },
@@ -95,7 +102,9 @@ describe("Restaurant sidebar navigation highlighting", () => {
       const link = screen.getByText(name).closest("a");
       fireEvent.click(link);
       expect(link).toHaveClass("bg-primary");
+      expect(link).toHaveAttribute("aria-current", "page");
       expect(screen.getByText("Dashboard").closest("a")).not.toHaveClass("bg-primary");
+      expect(screen.getByText("Dashboard").closest("a")).not.toHaveAttribute("aria-current");
     }
   });
 });
