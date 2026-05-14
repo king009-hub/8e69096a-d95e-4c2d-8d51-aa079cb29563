@@ -605,7 +605,7 @@ export default function HotelPOS({ mode = 'hotel' }: { mode?: 'hotel' | 'restaur
           </div>
 
           {/* ─── RIGHT: Cart & Orders ─── */}
-          <div className={`w-full md:w-[360px] lg:w-[400px] border-l border-border bg-card flex flex-col ${mobileView === 'menu' ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`pos-cart-panel w-full md:w-[360px] lg:w-[400px] border-l border-border flex flex-col ${mobileView === 'menu' ? 'hidden md:flex' : 'flex'}`}>
             <Tabs value={rightTab} onValueChange={(v) => setRightTab(v as any)} className="flex flex-col h-full">
               <TabsList className="w-full rounded-none border-b border-border h-9 bg-transparent p-0">
                 <TabsTrigger value="cart" className="flex-1 gap-1 text-xs rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary h-full">
