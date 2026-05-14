@@ -34,7 +34,7 @@ const restaurantRoutes = [
 
 describe("Restaurant sidebar navigation highlighting", () => {
   for (const { path, name } of restaurantRoutes) {
-    it(`highlights "${name}" link when on ${path}`, () => {
+    it(`highlights "${name}" link and sets aria-current="page" when on ${path}`, () => {
       render(
         <MemoryRouter initialEntries={[path]}>
           <Sidebar />
@@ -43,12 +43,14 @@ describe("Restaurant sidebar navigation highlighting", () => {
 
       const activeLink = screen.getByText(name).closest("a");
       expect(activeLink).toHaveClass("bg-primary");
+      expect(activeLink).toHaveAttribute("aria-current", "page");
 
       for (const other of restaurantRoutes) {
         if (other.name === name) continue;
         const otherLink = screen.queryByText(other.name)?.closest("a");
         if (otherLink) {
           expect(otherLink).not.toHaveClass("bg-primary");
+          expect(otherLink).not.toHaveAttribute("aria-current");
         }
       }
     });
