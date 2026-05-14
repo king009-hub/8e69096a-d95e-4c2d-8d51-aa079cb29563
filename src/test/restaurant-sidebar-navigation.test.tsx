@@ -56,7 +56,7 @@ describe("Restaurant sidebar navigation highlighting", () => {
     });
   }
 
-  it("navigates from Dashboard to POS and updates highlight", () => {
+  it("navigates from Dashboard to POS and updates highlight and aria-current", () => {
     render(
       <MemoryRouter initialEntries={["/restaurant"]}>
         <Sidebar />
@@ -65,6 +65,7 @@ describe("Restaurant sidebar navigation highlighting", () => {
 
     const dashboardLink = screen.getByText("Dashboard").closest("a");
     expect(dashboardLink).toHaveClass("bg-primary");
+    expect(dashboardLink).toHaveAttribute("aria-current", "page");
 
     const posLink = screen.getByText("Point of Sale").closest("a");
     fireEvent.click(posLink);
@@ -72,7 +73,9 @@ describe("Restaurant sidebar navigation highlighting", () => {
     const updatedPosLink = screen.getByText("Point of Sale").closest("a");
     const updatedDashboardLink = screen.getByText("Dashboard").closest("a");
     expect(updatedPosLink).toHaveClass("bg-primary");
+    expect(updatedPosLink).toHaveAttribute("aria-current", "page");
     expect(updatedDashboardLink).not.toHaveClass("bg-primary");
+    expect(updatedDashboardLink).not.toHaveAttribute("aria-current");
   });
 
   it("navigates through all restaurant routes via sidebar clicks", () => {
