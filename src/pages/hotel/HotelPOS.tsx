@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
+import "@/styles/odoo-pos.css";
 import { useAvailableServices } from "@/hooks/useServiceMenu";
 import { useActiveServiceCategories } from "@/hooks/useServiceCategories";
 import { useHotelBookings, useHotelInfo } from "@/hooks/useHotel";
