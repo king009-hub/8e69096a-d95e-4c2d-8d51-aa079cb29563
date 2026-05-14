@@ -444,15 +444,15 @@ export default function HotelPOS({ mode = 'hotel' }: { mode?: 'hotel' | 'restaur
   // ─── RENDER ─────────────────────────────────────────────
   return (
     <Layout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+      <div className="odoo-pos h-[calc(100vh-4rem)] flex flex-col overflow-hidden bg-background">
         {/* ─── Compact Top Bar ─── */}
-        <div className="bg-card border-b border-border px-3 py-2 flex items-center gap-2 flex-wrap">
+        <div className="pos-topbar px-3 py-2 flex items-center gap-2 flex-wrap">
           {/* Left: Title + Context */}
           <div className="flex items-center gap-2 min-w-0">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Receipt className="h-4 w-4 text-primary" />
+            <div className="pos-topbar-icon-wrap h-8 w-8 rounded-lg flex items-center justify-center shrink-0">
+              <Receipt className="h-4 w-4" />
             </div>
-            <h1 className="text-sm font-bold text-foreground hidden sm:block">{mode === 'restaurant' ? 'Restaurant POS' : 'Hotel POS'}</h1>
+            <h1 className="pos-topbar-title text-sm font-bold hidden sm:block">{mode === 'restaurant' ? 'Restaurant POS' : 'Hotel POS'}</h1>
           </div>
 
           {/* Center: Table + Room */}
