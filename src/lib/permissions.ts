@@ -93,7 +93,6 @@ export const defaultHotelRoutePermissions: RoutePermission[] = [
   { path: '/hotel/check-in-out', allowedRoles: ['admin', 'manager', 'cashier'] },
   { path: '/hotel/guests', allowedRoles: ['admin', 'manager', 'cashier'] },
   { path: '/hotel/housekeeping', allowedRoles: ['admin', 'manager', 'cashier', 'user'] },
-  { path: '/restaurant', allowedRoles: ['admin', 'manager', 'cashier', 'user'] },
 ];
 
 /**
@@ -207,7 +206,7 @@ export function hasRouteAccessWithData(
 export function filterNavigationByRole<T extends { href: string }>(
   items: T[],
   userRole: UserRole | null,
-  mode: 'pos' | 'hotel' | 'restaurant',
+  mode: 'pos' | 'hotel',
   permissions?: RolePermissionData[] | null
 ): T[] {
   if (!userRole) return [];
