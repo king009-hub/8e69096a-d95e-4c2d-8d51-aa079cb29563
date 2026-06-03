@@ -22,7 +22,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   cancelled: { label: 'Cancelled', color: 'bg-destructive', icon: XCircle },
 };
 
-export default function BarDisplay({ mode = 'hotel' }: { mode?: 'hotel' | 'restaurant' }) {
+export default function BarDisplay() {
   const { data: orders = [], isLoading, refetch } = useActiveOrders();
   useHotelOrdersRealtime();
   const updateOrderStatus = useUpdateOrderStatus();

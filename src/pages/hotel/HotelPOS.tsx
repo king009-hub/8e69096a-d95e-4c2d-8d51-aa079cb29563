@@ -59,7 +59,7 @@ interface SplitPayment {
   amount: number;
 }
 
-export default function HotelPOS({ mode = 'hotel' }: { mode?: 'hotel' | 'restaurant' }) {
+export default function HotelPOS() {
   const { formatCurrency } = useSettingsContext();
   const { activeStaff, activeShift } = useStaffSession();
   const { data: services = [], isLoading: servicesLoading } = useAvailableServices();
@@ -452,7 +452,7 @@ export default function HotelPOS({ mode = 'hotel' }: { mode?: 'hotel' | 'restaur
             <div className="pos-topbar-icon-wrap h-8 w-8 rounded-lg flex items-center justify-center shrink-0">
               <Receipt className="h-4 w-4" />
             </div>
-            <h1 className="pos-topbar-title text-sm font-bold hidden sm:block">{mode === 'restaurant' ? 'Restaurant POS' : 'Hotel POS'}</h1>
+            <h1 className="pos-topbar-title text-sm font-bold hidden sm:block">Hotel POS</h1>
           </div>
 
           {/* Center: Table + Room */}
