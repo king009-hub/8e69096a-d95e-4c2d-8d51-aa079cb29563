@@ -2,25 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AppModeProvider } from "./contexts/AppModeContext";
 import { StaffSessionProvider } from "./contexts/StaffSessionContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { Layout } from "./components/layout/Layout";
-import Index from "./pages/Index";
-import Products from "./pages/Products";
-import PointOfSale from "./pages/PointOfSale";
-import StockManagement from "./pages/StockManagement";
-import SalesHistory from "./pages/SalesHistory";
-import Reports from "./pages/Reports";
-import Scanner from "./pages/Scanner";
-import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
-import LoanManagement from "./pages/LoanManagement";
-import OwnerDashboard from "./pages/OwnerDashboard";
-import Customers from "./pages/Customers";
 import Auth from "./pages/Auth";
 import AdminSetup from "./pages/AdminSetup";
 import NotFound from "./pages/NotFound";
@@ -41,12 +30,6 @@ import HotelServiceMenu from "./pages/hotel/HotelServiceMenu";
 import HotelPOS from "./pages/hotel/HotelPOS";
 import KitchenDisplay from "./pages/hotel/KitchenDisplay";
 import BarDisplay from "./pages/hotel/BarDisplay";
-import RestaurantDashboard from "./pages/restaurant/RestaurantDashboard";
-import RestaurantPOS from "./pages/restaurant/RestaurantPOS";
-import RestaurantKitchen from "./pages/restaurant/RestaurantKitchen";
-import RestaurantBar from "./pages/restaurant/RestaurantBar";
-import RestaurantMenu from "./pages/restaurant/RestaurantMenu";
-import RestaurantReports from "./pages/restaurant/RestaurantReports";
 
 const queryClient = new QueryClient();
 
@@ -63,21 +46,11 @@ const App = () => (
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/admin-setup" element={<AdminSetup />} />
-                
-                {/* POS Routes */}
-                <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
-                <Route path="/owner" element={<ProtectedRoute><Layout><OwnerDashboard /></Layout></ProtectedRoute>} />
-                <Route path="/products" element={<ProtectedRoute><Layout><Products /></Layout></ProtectedRoute>} />
-                <Route path="/pos" element={<ProtectedRoute><PointOfSale /></ProtectedRoute>} />
-                <Route path="/stock" element={<ProtectedRoute><StockManagement /></ProtectedRoute>} />
-                <Route path="/sales" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
-                <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
-                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                <Route path="/loans" element={<ProtectedRoute><LoanManagement /></ProtectedRoute>} />
-                <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+
+                {/* Root redirects to Hotel — system is hotel-only */}
+                <Route path="/" element={<Navigate to="/hotel" replace />} />
                 <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-                
+
                 {/* Hotel Routes */}
                 <Route path="/hotel" element={<ProtectedRoute><HotelDashboard /></ProtectedRoute>} />
                 <Route path="/hotel/rooms" element={<ProtectedRoute><HotelRooms /></ProtectedRoute>} />
@@ -95,14 +68,6 @@ const App = () => (
                 <Route path="/hotel/bar" element={<ProtectedRoute><BarDisplay /></ProtectedRoute>} />
                 <Route path="/hotel/settings" element={<ProtectedRoute><HotelSettings /></ProtectedRoute>} />
 
-                {/* Restaurant Routes */}
-                <Route path="/restaurant" element={<ProtectedRoute><RestaurantDashboard /></ProtectedRoute>} />
-                <Route path="/restaurant/pos" element={<ProtectedRoute><RestaurantPOS /></ProtectedRoute>} />
-                <Route path="/restaurant/kitchen" element={<ProtectedRoute><RestaurantKitchen /></ProtectedRoute>} />
-                <Route path="/restaurant/bar" element={<ProtectedRoute><RestaurantBar /></ProtectedRoute>} />
-                <Route path="/restaurant/menu" element={<ProtectedRoute><RestaurantMenu /></ProtectedRoute>} />
-                <Route path="/restaurant/reports" element={<ProtectedRoute><RestaurantReports /></ProtectedRoute>} />
-                
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
