@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LogOut, Package, User, LogIn, Clock, StopCircle } from "lucide-react";
 import { useRealtimePermissions } from "@/hooks/useRealtimePermissions";
-import { useAppMode } from "@/contexts/AppModeContext";
 import { useStaffSession } from "@/contexts/StaffSessionContext";
 import { StaffPinLogin } from "@/components/hotel/StaffPinLogin";
 import { ShiftOpenDialog } from "@/components/hotel/ShiftOpenDialog";
@@ -18,20 +17,19 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { signOut } = useAuth();
-  const { mode } = useAppMode();
   const { activeStaff, activeShift, isStaffLoggedIn, isShiftOpen, logoutStaff } = useStaffSession();
   const [showCloseShift, setShowCloseShift] = useState(false);
   
   // Subscribe to real-time permission updates
   useRealtimePermissions();
 
-  // In hotel/restaurant mode, require staff PIN login
-  if ((mode === 'hotel' || mode === 'restaurant') && !isStaffLoggedIn) {
+  // Hotel-only system — always require staff PIN login
+  if (!isStaffLoggedIn) {
     return <StaffPinLogin />;
   }
 
-  // In hotel/restaurant mode, require shift to be open
-  if ((mode === 'hotel' || mode === 'restaurant') && isStaffLoggedIn && !isShiftOpen) {
+  // Always require an open shift
+  if (!isShiftOpen) {
     return <ShiftOpenDialog />;
   }
 
@@ -58,8 +56,7 @@ export function Layout({ children }: LayoutProps) {
 
       <main className="flex-1 overflow-auto w-full">
         <div className="flex justify-end items-center gap-2 p-1">
-          {/* Show active staff + shift info in hotel/restaurant mode */}
-          {(mode === 'hotel' || mode === 'restaurant') && activeStaff && (
+          {activeStaff && (
             <div className="flex items-center gap-2 mr-auto ml-2 flex-wrap">
               <Badge variant="secondary" className="gap-1 text-xs">
                 <User className="h-3 w-3" />
@@ -110,9 +107,7 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       {/* Shift close dialog */}
-      {(mode === 'hotel' || mode === 'restaurant') && (
-        <ShiftCloseDialog open={showCloseShift} onOpenChange={setShowCloseShift} />
-      )}
+      <ShiftCloseDialog open={showCloseShift} onOpenChange={setShowCloseShift} />
     </div>
   );
 }
