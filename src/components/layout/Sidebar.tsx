@@ -3,14 +3,8 @@ import {
   LayoutDashboard, 
   Package, 
   ShoppingCart, 
-  TrendingUp, 
-  Truck, 
   BarChart3,
-  Bell,
-  ScanLine,
-  CreditCard,
   Settings,
-  Shield,
   Users,
   BedDouble,
   CalendarDays,
@@ -25,27 +19,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAppMode } from "@/contexts/AppModeContext";
 import { useStaffSession } from "@/contexts/StaffSessionContext";
-import { ModeSwitcher } from "@/components/common/ModeSwitcher";
 import { filterNavigationByRole, UserRole, getRoleDisplayName, setCachedPermissions } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect } from "react";
-
-const posNavigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Products", href: "/products", icon: Package },
-  { name: "Point of Sale", href: "/pos", icon: ShoppingCart },
-  { name: "Stock Management", href: "/stock", icon: Truck },
-  { name: "Sales History", href: "/sales", icon: TrendingUp },
-  { name: "Customers", href: "/customers", icon: Users },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Scanner", href: "/scanner", icon: ScanLine },
-  { name: "Notifications", href: "/notifications", icon: Bell },
-  { name: "Loan Management", href: "/loans", icon: CreditCard },
-  { name: "Settings", href: "/settings", icon: Settings },
-];
 
 const hotelNavigation = [
   { name: "Dashboard", href: "/hotel", icon: LayoutDashboard },
@@ -64,22 +42,8 @@ const hotelNavigation = [
   { name: "Settings", href: "/hotel/settings", icon: Settings },
 ];
 
-const restaurantNavigation = [
-  { name: "Dashboard", href: "/restaurant", icon: LayoutDashboard },
-  { name: "Point of Sale", href: "/restaurant/pos", icon: ShoppingCart },
-  { name: "Kitchen Display", href: "/restaurant/kitchen", icon: ChefHat },
-  { name: "Bar Display", href: "/restaurant/bar", icon: Wine },
-  { name: "Menu", href: "/restaurant/menu", icon: UtensilsCrossed },
-  { name: "Reports", href: "/restaurant/reports", icon: BarChart3 },
-];
-
-const ownerNavigation = [
-  { name: "Owner Dashboard", href: "/owner", icon: Shield },
-];
-
 export function Sidebar() {
   const { userRole } = useAuth();
-  const { mode } = useAppMode();
   const { activeStaff } = useStaffSession();
   const { data: rolePermissions } = useRolePermissions();
   
@@ -90,44 +54,25 @@ export function Sidebar() {
     }
   }, [rolePermissions]);
   
-  const baseNavigation =
-    mode === 'hotel' ? hotelNavigation :
-    mode === 'restaurant' ? restaurantNavigation :
-    posNavigation;
-  const title =
-    mode === 'hotel' ? 'Hotel Manager' :
-    mode === 'restaurant' ? 'Restaurant' :
-    'StockFlow';
-  const subtitle =
-    mode === 'hotel' ? 'Hotel Management' :
-    mode === 'restaurant' ? 'Restaurant Operations' :
-    'Inventory Management';
+  const baseNavigation = hotelNavigation;
+  const title = 'Hotel Manager';
+  const subtitle = 'Hotel Management';
   
   // Filter navigation based on user role and database permissions
-  let navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, mode, rolePermissions);
-  
-  // In hotel mode, further filter by active staff's allowed routes.
-  // Restaurant mode is exempt because `allowed_hotel_routes` only contains /hotel/* paths,
-  // which would otherwise hide every restaurant nav item.
-  if (mode === 'hotel' && activeStaff && activeStaff.allowed_hotel_routes.length > 0) {
+  let navigation = filterNavigationByRole(baseNavigation, userRole as UserRole, 'hotel', rolePermissions);
+
+  // Further filter by active staff's allowed routes when configured.
+  if (activeStaff && activeStaff.allowed_hotel_routes.length > 0) {
     navigation = navigation.filter(item =>
       activeStaff.allowed_hotel_routes.includes(item.href)
     );
   }
-  
-  const filteredOwnerNav = filterNavigationByRole(ownerNavigation, userRole as UserRole, 'pos', rolePermissions);
-  
+
   return (
     <div className="w-56 md:w-64 bg-card border-r border-border h-full shadow-lg flex flex-col">
       <div className="p-4 md:p-6">
         <div className="flex items-center gap-2">
-          {mode === 'hotel' ? (
-            <Hotel className="h-6 w-6 text-primary" />
-          ) : mode === 'restaurant' ? (
-            <UtensilsCrossed className="h-6 w-6 text-primary" />
-          ) : (
-            <Package className="h-6 w-6 text-primary" />
-          )}
+          <Hotel className="h-6 w-6 text-primary" />
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-primary">{title}</h2>
             <p className="text-xs md:text-sm text-muted-foreground">{subtitle}</p>
@@ -142,40 +87,13 @@ export function Sidebar() {
       </div>
       
       <nav className="flex-1 mt-2 md:mt-4 px-3 md:px-4 overflow-y-auto">
-        {/* Owner Dashboard - Only for admins */}
-        {filteredOwnerNav.length > 0 && mode === 'pos' && (
-          <div className="mb-4">
-            <ul className="space-y-1 md:space-y-2">
-              {filteredOwnerNav.map((item) => (
-                <li key={item.name}>
-                  <NavLink
-                    to={item.href}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center px-3 md:px-4 py-2 md:py-3 text-sm font-medium rounded-lg transition-colors border-2 border-primary/30",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-primary hover:text-primary-foreground hover:bg-primary/90"
-                      )
-                    }
-                  >
-                    <item.icon className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3" />
-                    <span className="text-xs md:text-sm font-bold">{item.name}</span>
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-            <div className="border-b border-border my-4"></div>
-          </div>
-        )}
-
         {/* Regular Navigation */}
         <ul className="space-y-1 md:space-y-2">
           {navigation.map((item) => (
             <li key={item.name}>
               <NavLink
                 to={item.href}
-                end={item.href === '/' || item.href === '/hotel' || item.href === '/restaurant'}
+                end={item.href === '/hotel'}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center px-3 md:px-4 py-2 md:py-3 text-sm font-medium rounded-lg transition-colors",
@@ -192,11 +110,6 @@ export function Sidebar() {
           ))}
         </ul>
       </nav>
-      
-      {/* Mode Switcher at bottom */}
-      <div className="p-3 md:p-4 border-t border-border">
-        <ModeSwitcher />
-      </div>
     </div>
   );
 }
