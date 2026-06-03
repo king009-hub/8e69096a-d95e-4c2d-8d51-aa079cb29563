@@ -206,7 +206,7 @@ export function hasRouteAccessWithData(
 export function filterNavigationByRole<T extends { href: string }>(
   items: T[],
   userRole: UserRole | null,
-  mode: 'pos' | 'hotel' | 'restaurant',
+  mode: 'pos' | 'hotel',
   permissions?: RolePermissionData[] | null
 ): T[] {
   if (!userRole) return [];
