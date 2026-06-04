@@ -104,6 +104,27 @@ export default function HotelPOS() {
   const [showBillDialog, setShowBillDialog] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [addingToOrder, setAddingToOrder] = useState<HotelOrder | null>(null);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled'>('all');
+
+  // Live toast when an order transitions to preparing / served / cancelled
+  const prevStatusRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    myOrders.forEach(o => {
+      next[o.id] = o.status;
+      const prev = prevStatusRef.current[o.id];
+      if (prev && prev !== o.status) {
+        if (o.status === 'preparing') {
+          toast.info(`👨‍🍳 ${o.order_number} is being prepared`);
+        } else if (o.status === 'served') {
+          toast.success(`✅ ${o.order_number} marked served`);
+        } else if (o.status === 'cancelled') {
+          toast.error(`✖ ${o.order_number} was cancelled`);
+        }
+      }
+    });
+    prevStatusRef.current = next;
+  }, [myOrders]);
 
   const [kotQueue, setKotQueue] = useState<Array<{
     orderNumber: string;
