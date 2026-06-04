@@ -39,6 +39,9 @@ export interface HotelOrder {
   cancel_reason: string | null;
   cancelled_at: string | null;
   cancelled_by: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  customer_email: string | null;
   created_at: string;
   updated_at: string;
   items?: HotelOrderItem[];

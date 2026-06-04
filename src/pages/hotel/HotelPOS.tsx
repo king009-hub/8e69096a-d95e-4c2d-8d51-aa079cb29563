@@ -113,6 +113,9 @@ export default function HotelPOS() {
       ${order.room ? `<div><span class="b">Room:</span> ${order.room.room_number}</div>` : ''}
       ${order.table_number ? `<div><span class="b">Table:</span> ${order.table_number}</div>` : ''}
       ${activeStaff ? `<div><span class="b">Waiter:</span> ${activeStaff.first_name} ${activeStaff.last_name}</div>` : ''}
+      ${order.customer_name ? `<div><span class="b">Guest:</span> ${order.customer_name}</div>` : order.booking?.guest ? `<div><span class="b">Guest:</span> ${order.booking.guest.first_name} ${order.booking.guest.last_name}</div>` : ''}
+      ${order.customer_phone ? `<div><span class="b">Phone:</span> ${order.customer_phone}</div>` : ''}
+      ${order.customer_email ? `<div><span class="b">Email:</span> ${order.customer_email}</div>` : ''}
       ${order.notes ? `<div><span class="b">Notes:</span> ${order.notes}</div>` : ''}
       <div class="line"></div>
       <div class="b">ITEMS</div>
