@@ -112,7 +112,7 @@ export default function HotelPOS() {
       <div><span class="b">Date:</span> ${created.toLocaleDateString()} ${created.toLocaleTimeString()}</div>
       ${order.room ? `<div><span class="b">Room:</span> ${order.room.room_number}</div>` : ''}
       ${order.table_number ? `<div><span class="b">Table:</span> ${order.table_number}</div>` : ''}
-      ${activeStaff?.staff_name ? `<div><span class="b">Waiter:</span> ${activeStaff.staff_name}</div>` : ''}
+      ${activeStaff ? `<div><span class="b">Waiter:</span> ${activeStaff.first_name} ${activeStaff.last_name}</div>` : ''}
       ${order.notes ? `<div><span class="b">Notes:</span> ${order.notes}</div>` : ''}
       <div class="line"></div>
       <div class="b">ITEMS</div>
