@@ -104,6 +104,27 @@ export default function HotelPOS() {
   const [showBillDialog, setShowBillDialog] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [addingToOrder, setAddingToOrder] = useState<HotelOrder | null>(null);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled'>('all');
+
+  // Live toast when an order transitions to preparing / served / cancelled
+  const prevStatusRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    myOrders.forEach(o => {
+      next[o.id] = o.status;
+      const prev = prevStatusRef.current[o.id];
+      if (prev && prev !== o.status) {
+        if (o.status === 'preparing') {
+          toast.info(`👨‍🍳 ${o.order_number} is being prepared`);
+        } else if (o.status === 'served') {
+          toast.success(`✅ ${o.order_number} marked served`);
+        } else if (o.status === 'cancelled') {
+          toast.error(`✖ ${o.order_number} was cancelled`);
+        }
+      }
+    });
+    prevStatusRef.current = next;
+  }, [myOrders]);
 
   const [kotQueue, setKotQueue] = useState<Array<{
     orderNumber: string;
@@ -786,29 +807,60 @@ export default function HotelPOS() {
                   </Button>
                 </div>
 
+                {/* Live status filter chips */}
+                <div className="px-2 py-1.5 border-b border-border flex items-center gap-1 overflow-x-auto">
+                  {(['all','pending','preparing','ready','served','cancelled'] as const).map(s => {
+                    const count = s === 'all'
+                      ? myOrders.filter(o => !o.is_billed).length
+                      : myOrders.filter(o => o.status === s && !o.is_billed).length;
+                    const active = orderStatusFilter === s;
+                    const dotColor = s === 'all' ? 'bg-primary' : (orderStatusConfig[s]?.color ?? 'bg-muted');
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setOrderStatusFilter(s)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+                          active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${dotColor} ${s === 'preparing' && count > 0 ? 'animate-pulse' : ''}`} />
+                        <span className="capitalize">{s}</span>
+                        <span className={`ml-0.5 px-1 rounded ${active ? 'bg-primary-foreground/20' : 'bg-muted'}`}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <ScrollArea className="flex-1">
                   <div className="p-2 space-y-2">
-                    {myOrders.length === 0 ? (
+                    {myOrders.filter(o => !o.is_billed && (orderStatusFilter === 'all' || o.status === orderStatusFilter)).length === 0 ? (
                       <div className="text-center py-16 text-muted-foreground">
                         <ClipboardList className="h-10 w-10 mx-auto mb-2 opacity-15" />
-                        <p className="text-xs font-medium">No orders yet</p>
+                        <p className="text-xs font-medium">
+                          {orderStatusFilter === 'all' ? 'No orders yet' : `No ${orderStatusFilter} orders`}
+                        </p>
                       </div>
                     ) : (
-                      myOrders.filter(o => !o.is_billed).map(order => {
+                      myOrders
+                        .filter(o => !o.is_billed && (orderStatusFilter === 'all' || o.status === orderStatusFilter))
+                        .map(order => {
                         const config = orderStatusConfig[order.status] || orderStatusConfig.pending;
                         const isSelected = selectedOrderIds.includes(order.id);
                         const canBill = order.status === 'served' || order.status === 'ready';
+                        const isCancelled = order.status === 'cancelled';
                         return (
                           <div
                             key={order.id}
                             className={`
                               rounded-xl border bg-card overflow-hidden transition-all
                               ${isSelected ? 'ring-2 ring-primary' : ''}
+                              ${isCancelled ? 'opacity-60' : ''}
                               ${order.status === 'ready' ? 'border-emerald-400 shadow-sm shadow-emerald-500/10' : 'border-border'}
+                              ${order.status === 'preparing' ? 'border-blue-400/60' : ''}
                             `}
                           >
                             {/* Status strip */}
-                            <div className={`h-1 ${config.color}`} />
+                            <div className={`h-1 ${config.color} ${order.status === 'preparing' ? 'animate-pulse' : ''}`} />
                             <div className="p-2.5 space-y-2">
                               {/* Header */}
                               <div className="flex items-center justify-between">
@@ -820,7 +872,12 @@ export default function HotelPOS() {
                                   )}
                                   <span className="font-bold text-xs">{order.order_number}</span>
                                 </div>
-                                <Badge variant={config.variant} className="text-[10px] h-5">{config.label}</Badge>
+                                <Badge variant={config.variant} className="text-[10px] h-5 flex items-center gap-1">
+                                  {order.status === 'preparing' && <ChefHat className="h-2.5 w-2.5" />}
+                                  {order.status === 'served' && <CheckCircle2 className="h-2.5 w-2.5" />}
+                                  {order.status === 'cancelled' && <X className="h-2.5 w-2.5" />}
+                                  {config.label}
+                                </Badge>
                               </div>
 
                               {/* Meta */}
@@ -880,6 +937,16 @@ export default function HotelPOS() {
                                     onClick={() => startAddingToOrder(order)}
                                     disabled={addingToOrder?.id === order.id}>
                                     <Plus className="h-3 w-3 mr-1" /> Add Items
+                                  </Button>
+                                )}
+                                {['pending', 'preparing', 'ready'].includes(order.status) && (
+                                  <Button variant="ghost" size="sm" className="h-7 text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => {
+                                      if (confirm(`Cancel order ${order.order_number}?`)) {
+                                        updateOrderStatus.mutate({ orderId: order.id, status: 'cancelled' });
+                                      }
+                                    }}>
+                                    <X className="h-3 w-3" />
                                   </Button>
                                 )}
                               </div>
