@@ -78,6 +78,56 @@ export default function HotelPOS() {
 
   const hotelTaxRate = hotelInfo?.tax_rate ?? 18;
 
+  const printOrderTicket = (order: HotelOrder) => {
+    const win = window.open('', '_blank', 'width=380,height=600');
+    if (!win) { toast.error('Unable to open print window'); return; }
+    const itemsHtml = (order.items || []).map(it => `
+      <div class="row"><span>${it.quantity}× ${it.name}</span><span>${formatCurrency(it.total_price)}</span></div>
+      ${it.notes ? `<div class="note">• ${it.notes}</div>` : ''}
+    `).join('');
+    const created = new Date(order.created_at);
+    win.document.write(`<!DOCTYPE html><html><head><title>Ticket ${order.order_number}</title>
+      <style>
+        @media print { @page { margin: 0; size: 80mm auto; } body { margin: 0; } }
+        body { font-family: 'Courier New', monospace; font-size: 11px; padding: 8px; width: 72mm; line-height: 1.35; }
+        .c { text-align: center; } .b { font-weight: bold; }
+        .line { border-bottom: 1px dashed #000; margin: 6px 0; }
+        .dbl { border-bottom: 2px solid #000; margin: 6px 0; }
+        .row { display: flex; justify-content: space-between; gap: 8px; margin: 2px 0; }
+        .note { font-size: 10px; color: #555; margin-left: 8px; font-style: italic; }
+        .badge { display: inline-block; padding: 2px 8px; border: 1px solid #000; border-radius: 3px; font-size: 10px; margin-top: 4px; }
+        h2 { margin: 0; font-size: 14px; } h3 { margin: 4px 0; font-size: 12px; }
+      </style></head><body>
+      <div class="c">
+        ${hotelInfo?.logo_url ? `<img src="${hotelInfo.logo_url}" style="max-height:50px;max-width:120px;margin-bottom:4px;"/>` : ''}
+        <h2 class="b">${hotelInfo?.name || 'HOTEL'}</h2>
+        ${hotelInfo?.address ? `<div>${hotelInfo.address}</div>` : ''}
+        ${hotelInfo?.phone ? `<div>Tel: ${hotelInfo.phone}</div>` : ''}
+      </div>
+      <div class="line"></div>
+      <div class="c b">ORDER TICKET</div>
+      <div class="c"><span class="badge">${(order.status || '').toUpperCase()}</span></div>
+      <div class="line"></div>
+      <div><span class="b">Ticket:</span> ${order.order_number}</div>
+      <div><span class="b">Date:</span> ${created.toLocaleDateString()} ${created.toLocaleTimeString()}</div>
+      ${order.room ? `<div><span class="b">Room:</span> ${order.room.room_number}</div>` : ''}
+      ${order.table_number ? `<div><span class="b">Table:</span> ${order.table_number}</div>` : ''}
+      ${activeStaff ? `<div><span class="b">Waiter:</span> ${activeStaff.first_name} ${activeStaff.last_name}</div>` : ''}
+      ${order.notes ? `<div><span class="b">Notes:</span> ${order.notes}</div>` : ''}
+      <div class="line"></div>
+      <div class="b">ITEMS</div>
+      ${itemsHtml}
+      <div class="dbl"></div>
+      <div class="row b" style="font-size:13px;"><span>TOTAL</span><span>${formatCurrency(order.total_amount)}</span></div>
+      <div class="line"></div>
+      <div class="c" style="font-size:10px;margin-top:8px;">Not a tax invoice — order ticket only</div>
+      <div class="c" style="font-size:9px;color:#666;margin-top:4px;">Printed ${new Date().toLocaleString()}</div>
+      </body></html>`);
+    win.document.close();
+    win.onload = () => setTimeout(() => win.print(), 250);
+  };
+
+
   const {
     cart, selectedBooking, discount, subtotal, discountAmount,
     taxRate, taxAmount, total, addToCart, updateQuantity,
@@ -949,6 +999,11 @@ export default function HotelPOS() {
                                     <X className="h-3 w-3" />
                                   </Button>
                                 )}
+                                <Button variant="ghost" size="sm" className="h-7 text-[10px]"
+                                  onClick={() => printOrderTicket(order)}
+                                  title="Print ticket">
+                                  <Printer className="h-3 w-3" />
+                                </Button>
                               </div>
                             </div>
                           </div>
