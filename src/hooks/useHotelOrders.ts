@@ -115,7 +115,7 @@ export function useActiveOrders() {
 }
 
 export function useWaiterOrders(waiterId: string | undefined) {
-  return useHotelOrders(waiterId ? { waiterId, status: ['pending', 'preparing', 'ready', 'served'] } : undefined);
+  return useHotelOrders(waiterId ? { waiterId, status: ['pending', 'preparing', 'ready', 'served', 'cancelled'] } : undefined);
 }
 
 interface PlaceOrderParams {
