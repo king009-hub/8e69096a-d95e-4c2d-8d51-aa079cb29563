@@ -999,6 +999,11 @@ export default function HotelPOS() {
                                     <X className="h-3 w-3" />
                                   </Button>
                                 )}
+                                <Button variant="ghost" size="sm" className="h-7 text-[10px]"
+                                  onClick={() => printOrderTicket(order)}
+                                  title="Print ticket">
+                                  <Printer className="h-3 w-3" />
+                                </Button>
                               </div>
                             </div>
                           </div>
