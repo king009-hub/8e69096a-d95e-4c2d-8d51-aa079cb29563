@@ -889,6 +889,7 @@ export type Database = {
       hotel_order_items: {
         Row: {
           cancel_reason: string | null
+          course: Database["public"]["Enums"]["hotel_course"]
           created_at: string | null
           id: string
           item_type: string | null
@@ -910,6 +911,7 @@ export type Database = {
         }
         Insert: {
           cancel_reason?: string | null
+          course?: Database["public"]["Enums"]["hotel_course"]
           created_at?: string | null
           id?: string
           item_type?: string | null
@@ -931,6 +933,7 @@ export type Database = {
         }
         Update: {
           cancel_reason?: string | null
+          course?: Database["public"]["Enums"]["hotel_course"]
           created_at?: string | null
           id?: string
           item_type?: string | null
@@ -1077,6 +1080,8 @@ export type Database = {
           customer_name: string | null
           customer_phone: string | null
           customer_tin: string | null
+          delivery_address: string | null
+          delivery_fee: number
           discount_amount: number
           id: string
           invoice_id: string | null
@@ -1084,9 +1089,11 @@ export type Database = {
           kitchen_status: string
           notes: string | null
           order_number: string
+          order_type: Database["public"]["Enums"]["hotel_order_type"]
           payment_method: string | null
           payment_received_at: string | null
           payment_status: string | null
+          pickup_at: string | null
           posted_to_invoice_id: string | null
           preparing_started_at: string | null
           ready_at: string | null
@@ -1122,6 +1129,8 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           customer_tin?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number
           discount_amount?: number
           id?: string
           invoice_id?: string | null
@@ -1129,9 +1138,11 @@ export type Database = {
           kitchen_status?: string
           notes?: string | null
           order_number?: string
+          order_type?: Database["public"]["Enums"]["hotel_order_type"]
           payment_method?: string | null
           payment_received_at?: string | null
           payment_status?: string | null
+          pickup_at?: string | null
           posted_to_invoice_id?: string | null
           preparing_started_at?: string | null
           ready_at?: string | null
@@ -1167,6 +1178,8 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           customer_tin?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number
           discount_amount?: number
           id?: string
           invoice_id?: string | null
@@ -1174,9 +1187,11 @@ export type Database = {
           kitchen_status?: string
           notes?: string | null
           order_number?: string
+          order_type?: Database["public"]["Enums"]["hotel_order_type"]
           payment_method?: string | null
           payment_received_at?: string | null
           payment_status?: string | null
+          pickup_at?: string | null
           posted_to_invoice_id?: string | null
           preparing_started_at?: string | null
           ready_at?: string | null
@@ -1307,6 +1322,7 @@ export type Database = {
           id: string
           invoice_id: string | null
           notes: string | null
+          order_id: string | null
           payment_group_id: string | null
           payment_method: Database["public"]["Enums"]["hotel_payment_method"]
           receipt_no: string | null
@@ -1315,6 +1331,7 @@ export type Database = {
           shift_id: string | null
           staff_id: string | null
           status: string
+          tip_amount: number
           transaction_reference: string | null
         }
         Insert: {
@@ -1323,6 +1340,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          order_id?: string | null
           payment_group_id?: string | null
           payment_method: Database["public"]["Enums"]["hotel_payment_method"]
           receipt_no?: string | null
@@ -1331,6 +1349,7 @@ export type Database = {
           shift_id?: string | null
           staff_id?: string | null
           status?: string
+          tip_amount?: number
           transaction_reference?: string | null
         }
         Update: {
@@ -1339,6 +1358,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          order_id?: string | null
           payment_group_id?: string | null
           payment_method?: Database["public"]["Enums"]["hotel_payment_method"]
           receipt_no?: string | null
@@ -1347,6 +1367,7 @@ export type Database = {
           shift_id?: string | null
           staff_id?: string | null
           status?: string
+          tip_amount?: number
           transaction_reference?: string | null
         }
         Relationships: [
@@ -1355,6 +1376,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "hotel_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_orders"
             referencedColumns: ["id"]
           },
           {
@@ -2163,6 +2191,36 @@ export type Database = {
           },
         ]
       }
+      hotel_table_areas: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hotel_table_payment_group_seats: {
         Row: {
           created_at: string
@@ -2370,6 +2428,7 @@ export type Database = {
       hotel_tables: {
         Row: {
           area: string | null
+          area_id: string | null
           capacity: number
           cleaning_started_at: string | null
           created_at: string
@@ -2377,12 +2436,15 @@ export type Database = {
           is_active: boolean
           name: string | null
           notes: string | null
+          pos_x: number
+          pos_y: number
           status: Database["public"]["Enums"]["hotel_table_status"]
           table_number: string
           updated_at: string
         }
         Insert: {
           area?: string | null
+          area_id?: string | null
           capacity?: number
           cleaning_started_at?: string | null
           created_at?: string
@@ -2390,12 +2452,15 @@ export type Database = {
           is_active?: boolean
           name?: string | null
           notes?: string | null
+          pos_x?: number
+          pos_y?: number
           status?: Database["public"]["Enums"]["hotel_table_status"]
           table_number: string
           updated_at?: string
         }
         Update: {
           area?: string | null
+          area_id?: string | null
           capacity?: number
           cleaning_started_at?: string | null
           created_at?: string
@@ -2403,11 +2468,21 @@ export type Database = {
           is_active?: boolean
           name?: string | null
           notes?: string | null
+          pos_x?: number
+          pos_y?: number
           status?: Database["public"]["Enums"]["hotel_table_status"]
           table_number?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hotel_tables_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_table_areas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hotel_wastage_log: {
         Row: {
@@ -3507,6 +3582,70 @@ export type Database = {
         }
         Returns: Json
       }
+      waiter_close_order_payment: {
+        Args: {
+          p_amount: number
+          p_method: string
+          p_order_id: string
+          p_reference?: string
+          p_tip?: number
+        }
+        Returns: {
+          bar_status: string
+          booking_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string | null
+          customer_address: string | null
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_tin: string | null
+          delivery_address: string | null
+          delivery_fee: number
+          discount_amount: number
+          id: string
+          invoice_id: string | null
+          is_billed: boolean
+          kitchen_status: string
+          notes: string | null
+          order_number: string
+          order_type: Database["public"]["Enums"]["hotel_order_type"]
+          payment_method: string | null
+          payment_received_at: string | null
+          payment_status: string | null
+          pickup_at: string | null
+          posted_to_invoice_id: string | null
+          preparing_started_at: string | null
+          ready_at: string | null
+          room_id: string | null
+          seat_id: string | null
+          session_id: string | null
+          settled_at: string | null
+          settled_by: string | null
+          shift_id: string | null
+          staff_id: string | null
+          status: string
+          subtotal: number
+          table_id: string | null
+          table_number: string | null
+          tax_amount: number
+          total_amount: number
+          transfer_context: string | null
+          transferred_at: string | null
+          transferred_from_staff_id: string | null
+          updated_at: string | null
+          waiter_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "hotel_orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       booking_status:
@@ -3515,6 +3654,8 @@ export type Database = {
         | "checked_in"
         | "checked_out"
         | "cancelled"
+      hotel_course: "none" | "starter" | "main" | "dessert" | "drinks"
+      hotel_order_type: "dine_in" | "takeaway" | "delivery" | "room_service"
       hotel_payment_method:
         | "cash"
         | "card"
@@ -3678,6 +3819,8 @@ export const Constants = {
         "checked_out",
         "cancelled",
       ],
+      hotel_course: ["none", "starter", "main", "dessert", "drinks"],
+      hotel_order_type: ["dine_in", "takeaway", "delivery", "room_service"],
       hotel_payment_method: [
         "cash",
         "card",

@@ -12,6 +12,7 @@ import { useSettingsContext } from "@/contexts/SettingsContext";
 import { HotelReceiptPrint } from "@/components/hotel/HotelReceiptPrint";
 import { KOTPrint, getStationForCategory } from "@/components/hotel/KOTPrint";
 import { printTicket, resolvePaperWidth } from "@/lib/print/thermalPrint";
+import { useWaiterCloseOrderPayment } from "@/hooks/useHotelTables";
 import { HotelBooking } from "@/types/hotel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ export default function HotelPOS() {
   const addItemsToOrder = useAddItemsToOrder();
   const billOrders = useBillOrders();
   const updateOrderStatus = useUpdateOrderStatus();
+  const waiterPay = useWaiterCloseOrderPayment();
 
   const waiterId = activeStaff?.staff_id;
   const { data: myOrders = [] } = useWaiterOrders(waiterId);
@@ -993,6 +995,39 @@ export default function HotelPOS() {
                                   <Printer className="h-3 w-3" />
                                 </Button>
                               </div>
+                              {order.status !== 'settled' && order.status !== 'cancelled' && (
+                                <div className="flex flex-wrap gap-1 mt-1 pt-1 border-t border-border/40">
+                                  <span className="text-[9px] uppercase font-semibold text-muted-foreground mr-1 self-center">Pay:</span>
+                                  {(['cash','momo','card','room_charge'] as const).map((m) => (
+                                    <Button
+                                      key={m}
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 px-2 text-[10px]"
+                                      disabled={waiterPay.isPending}
+                                      onClick={async () => {
+                                        if (!confirm(`Mark ${order.order_number} as paid via ${m.replace('_',' ')} for ${formatCurrency(order.total_amount)}?`)) return;
+                                        try {
+                                          await waiterPay.mutateAsync({
+                                            orderId: order.id,
+                                            method: m,
+                                            amount: Number(order.total_amount),
+                                          });
+                                          toast.success(`Paid via ${m.replace('_',' ')}`);
+                                        } catch (e) {
+                                          toast.error((e as Error).message);
+                                        }
+                                      }}
+                                    >
+                                      {m === 'cash' && <Banknote className="h-3 w-3 mr-1" />}
+                                      {m === 'momo' && <Smartphone className="h-3 w-3 mr-1" />}
+                                      {m === 'card' && <CreditCard className="h-3 w-3 mr-1" />}
+                                      {m === 'room_charge' && <BedDouble className="h-3 w-3 mr-1" />}
+                                      {m === 'room_charge' ? 'Room' : m.toUpperCase()}
+                                    </Button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

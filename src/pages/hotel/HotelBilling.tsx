@@ -155,6 +155,7 @@ export default function HotelBilling() {
                   const PaymentIcon = invoice.payment_method 
                     ? paymentMethodIcons[invoice.payment_method] 
                     : DollarSign;
+                  const SafeIcon = PaymentIcon || DollarSign;
                   
                   return (
                     <TableRow key={invoice.id}>
@@ -171,7 +172,7 @@ export default function HotelBilling() {
                       <TableCell>
                         {invoice.payment_method ? (
                           <div className="flex items-center gap-1">
-                            <PaymentIcon className="h-4 w-4" />
+                            <SafeIcon className="h-4 w-4" />
                             <span className="capitalize">{invoice.payment_method.replace('_', ' ')}</span>
                           </div>
                         ) : '-'}

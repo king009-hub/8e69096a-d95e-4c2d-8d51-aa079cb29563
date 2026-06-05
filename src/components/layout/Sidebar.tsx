@@ -16,6 +16,7 @@ import {
   UtensilsCrossed,
   ChefHat,
   Wine,
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +29,7 @@ import { useEffect } from "react";
 const hotelNavigation = [
   { name: "Dashboard", href: "/hotel", icon: LayoutDashboard },
   { name: "Point of Sale", href: "/hotel/pos", icon: ShoppingCart },
+  { name: "Tables / Floor", href: "/hotel/tables", icon: LayoutGrid },
   { name: "Rooms", href: "/hotel/rooms", icon: BedDouble },
   { name: "Bookings", href: "/hotel/bookings", icon: CalendarDays },
   { name: "Check In/Out", href: "/hotel/check-in-out", icon: UserCheck },
