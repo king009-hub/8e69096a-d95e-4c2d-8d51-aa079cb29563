@@ -11,6 +11,7 @@ import { useStaffSession } from "@/contexts/StaffSessionContext";
 import { useSettingsContext } from "@/contexts/SettingsContext";
 import { HotelReceiptPrint } from "@/components/hotel/HotelReceiptPrint";
 import { KOTPrint, getStationForCategory } from "@/components/hotel/KOTPrint";
+import { printTicket, resolvePaperWidth } from "@/lib/print/thermalPrint";
 import { HotelBooking } from "@/types/hotel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,7 @@ interface SplitPayment {
 }
 
 export default function HotelPOS() {
-  const { formatCurrency } = useSettingsContext();
+  const { formatCurrency, receiptSettings } = useSettingsContext();
   const { activeStaff, activeShift } = useStaffSession();
   const { data: services = [], isLoading: servicesLoading } = useAvailableServices();
   const { data: categories = [] } = useActiveServiceCategories();
@@ -79,55 +80,39 @@ export default function HotelPOS() {
   const hotelTaxRate = hotelInfo?.tax_rate ?? 18;
 
   const printOrderTicket = (order: HotelOrder) => {
-    const win = window.open('', '_blank', 'width=380,height=600');
-    if (!win) { toast.error('Unable to open print window'); return; }
-    const itemsHtml = (order.items || []).map(it => `
-      <div class="row"><span>${it.quantity}× ${it.name}</span><span>${formatCurrency(it.total_price)}</span></div>
-      ${it.notes ? `<div class="note">• ${it.notes}</div>` : ''}
-    `).join('');
-    const created = new Date(order.created_at);
-    win.document.write(`<!DOCTYPE html><html><head><title>Ticket ${order.order_number}</title>
-      <style>
-        @media print { @page { margin: 0; size: 80mm auto; } body { margin: 0; } }
-        body { font-family: 'Courier New', monospace; font-size: 11px; padding: 8px; width: 72mm; line-height: 1.35; }
-        .c { text-align: center; } .b { font-weight: bold; }
-        .line { border-bottom: 1px dashed #000; margin: 6px 0; }
-        .dbl { border-bottom: 2px solid #000; margin: 6px 0; }
-        .row { display: flex; justify-content: space-between; gap: 8px; margin: 2px 0; }
-        .note { font-size: 10px; color: #555; margin-left: 8px; font-style: italic; }
-        .badge { display: inline-block; padding: 2px 8px; border: 1px solid #000; border-radius: 3px; font-size: 10px; margin-top: 4px; }
-        h2 { margin: 0; font-size: 14px; } h3 { margin: 4px 0; font-size: 12px; }
-      </style></head><body>
-      <div class="c">
-        ${hotelInfo?.logo_url ? `<img src="${hotelInfo.logo_url}" style="max-height:50px;max-width:120px;margin-bottom:4px;"/>` : ''}
-        <h2 class="b">${hotelInfo?.name || 'HOTEL'}</h2>
-        ${hotelInfo?.address ? `<div>${hotelInfo.address}</div>` : ''}
-        ${hotelInfo?.phone ? `<div>Tel: ${hotelInfo.phone}</div>` : ''}
-      </div>
-      <div class="line"></div>
-      <div class="c b">ORDER TICKET</div>
-      <div class="c"><span class="badge">${(order.status || '').toUpperCase()}</span></div>
-      <div class="line"></div>
-      <div><span class="b">Ticket:</span> ${order.order_number}</div>
-      <div><span class="b">Date:</span> ${created.toLocaleDateString()} ${created.toLocaleTimeString()}</div>
-      ${order.room ? `<div><span class="b">Room:</span> ${order.room.room_number}</div>` : ''}
-      ${order.table_number ? `<div><span class="b">Table:</span> ${order.table_number}</div>` : ''}
-      ${activeStaff ? `<div><span class="b">Waiter:</span> ${activeStaff.first_name} ${activeStaff.last_name}</div>` : ''}
-      ${order.customer_name ? `<div><span class="b">Guest:</span> ${order.customer_name}</div>` : order.booking?.guest ? `<div><span class="b">Guest:</span> ${order.booking.guest.first_name} ${order.booking.guest.last_name}</div>` : ''}
-      ${order.customer_phone ? `<div><span class="b">Phone:</span> ${order.customer_phone}</div>` : ''}
-      ${order.customer_email ? `<div><span class="b">Email:</span> ${order.customer_email}</div>` : ''}
-      ${order.notes ? `<div><span class="b">Notes:</span> ${order.notes}</div>` : ''}
-      <div class="line"></div>
-      <div class="b">ITEMS</div>
-      ${itemsHtml}
-      <div class="dbl"></div>
-      <div class="row b" style="font-size:13px;"><span>TOTAL</span><span>${formatCurrency(order.total_amount)}</span></div>
-      <div class="line"></div>
-      <div class="c" style="font-size:10px;margin-top:8px;">Not a tax invoice — order ticket only</div>
-      <div class="c" style="font-size:9px;color:#666;margin-top:4px;">Printed ${new Date().toLocaleString()}</div>
-      </body></html>`);
-    win.document.close();
-    win.onload = () => setTimeout(() => win.print(), 250);
+    const ok = printTicket({
+      width: resolvePaperWidth(receiptSettings.paper_size),
+      template: 'order',
+      header: {
+        logoUrl: receiptSettings.show_logo ? hotelInfo?.logo_url : null,
+        businessName: hotelInfo?.name || 'HOTEL',
+        address: hotelInfo?.address,
+        phone: hotelInfo?.phone,
+      },
+      meta: {
+        ticketNumber: order.order_number,
+        dateTime: new Date(order.created_at),
+        room: order.room?.room_number,
+        table: order.table_number,
+        waiter: activeStaff ? `${activeStaff.first_name} ${activeStaff.last_name}` : null,
+        customerName: order.customer_name
+          || (order.booking?.guest ? `${order.booking.guest.first_name} ${order.booking.guest.last_name}` : null),
+        customerPhone: order.customer_phone,
+        customerEmail: order.customer_email,
+        notes: order.notes,
+        badge: (order.status || '').toUpperCase(),
+      },
+      items: (order.items || []).map(it => ({
+        qty: it.quantity,
+        name: it.name,
+        notes: it.notes,
+        amount: it.total_price,
+      })),
+      totals: { total: order.total_amount },
+      footerText: `${receiptSettings.footer_text || ''}\nNot a tax invoice — order ticket only`,
+      formatMoney: (n) => formatCurrency(Number(n) || 0),
+    });
+    if (!ok) toast.error('Unable to open print window');
   };
 
 
