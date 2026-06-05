@@ -1322,6 +1322,7 @@ export type Database = {
           id: string
           invoice_id: string | null
           notes: string | null
+          order_id: string | null
           payment_group_id: string | null
           payment_method: Database["public"]["Enums"]["hotel_payment_method"]
           receipt_no: string | null
@@ -1330,6 +1331,7 @@ export type Database = {
           shift_id: string | null
           staff_id: string | null
           status: string
+          tip_amount: number
           transaction_reference: string | null
         }
         Insert: {
@@ -1338,6 +1340,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          order_id?: string | null
           payment_group_id?: string | null
           payment_method: Database["public"]["Enums"]["hotel_payment_method"]
           receipt_no?: string | null
@@ -1346,6 +1349,7 @@ export type Database = {
           shift_id?: string | null
           staff_id?: string | null
           status?: string
+          tip_amount?: number
           transaction_reference?: string | null
         }
         Update: {
@@ -1354,6 +1358,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          order_id?: string | null
           payment_group_id?: string | null
           payment_method?: Database["public"]["Enums"]["hotel_payment_method"]
           receipt_no?: string | null
@@ -1362,6 +1367,7 @@ export type Database = {
           shift_id?: string | null
           staff_id?: string | null
           status?: string
+          tip_amount?: number
           transaction_reference?: string | null
         }
         Relationships: [
@@ -1370,6 +1376,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "hotel_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_orders"
             referencedColumns: ["id"]
           },
           {
