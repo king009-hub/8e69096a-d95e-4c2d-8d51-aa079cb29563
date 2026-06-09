@@ -7,8 +7,8 @@ export interface ServiceMenuItem {
   name: string;
   description: string | null;
   category: string;
-  price: number;
-  selling_price?: number;
+  price?: number;
+  selling_price: number;
   purchase_price?: number;
   is_available: boolean;
   sort_order: number;
