@@ -509,6 +509,59 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_happy_hour_rules: {
+        Row: {
+          apply_to: string
+          category: string | null
+          created_at: string
+          days_of_week: number[]
+          discount_percent: number
+          end_time: string
+          id: string
+          is_active: boolean
+          name: string
+          service_item_id: string | null
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          apply_to?: string
+          category?: string | null
+          created_at?: string
+          days_of_week?: number[]
+          discount_percent?: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          name: string
+          service_item_id?: string | null
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          apply_to?: string
+          category?: string | null
+          created_at?: string
+          days_of_week?: number[]
+          discount_percent?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          service_item_id?: string | null
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_happy_hour_rules_service_item_id_fkey"
+            columns: ["service_item_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_service_menu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_housekeeping: {
         Row: {
           assigned_to: string | null
@@ -882,6 +935,134 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "hotel_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_modifier_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_required: boolean
+          max_select: number
+          min_select: number
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          max_select?: number
+          min_select?: number
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          max_select?: number
+          min_select?: number
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hotel_modifiers: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          price_delta: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          price_delta?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          price_delta?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_modifiers_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_modifier_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_order_item_modifiers: {
+        Row: {
+          created_at: string
+          group_name: string
+          id: string
+          modifier_id: string | null
+          modifier_name: string
+          order_item_id: string
+          price_delta: number
+        }
+        Insert: {
+          created_at?: string
+          group_name: string
+          id?: string
+          modifier_id?: string | null
+          modifier_name: string
+          order_item_id: string
+          price_delta?: number
+        }
+        Update: {
+          created_at?: string
+          group_name?: string
+          id?: string
+          modifier_id?: string | null
+          modifier_name?: string
+          order_item_id?: string
+          price_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_order_item_modifiers_modifier_id_fkey"
+            columns: ["modifier_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_modifiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_order_item_modifiers_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_order_items"
             referencedColumns: ["id"]
           },
         ]
@@ -1562,6 +1743,45 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_service_item_modifiers: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          service_item_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          service_item_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          service_item_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_service_item_modifiers_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_modifier_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_service_item_modifiers_service_item_id_fkey"
+            columns: ["service_item_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_service_menu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_service_item_recipes: {
         Row: {
           created_at: string | null
@@ -1642,6 +1862,8 @@ export type Database = {
           sort_order: number | null
           stock_quantity: number | null
           track_stock: boolean | null
+          unavailable_reason: string | null
+          unavailable_until: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1658,6 +1880,8 @@ export type Database = {
           sort_order?: number | null
           stock_quantity?: number | null
           track_stock?: boolean | null
+          unavailable_reason?: string | null
+          unavailable_until?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1674,6 +1898,8 @@ export type Database = {
           sort_order?: number | null
           stock_quantity?: number | null
           track_stock?: boolean | null
+          unavailable_reason?: string | null
+          unavailable_until?: string | null
           updated_at?: string | null
         }
         Relationships: [
