@@ -29,6 +29,7 @@ import HotelSettings from "./pages/hotel/HotelSettings";
 import HotelServiceMenu from "./pages/hotel/HotelServiceMenu";
 import HotelPOS from "./pages/hotel/HotelPOS";
 import HotelTables from "./pages/hotel/HotelTables";
+import HotelMenuExtras from "./pages/hotel/HotelMenuExtras";
 import KitchenDisplay from "./pages/hotel/KitchenDisplay";
 import BarDisplay from "./pages/hotel/BarDisplay";
 
@@ -66,6 +67,7 @@ const App = () => (
                 <Route path="/hotel/service-menu" element={<ProtectedRoute><HotelServiceMenu /></ProtectedRoute>} />
                 <Route path="/hotel/pos" element={<ProtectedRoute><HotelPOS /></ProtectedRoute>} />
                 <Route path="/hotel/tables" element={<ProtectedRoute><HotelTables /></ProtectedRoute>} />
+                <Route path="/hotel/menu-extras" element={<ProtectedRoute><HotelMenuExtras /></ProtectedRoute>} />
                 <Route path="/hotel/kitchen" element={<ProtectedRoute><KitchenDisplay /></ProtectedRoute>} />
                 <Route path="/hotel/bar" element={<ProtectedRoute><BarDisplay /></ProtectedRoute>} />
                 <Route path="/hotel/settings" element={<ProtectedRoute><HotelSettings /></ProtectedRoute>} />
