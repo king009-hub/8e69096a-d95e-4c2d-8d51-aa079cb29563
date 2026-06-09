@@ -194,7 +194,7 @@ export default function HotelServiceMenu() {
       name: item.name,
       description: item.description || '',
       category: item.category,
-      price: item.price.toString(),
+      price: (item.selling_price ?? item.price ?? 0).toString(),
       sort_order: item.sort_order.toString(),
       is_available: item.is_available,
       track_stock: item.track_stock,
@@ -212,11 +212,13 @@ export default function HotelServiceMenu() {
     // If linked to a product, get stock from product
     const linkedProduct = formData.product_id ? products.find(p => p.id === formData.product_id) : null;
 
+    const priceNum = parseFloat(formData.price);
     const data = {
       name: formData.name,
       description: formData.description || null,
       category: formData.category,
-      price: parseFloat(formData.price),
+      price: priceNum,
+      selling_price: priceNum,
       sort_order: parseInt(formData.sort_order) || 0,
       is_available: formData.is_available,
       track_stock: formData.track_stock || !!linkedProduct,
