@@ -49,7 +49,7 @@ export const availableHotelRoutes = [
   { path: '/hotel/housekeeping', label: 'Housekeeping', description: 'Cleaning tasks' },
 ];
 
-export function useRolePermissions() {
+export function useRolePermissions(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['role-permissions'],
     queryFn: async () => {
@@ -61,6 +61,8 @@ export function useRolePermissions() {
       if (error) throw error;
       return data as RolePermission[];
     },
+    enabled: options?.enabled ?? true,
+    retry: false,
   });
 }
 
