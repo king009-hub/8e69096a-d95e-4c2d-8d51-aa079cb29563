@@ -13,9 +13,9 @@ interface ProtectedRouteProps {
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRoles }) => {
   const { user, loading, userRole } = useAuth();
   const location = useLocation();
-  const { data: rolePermissions, isLoading: permissionsLoading } = useRolePermissions();
+  const { data: rolePermissions, isLoading: permissionsLoading } = useRolePermissions({ enabled: !!user && !loading });
 
-  if (loading || permissionsLoading) {
+  if (loading || (!!user && permissionsLoading)) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -24,7 +24,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/auth" replace state={{ from: location }} />;
   }
 
   // Check role-based access using database permissions
