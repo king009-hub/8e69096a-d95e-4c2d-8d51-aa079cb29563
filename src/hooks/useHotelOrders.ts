@@ -52,6 +52,54 @@ export interface HotelOrder {
 
 export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled' | 'billed';
 
+async function assertRecipeStockAvailable(items: { serviceItemId: string | null; quantity: number }[]) {
+  const serviceIds = Array.from(new Set(items.map((item) => item.serviceItemId).filter(Boolean))) as string[];
+  if (serviceIds.length === 0) return;
+
+  const { data, error } = await supabase
+    .from('hotel_service_item_recipes')
+    .select('service_item_id, quantity_required, ingredient:hotel_ingredients(name, stock_quantity, unit)')
+    .in('service_item_id', serviceIds);
+
+  if (error) throw error;
+
+  const requiredByIngredient = new Map<string, { name: string; needed: number; stock: number; unit: string }>();
+  (data || []).forEach((recipe: any) => {
+    const orderedQty = items
+      .filter((item) => item.serviceItemId === recipe.service_item_id)
+      .reduce((sum, item) => sum + item.quantity, 0);
+    if (!recipe.ingredient || orderedQty <= 0) return;
+    const key = recipe.ingredient.name;
+    const current = requiredByIngredient.get(key) || {
+      name: recipe.ingredient.name,
+      needed: 0,
+      stock: Number(recipe.ingredient.stock_quantity) || 0,
+      unit: recipe.ingredient.unit || '',
+    };
+    current.needed += Number(recipe.quantity_required) * orderedQty;
+    requiredByIngredient.set(key, current);
+  });
+
+  const shortage = Array.from(requiredByIngredient.values()).find((item) => item.needed > item.stock);
+  if (shortage) {
+    throw new Error(`Insufficient ingredient ${shortage.name}: need ${shortage.needed} ${shortage.unit}, have ${shortage.stock} ${shortage.unit}`);
+  }
+}
+
+async function consumeRecipesForItems(items: { serviceItemId: string | null; quantity: number }[], orderId: string, orderNumber: string) {
+  for (const item of items) {
+    if (!item.serviceItemId) continue;
+    const { error } = await (supabase as any).rpc('hotel_consume_service_recipe', {
+      p_service_item_id: item.serviceItemId,
+      p_quantity: item.quantity,
+      p_order_id: orderId,
+      p_order_item_id: null,
+      p_notes: `Order ${orderNumber}`,
+    });
+    if (error) throw error;
+  }
+}
+
 export function useHotelOrders(filters?: { waiterId?: string; status?: string[] }) {
   return useQuery({
     queryKey: ['hotel-orders', filters],
