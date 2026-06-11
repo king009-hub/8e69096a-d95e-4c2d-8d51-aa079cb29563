@@ -3672,6 +3672,76 @@ export type Database = {
         }[]
       }
       get_user_count: { Args: never; Returns: number }
+      hotel_consume_service_recipe: {
+        Args: {
+          p_notes?: string
+          p_order_id?: string
+          p_order_item_id?: string
+          p_quantity: number
+          p_service_item_id: string
+        }
+        Returns: Json
+      }
+      hotel_record_ingredient_movement: {
+        Args: {
+          p_ingredient_id: string
+          p_movement_type: string
+          p_notes?: string
+          p_quantity: number
+          p_reason: string
+          p_reference_id?: string
+          p_unit_cost?: number
+        }
+        Returns: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          empty_units_count: number | null
+          id: string
+          is_liquid: boolean | null
+          min_stock_threshold: number
+          name: string
+          open_unit_volume: number | null
+          purchase_price: number
+          stock_quantity: number
+          track_empties: boolean | null
+          unit: string
+          updated_at: string | null
+          volume_per_unit: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "hotel_ingredients"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      hotel_record_wastage: {
+        Args: {
+          p_ingredient_id: string
+          p_notes?: string
+          p_quantity: number
+          p_reason: string
+          p_service_item_id?: string
+        }
+        Returns: {
+          created_at: string | null
+          id: string
+          ingredient_id: string | null
+          notes: string | null
+          product_id: string | null
+          quantity: number
+          reason: string
+          reported_by: string | null
+          service_item_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "hotel_wastage_log"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       is_admin: { Args: never; Returns: boolean }
       is_manager_or_owner: { Args: never; Returns: boolean }
       log_security_event: {
