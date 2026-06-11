@@ -59,7 +59,8 @@ const ALL_KNOWN_POS_ROUTES = [
 const ALL_KNOWN_HOTEL_ROUTES = [
   '/hotel', '/hotel/settings', '/hotel/staff', '/hotel/reports', '/hotel/billing',
   '/hotel/service-menu', '/hotel/pos', '/hotel/rooms', '/hotel/bookings',
-  '/hotel/new-booking', '/hotel/check-in-out', '/hotel/guests', '/hotel/housekeeping'
+  '/hotel/new-booking', '/hotel/check-in-out', '/hotel/guests', '/hotel/housekeeping',
+  '/hotel/tables', '/hotel/menu-extras', '/hotel/ingredients', '/hotel/kitchen', '/hotel/bar'
 ];
 
 // Fallback static permissions (used ONLY when database is not available)
@@ -85,8 +86,13 @@ export const defaultHotelRoutePermissions: RoutePermission[] = [
   { path: '/hotel/reports', allowedRoles: ['admin', 'manager'] },
   { path: '/hotel/billing', allowedRoles: ['admin', 'manager'] },
   { path: '/hotel/service-menu', allowedRoles: ['admin', 'manager'] },
+  { path: '/hotel/menu-extras', allowedRoles: ['admin', 'manager'] },
+  { path: '/hotel/ingredients', allowedRoles: ['admin', 'manager'] },
   { path: '/hotel', allowedRoles: ['admin', 'manager', 'cashier', 'user'] },
   { path: '/hotel/pos', allowedRoles: ['admin', 'manager', 'cashier'] },
+  { path: '/hotel/tables', allowedRoles: ['admin', 'manager', 'cashier'] },
+  { path: '/hotel/kitchen', allowedRoles: ['admin', 'manager', 'cashier'] },
+  { path: '/hotel/bar', allowedRoles: ['admin', 'manager', 'cashier'] },
   { path: '/hotel/rooms', allowedRoles: ['admin', 'manager', 'cashier'] },
   { path: '/hotel/bookings', allowedRoles: ['admin', 'manager', 'cashier'] },
   { path: '/hotel/new-booking', allowedRoles: ['admin', 'manager', 'cashier'] },
