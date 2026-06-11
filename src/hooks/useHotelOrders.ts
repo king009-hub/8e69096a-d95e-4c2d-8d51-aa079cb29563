@@ -194,6 +194,8 @@ export function usePlaceOrder() {
 
   return useMutation({
     mutationFn: async (params: PlaceOrderParams) => {
+      await assertRecipeStockAvailable(params.items);
+
       const subtotal = params.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
       const discountPct = params.discount || 0;
       const discountAmt = (subtotal * discountPct) / 100;
@@ -242,6 +244,8 @@ export function usePlaceOrder() {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      await consumeRecipesForItems(params.items, order.id, order.order_number);
 
       // Deduct stock for tracked items
       for (const item of params.items) {
@@ -296,6 +300,8 @@ export function usePlaceOrder() {
       queryClient.invalidateQueries({ queryKey: ['hotel-orders'] });
       queryClient.invalidateQueries({ queryKey: ['service-menu'] });
       queryClient.invalidateQueries({ queryKey: ['hotel-stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurant-ingredients'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurant-ingredient-movements'] });
       toast.success(`Order ${order.order_number} placed successfully!`);
     },
     onError: (error: Error) => {
@@ -385,6 +391,8 @@ export function useAddItemsToOrder() {
         category?: string;
       }[];
     }) => {
+      await assertRecipeStockAvailable(items);
+
       // Insert new items
       const orderItems = items.map(item => ({
         order_id: orderId,
@@ -404,6 +412,8 @@ export function useAddItemsToOrder() {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      await consumeRecipesForItems(items, orderId, `${orderNumber} (extra)`);
 
       // Deduct stock for tracked items
       for (const item of items) {
@@ -478,6 +488,8 @@ export function useAddItemsToOrder() {
       queryClient.invalidateQueries({ queryKey: ['hotel-orders'] });
       queryClient.invalidateQueries({ queryKey: ['service-menu'] });
       queryClient.invalidateQueries({ queryKey: ['hotel-stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurant-ingredients'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurant-ingredient-movements'] });
       toast.success(`Extra items added to ${orderNumber}!`);
     },
     onError: (error: Error) => {
