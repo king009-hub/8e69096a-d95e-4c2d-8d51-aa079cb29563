@@ -840,6 +840,7 @@ export type Database = {
             | Database["public"]["Enums"]["hotel_payment_method"]
             | null
           payment_status: string | null
+          session_id: string | null
           shift_id: string | null
           staff_id: string | null
           subtotal: number
@@ -867,6 +868,7 @@ export type Database = {
             | Database["public"]["Enums"]["hotel_payment_method"]
             | null
           payment_status?: string | null
+          session_id?: string | null
           shift_id?: string | null
           staff_id?: string | null
           subtotal?: number
@@ -894,6 +896,7 @@ export type Database = {
             | Database["public"]["Enums"]["hotel_payment_method"]
             | null
           payment_status?: string | null
+          session_id?: string | null
           shift_id?: string | null
           staff_id?: string | null
           subtotal?: number
@@ -921,6 +924,13 @@ export type Database = {
             columns: ["guest_id"]
             isOneToOne: false
             referencedRelation: "hotel_guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_invoices_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_table_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -1501,6 +1511,7 @@ export type Database = {
           amount: number
           created_at: string | null
           id: string
+          idempotency_key: string | null
           invoice_id: string | null
           notes: string | null
           order_id: string | null
@@ -1519,6 +1530,7 @@ export type Database = {
           amount: number
           created_at?: string | null
           id?: string
+          idempotency_key?: string | null
           invoice_id?: string | null
           notes?: string | null
           order_id?: string | null
@@ -1537,6 +1549,7 @@ export type Database = {
           amount?: number
           created_at?: string | null
           id?: string
+          idempotency_key?: string | null
           invoice_id?: string | null
           notes?: string | null
           order_id?: string | null
@@ -3532,6 +3545,20 @@ export type Database = {
       }
     }
     Functions: {
+      apply_hotel_payment_shift_audit: {
+        Args: {
+          p_amount: number
+          p_invoice_id: string
+          p_log_action_type: string
+          p_log_description: string
+          p_payment_id: string
+          p_payment_method: Database["public"]["Enums"]["hotel_payment_method"]
+          p_session_id: string
+          p_shift_id: string
+          p_staff_id: string
+        }
+        Returns: undefined
+      }
       calculate_product_stock: {
         Args: { product_uuid: string }
         Returns: number
@@ -3606,6 +3633,7 @@ export type Database = {
         Args: { p_auth_user_id: string }
         Returns: string
       }
+      current_authenticated_staff_id: { Args: never; Returns: string }
       current_staff_can_access_payment_group: {
         Args: { target_group_id: string }
         Returns: boolean
@@ -3621,6 +3649,10 @@ export type Database = {
       current_staff_id: { Args: never; Returns: string }
       current_staff_role: { Args: never; Returns: string }
       delete_custom_role: { Args: { role_name: string }; Returns: boolean }
+      ensure_hotel_table_session_invoice: {
+        Args: { p_session_id: string; p_shift_id: string; p_staff_id: string }
+        Returns: string
+      }
       generate_booking_reference: { Args: never; Returns: string }
       generate_hotel_invoice_number: { Args: never; Returns: string }
       generate_hotel_order_number: { Args: never; Returns: string }
@@ -3640,6 +3672,76 @@ export type Database = {
         }[]
       }
       get_user_count: { Args: never; Returns: number }
+      hotel_consume_service_recipe: {
+        Args: {
+          p_notes?: string
+          p_order_id?: string
+          p_order_item_id?: string
+          p_quantity: number
+          p_service_item_id: string
+        }
+        Returns: Json
+      }
+      hotel_record_ingredient_movement: {
+        Args: {
+          p_ingredient_id: string
+          p_movement_type: string
+          p_notes?: string
+          p_quantity: number
+          p_reason: string
+          p_reference_id?: string
+          p_unit_cost?: number
+        }
+        Returns: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          empty_units_count: number | null
+          id: string
+          is_liquid: boolean | null
+          min_stock_threshold: number
+          name: string
+          open_unit_volume: number | null
+          purchase_price: number
+          stock_quantity: number
+          track_empties: boolean | null
+          unit: string
+          updated_at: string | null
+          volume_per_unit: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "hotel_ingredients"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      hotel_record_wastage: {
+        Args: {
+          p_ingredient_id: string
+          p_notes?: string
+          p_quantity: number
+          p_reason: string
+          p_service_item_id?: string
+        }
+        Returns: {
+          created_at: string | null
+          id: string
+          ingredient_id: string | null
+          notes: string | null
+          product_id: string | null
+          quantity: number
+          reason: string
+          reported_by: string | null
+          service_item_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "hotel_wastage_log"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       is_admin: { Args: never; Returns: boolean }
       is_manager_or_owner: { Args: never; Returns: boolean }
       log_security_event: {
@@ -3727,20 +3829,49 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      record_hotel_table_payment: {
+      record_hotel_invoice_payment: {
         Args: {
-          p_amount?: number
+          p_amount: number
+          p_idempotency_key?: string
+          p_invoice_id: string
           p_notes?: string
-          p_payment_group_id?: string
           p_payment_method: string
-          p_receipt_no?: string
-          p_seat_id?: string
-          p_session_id: string
           p_shift_id?: string
           p_staff_id?: string
+          p_transaction_reference?: string
         }
         Returns: Json
       }
+      record_hotel_table_payment:
+        | {
+            Args: {
+              p_amount?: number
+              p_notes?: string
+              p_payment_group_id?: string
+              p_payment_method: string
+              p_receipt_no?: string
+              p_seat_id?: string
+              p_session_id: string
+              p_shift_id?: string
+              p_staff_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount?: number
+              p_idempotency_key?: string
+              p_notes?: string
+              p_payment_group_id?: string
+              p_payment_method: string
+              p_receipt_no?: string
+              p_seat_id?: string
+              p_session_id: string
+              p_shift_id?: string
+              p_staff_id?: string
+            }
+            Returns: Json
+          }
       refresh_hotel_table_session_state: {
         Args: { p_session_id: string }
         Returns: undefined
@@ -3754,6 +3885,14 @@ export type Database = {
         Returns: string
       }
       reset_admin_password: { Args: never; Returns: string }
+      resolve_hotel_payment_shift_id: {
+        Args: { p_shift_id: string; p_staff_id: string }
+        Returns: string
+      }
+      resolve_hotel_payment_staff_id: {
+        Args: { p_staff_id?: string }
+        Returns: string
+      }
       safe_update_user_role: {
         Args: {
           ip_address?: string
@@ -3772,6 +3911,14 @@ export type Database = {
       sync_hotel_table_status: {
         Args: { p_table_id: string }
         Returns: undefined
+      }
+      update_hotel_invoice_payment_snapshot: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          outstanding_amount: number
+          payment_status: string
+          total_paid: number
+        }[]
       }
       upsert_hotel_table_payment_group: {
         Args: {

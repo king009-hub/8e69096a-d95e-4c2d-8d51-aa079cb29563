@@ -40,7 +40,12 @@ export const availableHotelRoutes = [
   { path: '/hotel/reports', label: 'Hotel Reports', description: 'Hotel analytics' },
   { path: '/hotel/billing', label: 'Billing', description: 'Invoice management' },
   { path: '/hotel/service-menu', label: 'Service Menu', description: 'Room service items' },
+  { path: '/hotel/menu-extras', label: 'Menu Controls', description: 'Modifiers, 86’d items and happy hour' },
+  { path: '/hotel/ingredients', label: 'Ingredients', description: 'Recipes, wastage and ingredient stock' },
+  { path: '/hotel/tables', label: 'Tables / Floor', description: 'Restaurant tables and sessions' },
   { path: '/hotel/pos', label: 'Hotel POS', description: 'Room service orders' },
+  { path: '/hotel/kitchen', label: 'Kitchen Display', description: 'Kitchen order display' },
+  { path: '/hotel/bar', label: 'Bar Display', description: 'Bar order display' },
   { path: '/hotel/rooms', label: 'Rooms', description: 'Room management' },
   { path: '/hotel/bookings', label: 'Bookings', description: 'Reservation management' },
   { path: '/hotel/new-booking', label: 'New Booking', description: 'Create new reservation' },
@@ -49,7 +54,7 @@ export const availableHotelRoutes = [
   { path: '/hotel/housekeeping', label: 'Housekeeping', description: 'Cleaning tasks' },
 ];
 
-export function useRolePermissions() {
+export function useRolePermissions(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['role-permissions'],
     queryFn: async () => {
@@ -61,6 +66,8 @@ export function useRolePermissions() {
       if (error) throw error;
       return data as RolePermission[];
     },
+    enabled: options?.enabled ?? true,
+    retry: false,
   });
 }
 
