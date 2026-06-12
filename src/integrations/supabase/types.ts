@@ -2042,7 +2042,7 @@ export type Database = {
           pin: string | null
           pin_failed_attempts: number | null
           pin_locked_until: string | null
-          role: Database["public"]["Enums"]["staff_role"]
+          role: string
           salary: number | null
           shift: string | null
           updated_at: string | null
@@ -2061,7 +2061,7 @@ export type Database = {
           pin?: string | null
           pin_failed_attempts?: number | null
           pin_locked_until?: string | null
-          role?: Database["public"]["Enums"]["staff_role"]
+          role?: string
           salary?: number | null
           shift?: string | null
           updated_at?: string | null
@@ -2080,7 +2080,7 @@ export type Database = {
           pin?: string | null
           pin_failed_attempts?: number | null
           pin_locked_until?: string | null
-          role?: Database["public"]["Enums"]["staff_role"]
+          role?: string
           salary?: number | null
           shift?: string | null
           updated_at?: string | null
@@ -2280,7 +2280,7 @@ export type Database = {
           shift_duration: string | null
           shift_label: string
           staff_id: string
-          staff_role: Database["public"]["Enums"]["staff_role"]
+          staff_role: string
           started_at: string | null
           status: string
           summary: Json | null
@@ -2316,7 +2316,7 @@ export type Database = {
           shift_duration?: string | null
           shift_label: string
           staff_id: string
-          staff_role: Database["public"]["Enums"]["staff_role"]
+          staff_role: string
           started_at?: string | null
           status?: string
           summary?: Json | null
@@ -2352,7 +2352,7 @@ export type Database = {
           shift_duration?: string | null
           shift_label?: string
           staff_id?: string
-          staff_role?: Database["public"]["Enums"]["staff_role"]
+          staff_role?: string
           started_at?: string | null
           status?: string
           summary?: Json | null
@@ -3603,7 +3603,7 @@ export type Database = {
           shift_duration: string | null
           shift_label: string
           staff_id: string
-          staff_role: Database["public"]["Enums"]["staff_role"]
+          staff_role: string
           started_at: string | null
           status: string
           summary: Json | null
@@ -3748,57 +3748,107 @@ export type Database = {
         Args: { details?: Json; event_type: string; user_id_param?: string }
         Returns: undefined
       }
-      open_hotel_staff_shift: {
-        Args: {
-          p_opening_cash?: number
-          p_opening_notes?: string
-          p_shift_label?: string
-          p_staff_id: string
-          p_staff_role: string
-        }
-        Returns: {
-          available_rooms: number | null
-          bar_sales: Json | null
-          billed_sales: number | null
-          closed_at: string | null
-          closing_cash: number | null
-          closing_notes: string | null
-          closing_report: string | null
-          completed_orders: number | null
-          created_at: string
-          difference: number | null
-          ended_at: string | null
-          expected_cash: number | null
-          id: string
-          kitchen_sales: Json | null
-          occupied_rooms: number | null
-          opened_at: string
-          opening_cash: number | null
-          opening_notes: string | null
-          pending_check_ins: number | null
-          pending_orders: Json | null
-          revenue_billed: number | null
-          revenue_pending: number | null
-          shift_check_ins: number | null
-          shift_check_outs: number | null
-          shift_duration: string | null
-          shift_label: string
-          staff_id: string
-          staff_role: Database["public"]["Enums"]["staff_role"]
-          started_at: string | null
-          status: string
-          summary: Json | null
-          total_items: number | null
-          total_orders: number | null
-          total_sales: number | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "hotel_staff_shifts"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      open_hotel_staff_shift:
+        | {
+            Args: {
+              p_opening_cash?: number
+              p_opening_notes?: string
+              p_shift_label?: string
+            }
+            Returns: {
+              available_rooms: number | null
+              bar_sales: Json | null
+              billed_sales: number | null
+              closed_at: string | null
+              closing_cash: number | null
+              closing_notes: string | null
+              closing_report: string | null
+              completed_orders: number | null
+              created_at: string
+              difference: number | null
+              ended_at: string | null
+              expected_cash: number | null
+              id: string
+              kitchen_sales: Json | null
+              occupied_rooms: number | null
+              opened_at: string
+              opening_cash: number | null
+              opening_notes: string | null
+              pending_check_ins: number | null
+              pending_orders: Json | null
+              revenue_billed: number | null
+              revenue_pending: number | null
+              shift_check_ins: number | null
+              shift_check_outs: number | null
+              shift_duration: string | null
+              shift_label: string
+              staff_id: string
+              staff_role: string
+              started_at: string | null
+              status: string
+              summary: Json | null
+              total_items: number | null
+              total_orders: number | null
+              total_sales: number | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "hotel_staff_shifts"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_opening_cash?: number
+              p_opening_notes?: string
+              p_shift_label?: string
+              p_staff_id: string
+              p_staff_role: string
+            }
+            Returns: {
+              available_rooms: number | null
+              bar_sales: Json | null
+              billed_sales: number | null
+              closed_at: string | null
+              closing_cash: number | null
+              closing_notes: string | null
+              closing_report: string | null
+              completed_orders: number | null
+              created_at: string
+              difference: number | null
+              ended_at: string | null
+              expected_cash: number | null
+              id: string
+              kitchen_sales: Json | null
+              occupied_rooms: number | null
+              opened_at: string
+              opening_cash: number | null
+              opening_notes: string | null
+              pending_check_ins: number | null
+              pending_orders: Json | null
+              revenue_billed: number | null
+              revenue_pending: number | null
+              shift_check_ins: number | null
+              shift_check_outs: number | null
+              shift_duration: string | null
+              shift_label: string
+              staff_id: string
+              staff_role: string
+              started_at: string | null
+              status: string
+              summary: Json | null
+              total_items: number | null
+              total_orders: number | null
+              total_sales: number | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "hotel_staff_shifts"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       open_hotel_table_session: {
         Args: {
           p_guest_count?: number
@@ -4058,6 +4108,8 @@ export type Database = {
         | "barman"
         | "chef"
         | "accountant"
+        | "waiter_admin"
+        | "cashier"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4225,6 +4277,8 @@ export const Constants = {
         "barman",
         "chef",
         "accountant",
+        "waiter_admin",
+        "cashier",
       ],
     },
   },
